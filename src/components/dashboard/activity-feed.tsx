@@ -58,7 +58,7 @@ export function ActivityFeed({ items, loading, viewAllHref = '/inbox' }: Activit
     i === 0 || totalLoaded > PAGE_SIZES[i - 1]
 
   return (
-    <section className="rounded-xl border border-border bg-card">
+    <section className="flex h-full flex-col rounded-xl border border-border bg-card">
       <header className="flex items-center justify-between border-b border-border px-5 py-4">
         <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
         <Link
@@ -70,13 +70,13 @@ export function ActivityFeed({ items, loading, viewAllHref = '/inbox' }: Activit
       </header>
 
       {loading || !items ? (
-        <div className="space-y-2 p-5">
+        <div className="flex-1 space-y-2 p-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="p-5">
+        <div className="flex flex-1 flex-col justify-center p-5">
           <EmptyState
             icon={Inbox}
             title={t('noActivity')}
@@ -85,7 +85,7 @@ export function ActivityFeed({ items, loading, viewAllHref = '/inbox' }: Activit
         </div>
       ) : (
         <>
-          <ul className="divide-y divide-border">
+          <ul className="flex-1 divide-y divide-border">
             {visible.map((it, i) => {
               const theme = KIND_THEME[it.kind]
               const Icon = theme.icon

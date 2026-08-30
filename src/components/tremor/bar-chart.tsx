@@ -695,11 +695,13 @@ const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
               tick={{
                 transform:
                   layout !== "vertical" ? "translate(0, 6)" : undefined,
+                fill: "var(--muted-foreground)",
               }}
-              fill=""
+              fill="var(--muted-foreground)"
               stroke=""
               className={cx(
                 "text-xs",
+                "text-muted-foreground",
                 "fill-muted-foreground",
                 { "mt-4": layout !== "vertical" },
               )}
@@ -741,10 +743,11 @@ const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
               hide={!showYAxis}
               axisLine={false}
               tickLine={false}
-              fill=""
+              fill="var(--muted-foreground)"
               stroke=""
               className={cx(
                 "text-xs",
+                "text-muted-foreground",
                 "fill-muted-foreground",
               )}
               tick={{
@@ -752,6 +755,7 @@ const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
                   layout !== "vertical"
                     ? "translate(-3, 0)"
                     : "translate(0, 0)",
+                fill: "var(--muted-foreground)",
               }}
               {...(layout !== "vertical"
                 ? {
