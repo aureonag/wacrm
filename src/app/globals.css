@@ -145,6 +145,24 @@ html[data-mode="light"] {
   --sidebar-border: oklch(0.922 0.004 260);
 }
 
+/* ---- BRAND: mode-aware Aureon logo swap ---- */
+/* The wordmark comes in a white-text and a black-text variant. Dark
+   mode (the app default) needs the white one; light mode needs the
+   black one. Swapped by visibility rather than by picking a src in
+   JS so it works the instant data-mode changes, no re-render needed. */
+
+.aureon-logo--light {
+  display: none;
+}
+
+html[data-mode="light"] .aureon-logo--dark {
+  display: none;
+}
+
+html[data-mode="light"] .aureon-logo--light {
+  display: block;
+}
+
 /* ---- ACCENT: primary color ---- */
 
 :root,
