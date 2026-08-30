@@ -19,6 +19,7 @@ import { Skeleton } from './skeleton'
 interface ActivityFeedProps {
   items: ActivityItem[] | null
   loading: boolean
+  viewAllHref?: string
 }
 
 const PAGE_SIZES = [5, 10, 20, 50] as const
@@ -40,7 +41,7 @@ const KIND_THEME: Record<ActivityKind, KindTheme> = {
 
 import { useTranslations } from 'next-intl'
 
-export function ActivityFeed({ items, loading }: ActivityFeedProps) {
+export function ActivityFeed({ items, loading, viewAllHref = '/inbox' }: ActivityFeedProps) {
   const t = useTranslations('Dashboard.activityFeed')
   // Start at 5 — a quick scan of the most recent events without
   // dominating vertical real estate. User expands explicitly via the
@@ -61,7 +62,7 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
       <header className="flex items-center justify-between border-b border-border px-5 py-4">
         <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
         <Link
-          href="/inbox"
+          href={viewAllHref}
           className="text-xs font-medium text-primary hover:text-primary/80"
         >
           {t('viewAll')}

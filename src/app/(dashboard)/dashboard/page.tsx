@@ -1,234 +1,219 @@
 "use client"
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
-import { formatCurrency } from '@/lib/currency'
-import {
-  MessageSquare,
-  UserPlus,
-  DollarSign,
-  Send,
-} from 'lucide-react'
+import { GitBranch, Plus } from 'lucide-react'
+import type { Deal, Pipeline, PipelineStage } from '@/types'
 
-import {
-  loadActivity,
-  loadConversationsSeries,
-  loadMetrics,
-  loadPipelineDonut,
-  loadResponseTime,
-} from '@/lib/dashboard/queries'
-import type {
-  ActivityItem,
-  ConversationsSeriesPoint,
-  MetricsBundle,
-  PipelineDonutData,
-  ResponseTimeSummary,
-} from '@/lib/dashboard/types'
+import { loadPipelines, loadPipelineStages, loadPipelineDeals } from '@/lib/pipelines/queries'
+import { buildPipelineActivity, buildPipelineDonutFromDeals } from '@/lib/dashboard/queries'
+import { getPeriodRange, isWithinRange, type DateRange, type PeriodKind } from '@/lib/dashboard/period'
+import type { ActivityItem, PipelineDonutData } from '@/lib/dashboard/types'
 
-import { MetricCard } from '@/components/dashboard/metric-card'
-import { SkeletonCard } from '@/components/dashboard/skeleton'
+import { PipelineSelector } from '@/components/pipelines/pipeline-selector'
+import { PipelineAnalytics } from '@/components/pipelines/pipeline-analytics'
 import { QuickActions } from '@/components/dashboard/quick-actions'
-import { ConversationsChart } from '@/components/dashboard/conversations-chart'
 import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
-import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
+import { PeriodFilter } from '@/components/dashboard/period-filter'
+import { UserFilter } from '@/components/dashboard/user-filter'
+import { ClosedDealsCard } from '@/components/dashboard/closed-deals-card'
 
 import { useTranslations } from 'next-intl'
 
-type RangeDays = 7 | 30 | 90
-
 export default function DashboardPage() {
   const t = useTranslations('Dashboard.page')
+  const tPipelines = useTranslations('Pipelines.page')
+  const tActivity = useTranslations('Dashboard.activityFeed')
   const { defaultCurrency } = useAuth()
-  const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
-  const [metricsLoading, setMetricsLoading] = useState(true)
+  const router = useRouter()
 
-  const [range, setRange] = useState<RangeDays>(30)
-  // Keep a cache per range so switching tabs doesn't re-fetch what we
-  // already have. Ranges the user hasn't opened yet stay null and
-  // trigger a fetch on first view.
-  const [series, setSeries] = useState<Record<RangeDays, ConversationsSeriesPoint[] | null>>({
-    7: null,
-    30: null,
-    90: null,
-  })
-  const [seriesLoading, setSeriesLoading] = useState(true)
+  const [pipelines, setPipelines] = useState<Pipeline[]>([])
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>('')
+  const [stages, setStages] = useState<PipelineStage[]>([])
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [pipeline, setPipeline] = useState<PipelineDonutData | null>(null)
-  const [pipelineLoading, setPipelineLoading] = useState(true)
+  const [periodKind, setPeriodKind] = useState<PeriodKind>('month')
+  const [customRange, setCustomRange] = useState<DateRange | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
-  const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(null)
-  const [responseTimeLoading, setResponseTimeLoading] = useState(true)
-
-  const [activity, setActivity] = useState<ActivityItem[] | null>(null)
-  const [activityLoading, setActivityLoading] = useState(true)
-
-  const loadAll = useCallback(() => {
+  // Initial pipeline list load. Unlike the Pipelines board, the
+  // dashboard never seeds a default pipeline — it just points the
+  // user at /pipelines (where that seeding already lives) when the
+  // account has none yet.
+  useEffect(() => {
+    let cancelled = false
     const db = createClient()
-
-    // Kick everything off in parallel. Each block has its own
-    // setState + finally so a slow query doesn't hold up faster
-    // sections — each widget shows its own skeleton independently.
-    void loadMetrics(db)
-      .then((m) => setMetrics(m))
-      .catch((err) => console.error('[dashboard] metrics failed:', err))
-      .finally(() => setMetricsLoading(false))
-
-    void loadConversationsSeries(db, 30)
-      .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
-      .catch((err) => console.error('[dashboard] series failed:', err))
-      .finally(() => setSeriesLoading(false))
-
-    void loadPipelineDonut(db)
-      .then((p) => setPipeline(p))
-      .catch((err) => console.error('[dashboard] pipeline failed:', err))
-      .finally(() => setPipelineLoading(false))
-
-    void loadResponseTime(db)
-      .then((r) => setResponseTime(r))
-      .catch((err) => console.error('[dashboard] response time failed:', err))
-      .finally(() => setResponseTimeLoading(false))
-
-    // Fetch up to 50 so the biggest page-size option in the feed
-    // (50 rows) is already in memory — switching sizes then becomes
-    // a pure client-side slice with no extra round trip.
-    void loadActivity(db, 50)
-      .then((a) => setActivity(a))
-      .catch((err) => console.error('[dashboard] activity failed:', err))
-      .finally(() => setActivityLoading(false))
+    ;(async () => {
+      const list = await loadPipelines(db)
+      if (cancelled) return
+      setPipelines(list)
+      setSelectedPipelineId((prev) =>
+        prev && list.some((p) => p.id === prev) ? prev : (list[0]?.id ?? ''),
+      )
+      setLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
+  // Load stages + deals whenever the selected pipeline changes.
   useEffect(() => {
-    loadAll()
-  }, [loadAll])
+    if (!selectedPipelineId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStages([])
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDeals([])
+      return
+    }
+    let cancelled = false
+    const db = createClient()
+    ;(async () => {
+      const [s, d] = await Promise.all([
+        loadPipelineStages(db, selectedPipelineId),
+        loadPipelineDeals(db, selectedPipelineId),
+      ])
+      if (cancelled) return
+      setStages(s)
+      setDeals(d)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedPipelineId])
 
-  // Range switch handler — kept in an event callback (not an effect)
-  // so the setState calls stay out of the react-hooks/set-state-in-effect
-  // rule's way. The cached bucket check means switching back to a
-  // previously-viewed range is instant and doesn't re-fetch.
-  const handleRangeChange = useCallback(
-    (r: RangeDays) => {
-      setRange(r)
-      if (series[r] !== null) return
-      setSeriesLoading(true)
-      const db = createClient()
-      loadConversationsSeries(db, r)
-        .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
-        .catch((err) => console.error('[dashboard] series failed:', err))
-        .finally(() => setSeriesLoading(false))
-    },
-    [series],
+  // Switching pipeline resets the filters — a period/user combo from a
+  // different pipeline isn't necessarily meaningful here (different
+  // team, different volume).
+  const handleSelectPipeline = useCallback((id: string) => {
+    setSelectedPipelineId(id)
+    setPeriodKind('month')
+    setCustomRange(null)
+    setUserId(null)
+  }, [])
+
+  const periodRange = useMemo(
+    () => getPeriodRange(periodKind, customRange ?? undefined),
+    [periodKind, customRange],
   )
+
+  // User filter applies everywhere. The period filter, per spec, scopes
+  // "what's in the funnel" (created_at cohort) for the metric cards and
+  // the donut — but the activity feed has its own reading of the same
+  // period (created OR updated), so it filters the user-only subset
+  // itself via buildPipelineActivity's periodRange param instead of
+  // this array.
+  const dealsForUser = useMemo(
+    () => (userId ? deals.filter((d) => d.user_id === userId) : deals),
+    [deals, userId],
+  )
+  const dealsForPeriodAndUser = useMemo(
+    () => dealsForUser.filter((d) => isWithinRange(d.created_at, periodRange)),
+    [dealsForUser, periodRange],
+  )
+
+  const donut: PipelineDonutData = buildPipelineDonutFromDeals(stages, dealsForPeriodAndUser)
+  const activity: ActivityItem[] = buildPipelineActivity(
+    stages,
+    dealsForUser,
+    50,
+    {
+      inStage: (title, stage) => tActivity('dealInStage', { title, stage }),
+      updated: (title) => tActivity('dealUpdated', { title }),
+    },
+    periodRange,
+  )
+
+  const activityHref = `/dashboard/activity?pipeline=${selectedPipelineId}&period=${periodKind}`
+
+  const handleManage = useCallback(() => {
+    router.push('/pipelines')
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+        <div className="h-40 w-full animate-pulse rounded-xl bg-muted/50" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('description')}
-        </p>
-      </div>
-
-      {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metricsLoading || !metrics ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          <>
-            <MetricCard
-              title={t('activeConversations')}
-              value={metrics.activeConversations.current.toLocaleString()}
-              icon={MessageSquare}
-              delta={{
-                sign: metrics.activeConversations.previous,
-                label: deltaLabel(
-                  metrics.activeConversations.previous, 
-                  t('newTodayVsYesterday'), 
-                  t('noChange', { suffix: t('newTodayVsYesterday') })
-                ),
-              }}
-            />
-            <MetricCard
-              title={t('newContactsToday')}
-              value={metrics.newContactsToday.current.toLocaleString()}
-              icon={UserPlus}
-              delta={{
-                sign:
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                label: deltaLabel(
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                  t('vsYesterday'),
-                  t('noChange', { suffix: t('vsYesterday') })
-                ),
-              }}
-            />
-            <MetricCard
-              title={t('openDealsValue')}
-              value={formatCurrency(metrics.openDealsValue, defaultCurrency)}
-              icon={DollarSign}
-              subtitle={t('openDeals', { count: metrics.openDealsCount })}
-            />
-            <MetricCard
-              title={t('messagesSentToday')}
-              value={metrics.messagesSentToday.current.toLocaleString()}
-              icon={Send}
-              delta={{
-                sign:
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                label: deltaLabel(
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                  t('vsYesterday'),
-                  t('noChange', { suffix: t('vsYesterday') })
-                ),
-              }}
-            />
-          </>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
+        </div>
+        {pipelines.length > 0 && (
+          <PipelineSelector
+            pipelines={pipelines}
+            selectedId={selectedPipelineId}
+            onSelect={handleSelectPipeline}
+            onManage={handleManage}
+            placeholderLabel={tPipelines('selectPipeline')}
+            emptyLabel={tPipelines('noPipelinesYet')}
+            manageLabel={tPipelines('managePipelines')}
+          />
         )}
       </div>
 
-      {/* Quick actions */}
       <QuickActions />
 
-      {/* Charts row */}
-      {/* items-stretch (the grid default) stretches the two columns to
-          match the tallest sibling; adding h-full on each wrapper and
-          on the inner panels makes both cards actually fill that
-          stretched height so their rounded borders line up. Without
-          this, the pipeline card rendered at its natural (shorter)
-          height while the line chart drove the row height. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="h-full lg:col-span-3">
-          <ConversationsChart
-            series={series}
-            loading={seriesLoading}
-            range={range}
-            onRangeChange={handleRangeChange}
-          />
+      {pipelines.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20">
+          <GitBranch className="h-12 w-12 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-medium text-foreground">
+            {t('noPipelinesTitle')}
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">{t('noPipelinesDesc')}</p>
+          <Link
+            href="/pipelines"
+            className="mt-4 inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            {t('goToPipelines')}
+          </Link>
         </div>
-        <div className="h-full lg:col-span-2">
-          <PipelineDonut
-            data={pipeline}
-            loading={pipelineLoading}
-            currency={defaultCurrency}
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <PeriodFilter
+              kind={periodKind}
+              custom={customRange}
+              onChange={(kind, custom) => {
+                setPeriodKind(kind)
+                setCustomRange(custom ?? null)
+              }}
+            />
+            <UserFilter deals={deals} selectedUserId={userId} onChange={setUserId} />
+          </div>
+
+          <PipelineAnalytics
+            stages={stages}
+            deals={dealsForPeriodAndUser}
+            periodRange={periodRange}
           />
-        </div>
-      </div>
 
-      {/* Response time */}
-      <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+            <div className="h-full lg:col-span-3">
+              <ActivityFeed items={activity} loading={false} viewAllHref={activityHref} />
+            </div>
+            <div className="h-full lg:col-span-2">
+              <PipelineDonut data={donut} loading={false} currency={defaultCurrency} />
+            </div>
+          </div>
 
-      {/* Activity feed */}
-      <ActivityFeed items={activity} loading={activityLoading} />
+          <ClosedDealsCard deals={dealsForUser} />
+        </>
+      )}
     </div>
   )
-}
-
-// ------------------------------------------------------------
-
-function deltaLabel(delta: number, suffix: string, noChangeLabel: string): string {
-  if (delta === 0) return noChangeLabel
-  const sign = delta > 0 ? '+' : ''
-  return `${sign}${delta.toLocaleString()} ${suffix}`
 }

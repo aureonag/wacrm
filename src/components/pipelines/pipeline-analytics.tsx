@@ -24,6 +24,11 @@ import { useTranslations } from "next-intl";
 interface PipelineAnalyticsProps {
   stages: PipelineStage[];
   deals: Deal[];
+  /** When set, the won/lost cards count by `closed_at` within this range
+   *  instead of the current calendar month — used by the dashboard's
+   *  period filter. Omitted on the Pipelines board, which keeps the
+   *  original "this month" behaviour. */
+  periodRange?: { start: Date; end: Date };
 }
 
 /**
@@ -46,7 +51,7 @@ function computeStageProbability(
   return 0.1 + t * (0.9 - 0.1);
 }
 
-export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
+export function PipelineAnalytics({ stages, deals, periodRange }: PipelineAnalyticsProps) {
   const t = useTranslations("Pipelines.analytics");
   const { defaultCurrency } = useAuth();
   const sortedStages = useMemo(
@@ -70,28 +75,35 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
       return sum + Number(d.value || 0) * prob;
     }, 0);
 
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisMonth = (d: Deal) => {
-      const ts = d.updated_at ?? d.created_at;
+    // Without a periodRange (the Pipelines board's plain usage), keep the
+    // original "this calendar month" reading, approximated from
+    // updated_at since older deals predate the closed_at column. With a
+    // periodRange (the dashboard's period filter), count by the precise
+    // closed_at the migration 040 trigger stamps on the won/lost
+    // transition — accurate regardless of later unrelated edits.
+    const inWindow = (d: Deal) => {
+      if (periodRange) {
+        if (!d.closed_at) return false;
+        const t = new Date(d.closed_at).getTime();
+        return t >= periodRange.start.getTime() && t <= periodRange.end.getTime();
+      }
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const ts = d.closed_at ?? d.updated_at ?? d.created_at;
       return ts ? new Date(ts) >= monthStart : false;
     };
-    const wonThisMonth = deals.filter(
-      (d) => d.status === "won" && thisMonth(d),
-    ).length;
-    const lostThisMonth = deals.filter(
-      (d) => d.status === "lost" && thisMonth(d),
-    ).length;
+    const wonInWindow = deals.filter((d) => d.status === "won" && inWindow(d)).length;
+    const lostInWindow = deals.filter((d) => d.status === "lost" && inWindow(d)).length;
 
     return {
       totalCount,
       totalValue,
       avgValue,
       weightedValue,
-      wonThisMonth,
-      lostThisMonth,
+      wonInWindow,
+      lostInWindow,
     };
-  }, [deals, sortedStages]);
+  }, [deals, sortedStages, periodRange]);
 
   return (
     <TooltipProvider>
@@ -126,16 +138,16 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
         />
         <Metric
           icon={<Trophy className="h-4 w-4 text-primary" />}
-          label={t("wonThisMonth")}
-          value={String(stats.wonThisMonth)}
-          tooltip={t("wonThisMonthTooltip")}
+          label={periodRange ? t("wonInPeriod") : t("wonThisMonth")}
+          value={String(stats.wonInWindow)}
+          tooltip={periodRange ? t("wonInPeriodTooltip") : t("wonThisMonthTooltip")}
           t={t}
         />
         <Metric
           icon={<XCircle className="h-4 w-4 text-red-400" />}
-          label={t("lostThisMonth")}
-          value={String(stats.lostThisMonth)}
-          tooltip={t("lostThisMonthTooltip")}
+          label={periodRange ? t("lostInPeriod") : t("lostThisMonth")}
+          value={String(stats.lostInWindow)}
+          tooltip={periodRange ? t("lostInPeriodTooltip") : t("lostThisMonthTooltip")}
           t={t}
         />
       </div>

@@ -104,15 +104,10 @@
   "Dashboard": {
     "page": {
       "title": "Dashboard",
-      "description": "Análises em tempo real de conversas, contatos, negócios, transmissões e automações.",
-      "activeConversations": "Conversas ativas",
-      "newContactsToday": "Novos contatos hoje",
-      "openDealsValue": "Valor em negócios abertos",
-      "messagesSentToday": "Mensagens enviadas hoje",
-      "newTodayVsYesterday": "novos hoje vs. ontem",
-      "vsYesterday": "vs. ontem",
-      "openDeals": "{count} {count, plural, =1 {negócio aberto} other {negócios abertos}}",
-      "noChange": "Sem alteração {suffix}"
+      "description": "Escolha um pipeline para ver seus negócios, a divisão por etapa e a atividade recente.",
+      "noPipelinesTitle": "Ainda não há pipelines",
+      "noPipelinesDesc": "Crie um pipeline para ver o dashboard dele aqui.",
+      "goToPipelines": "Ir para Pipelines"
     },
     "quickActions": {
       "newContact": "Novo contato",
@@ -124,25 +119,15 @@
       "title": "Atividade recente",
       "viewAll": "Ver tudo →",
       "noActivity": "Ainda sem atividade",
-      "noActivityHint": "Atividades de mensagens, negócios, transmissões e automações vão aparecer aqui.",
+      "noActivityHint": "Negócios criados ou atualizados neste pipeline vão aparecer aqui.",
       "showingOf": "Mostrando {visible} de {totalLoaded}{plus}",
       "show": "Mostrar",
       "timeS": "há {sec}s",
       "timeM": "há {min}min",
       "timeH": "há {hr}h",
-      "timeD": "há {day}d"
-    },
-    "conversationsChart": {
-      "title": "Conversas ao longo do tempo",
-      "description": "Volume diário de mensagens por direção",
-      "days": "{count} dias",
-      "noActivity": "Nenhuma atividade de mensagens neste período",
-      "noActivityHint": "Envie ou receba mensagens para começar a preencher este gráfico.",
-      "incoming": "Recebidas",
-      "outgoing": "Enviadas",
-      "tooltipIncoming": "{count} recebidas",
-      "tooltipOutgoing": "{count} enviadas",
-      "ariaLabel": "Conversas por dia"
+      "timeD": "há {day}d",
+      "dealInStage": "Negócio \"{title}\" em {stage}",
+      "dealUpdated": "Negócio \"{title}\" atualizado"
     },
     "pipelineDonut": {
       "title": "Valor do pipeline",
@@ -153,14 +138,45 @@
       "total": "Total",
       "ariaLabel": "Valor do pipeline por etapa"
     },
-    "responseTimeChart": {
-      "title": "Tempo médio da primeira resposta",
-      "description": "Minutos para responder à primeira mensagem não respondida de um cliente, por dia da semana",
-      "target": "meta {minutes}min",
-      "thisWeek": "Esta semana:",
-      "lastWeek": "Semana passada:",
-      "noReplies": "Ainda não há respostas registradas",
-      "noRepliesHint": "Este gráfico se preenche conforme você responde mensagens de clientes."
+    "periodFilter": {
+      "today": "Hoje",
+      "yesterday": "Ontem",
+      "week": "Semana",
+      "month": "Mês",
+      "custom": "Período",
+      "from": "De",
+      "to": "Até",
+      "apply": "Aplicar"
+    },
+    "userFilter": {
+      "label": "Usuário",
+      "all": "Todos"
+    },
+    "closedDeals": {
+      "title": "Contratos fechados por mês",
+      "description": "Negócios ganhos, pelo mês em que fecharam",
+      "q1": "1º Trimestre",
+      "q2": "2º Trimestre",
+      "q3": "3º Trimestre",
+      "q4": "4º Trimestre",
+      "h1": "1º Semestre",
+      "h2": "2º Semestre",
+      "year": "Ano",
+      "custom": "Período personalizado",
+      "from": "De",
+      "to": "Até",
+      "apply": "Aplicar",
+      "rangeTooLong": "Escolha um período de até {max} meses",
+      "dealsLabel": "Negócios",
+      "valueLabel": "Valor",
+      "noData": "Nenhum negócio fechado neste período"
+    },
+    "activityPage": {
+      "title": "Atividade",
+      "titleFor": "Atividade — {pipeline}",
+      "back": "Voltar ao Dashboard",
+      "showingPagination": "Mostrando {start}-{end} de {total}",
+      "pageCount": "Página {page} de {total}"
     },
     "emptyState": {
       "title": "Ainda não há dados suficientes"
@@ -644,6 +660,10 @@
       "wonThisMonthTooltip": "Negócios marcados como Ganho desde o primeiro dia do mês atual.",
       "lostThisMonth": "Perdidos este mês",
       "lostThisMonthTooltip": "Negócios marcados como Perdido desde o primeiro dia do mês atual.",
+      "wonInPeriod": "Ganhos no período",
+      "wonInPeriodTooltip": "Negócios marcados como Ganho dentro do período selecionado, pela data exata de fechamento.",
+      "lostInPeriod": "Perdidos no período",
+      "lostInPeriodTooltip": "Negócios marcados como Perdido dentro do período selecionado, pela data exata de fechamento.",
       "howCalculated": "Como {label} é calculado"
     }
   },

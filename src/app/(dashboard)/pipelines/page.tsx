@@ -7,6 +7,7 @@ import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealForm } from "@/components/pipelines/deal-form";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
+import { PipelineSelector } from "@/components/pipelines/pipeline-selector";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,21 +16,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, Plus, ChevronDown, Settings } from "lucide-react";
+import { GitBranch, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
 import { useTranslations } from "next-intl";
+import {
+  loadPipelines as fetchPipelines,
+  loadPipelineStages,
+  loadPipelineDeals,
+} from "@/lib/pipelines/queries";
 
 // Pipeline creation is admin-class (settings-tier write under
 // the new RLS); deal creation is operational and only requires
@@ -73,39 +72,15 @@ export default function PipelinesPage() {
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
 
-  const loadPipelines = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("pipelines")
-      .select("*")
-      .order("created_at");
-    if (error) {
-      console.error("Failed to load pipelines:", error.message);
-      return [];
-    }
-    return data ?? [];
-  }, [supabase]);
+  const loadPipelines = useCallback(() => fetchPipelines(supabase), [supabase]);
 
   const loadStages = useCallback(
-    async (pipelineId: string) => {
-      const { data } = await supabase
-        .from("pipeline_stages")
-        .select("*")
-        .eq("pipeline_id", pipelineId)
-        .order("position");
-      return data ?? [];
-    },
+    (pipelineId: string) => loadPipelineStages(supabase, pipelineId),
     [supabase],
   );
 
   const loadDeals = useCallback(
-    async (pipelineId: string) => {
-      const { data } = await supabase
-        .from("deals")
-        .select("*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*)")
-        .eq("pipeline_id", pipelineId)
-        .order("created_at", { ascending: false });
-      return (data ?? []) as Deal[];
-    },
+    (pipelineId: string) => loadPipelineDeals(supabase, pipelineId),
     [supabase],
   );
 
@@ -318,52 +293,15 @@ export default function PipelinesPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {/* Pipeline selector dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors data-[popup-open]:bg-muted"
-            >
-              <GitBranch className="h-4 w-4 text-primary" />
-              <span className="font-semibold">
-                {selectedPipeline?.name ?? t("selectPipeline")}
-              </span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="w-64 border-border bg-popover text-popover-foreground"
-            >
-              {pipelines.length === 0 && (
-                <DropdownMenuItem disabled className="text-muted-foreground">
-                  {t("noPipelinesYet")}
-                </DropdownMenuItem>
-              )}
-              {pipelines.map((p) => (
-                <DropdownMenuItem
-                  key={p.id}
-                  onClick={() => setSelectedPipelineId(p.id)}
-                  className={
-                    p.id === selectedPipelineId
-                      ? "text-primary"
-                      : "text-popover-foreground"
-                  }
-                >
-                  <GitBranch className="mr-2 h-3.5 w-3.5" />
-                  {p.name}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator className="bg-border" />
-              {selectedPipeline && (
-                <DropdownMenuItem
-                  onClick={() => setSettingsOpen(true)}
-                  className="text-popover-foreground"
-                >
-                  <Settings className="mr-2 h-3.5 w-3.5" />
-                  {t("managePipelines")}
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <PipelineSelector
+            pipelines={pipelines}
+            selectedId={selectedPipelineId}
+            onSelect={setSelectedPipelineId}
+            onManage={() => setSettingsOpen(true)}
+            placeholderLabel={t("selectPipeline")}
+            emptyLabel={t("noPipelinesYet")}
+            manageLabel={t("managePipelines")}
+          />
         </div>
 
         <div className="flex items-center gap-2">

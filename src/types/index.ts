@@ -386,9 +386,14 @@ export interface Deal {
   status?: DealStatus;
   created_at: string;
   updated_at?: string;
+  /** Set by a DB trigger the instant status flips to won/lost (migration 040);
+   *  cleared back to null if the deal is reopened. Null while status is 'open'. */
+  closed_at?: string | null;
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;
+  /** Who created the deal — joined in for the dashboard's user filter. */
+  creator?: Profile;
 }
 
 export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';

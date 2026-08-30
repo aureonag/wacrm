@@ -104,15 +104,10 @@
   "Dashboard": {
     "page": {
       "title": "Dashboard",
-      "description": "Live analytics across conversations, contacts, deals, broadcasts, and automations.",
-      "activeConversations": "Active Conversations",
-      "newContactsToday": "New Contacts Today",
-      "openDealsValue": "Open Deals Value",
-      "messagesSentToday": "Messages Sent Today",
-      "newTodayVsYesterday": "new today vs yesterday",
-      "vsYesterday": "vs yesterday",
-      "openDeals": "{count} open {count, plural, =1 {deal} other {deals}}",
-      "noChange": "No change {suffix}"
+      "description": "Pick a pipeline to see its deals, stage breakdown, and recent activity.",
+      "noPipelinesTitle": "No pipelines yet",
+      "noPipelinesDesc": "Create a pipeline to see its dashboard here.",
+      "goToPipelines": "Go to Pipelines"
     },
     "quickActions": {
       "newContact": "New Contact",
@@ -124,25 +119,15 @@
       "title": "Recent Activity",
       "viewAll": "View all →",
       "noActivity": "No activity yet",
-      "noActivityHint": "Activity from messages, deals, broadcasts, and automations will appear here.",
+      "noActivityHint": "Deals created or updated in this pipeline will appear here.",
       "showingOf": "Showing {visible} of {totalLoaded}{plus}",
       "show": "Show",
       "timeS": "{sec}s ago",
       "timeM": "{min}m ago",
       "timeH": "{hr}h ago",
-      "timeD": "{day}d ago"
-    },
-    "conversationsChart": {
-      "title": "Conversations Over Time",
-      "description": "Daily message volume by direction",
-      "days": "{count} days",
-      "noActivity": "No message activity in this range",
-      "noActivityHint": "Send or receive messages to start populating this chart.",
-      "incoming": "Incoming",
-      "outgoing": "Outgoing",
-      "tooltipIncoming": "{count} incoming",
-      "tooltipOutgoing": "{count} outgoing",
-      "ariaLabel": "Conversations per day"
+      "timeD": "{day}d ago",
+      "dealInStage": "Deal \"{title}\" in {stage}",
+      "dealUpdated": "Deal \"{title}\" updated"
     },
     "pipelineDonut": {
       "title": "Pipeline Value",
@@ -153,14 +138,45 @@
       "total": "Total",
       "ariaLabel": "Pipeline value by stage"
     },
-    "responseTimeChart": {
-      "title": "Average First Response Time",
-      "description": "Minutes to reply to a customer's first unreplied message, by weekday",
-      "target": "target {minutes}m",
-      "thisWeek": "This week:",
-      "lastWeek": "Last week:",
-      "noReplies": "No replies recorded yet",
-      "noRepliesHint": "This chart fills in as you reply to customer messages."
+    "periodFilter": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Week",
+      "month": "Month",
+      "custom": "Period",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply"
+    },
+    "userFilter": {
+      "label": "User",
+      "all": "All"
+    },
+    "closedDeals": {
+      "title": "Contracts closed by month",
+      "description": "Won deals, by the month they closed",
+      "q1": "Q1",
+      "q2": "Q2",
+      "q3": "Q3",
+      "q4": "Q4",
+      "h1": "1st half",
+      "h2": "2nd half",
+      "year": "Year",
+      "custom": "Custom period",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "rangeTooLong": "Pick a range of {max} months or less",
+      "dealsLabel": "Deals",
+      "valueLabel": "Value",
+      "noData": "No deals closed in this period"
+    },
+    "activityPage": {
+      "title": "Activity",
+      "titleFor": "Activity — {pipeline}",
+      "back": "Back to Dashboard",
+      "showingPagination": "Showing {start}-{end} of {total}",
+      "pageCount": "Page {page} of {total}"
     },
     "emptyState": {
       "title": "Not enough data yet"
@@ -644,6 +660,10 @@
       "wonThisMonthTooltip": "Deals marked as Won since the first day of the current month.",
       "lostThisMonth": "Lost This Month",
       "lostThisMonthTooltip": "Deals marked as Lost since the first day of the current month.",
+      "wonInPeriod": "Won in Period",
+      "wonInPeriodTooltip": "Deals marked as Won within the selected period, by their exact close date.",
+      "lostInPeriod": "Lost in Period",
+      "lostInPeriodTooltip": "Deals marked as Lost within the selected period, by their exact close date.",
       "howCalculated": "How {label} is calculated"
     }
   },
