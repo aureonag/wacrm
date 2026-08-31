@@ -155,7 +155,11 @@ export function ProspectingExternalImport({ selections, onRunStarted }: Prospect
                   value={pastedText}
                   onChange={(e) => setPastedText(e.target.value)}
                   placeholder={t("pastePlaceholder")}
-                  className="min-h-[180px] font-mono text-xs"
+                  // A pesquisa real pode devolver um CSV de várias linhas
+                  // bem longas — sem um teto de altura, `field-sizing:
+                  // content` (padrão do Textarea) deixa a caixa (e o
+                  // diálogo inteiro) crescer sem limite até estourar a tela.
+                  className="min-h-[180px] max-h-[340px] overflow-y-auto font-mono text-xs"
                 />
                 <Button type="button" size="sm" onClick={handleSubmitPaste} disabled={submitting || !pastedText.trim()}>
                   {t("importSubmit")}
