@@ -702,7 +702,7 @@ export default function DealDetailPage() {
                         </span>
                         <span className="text-[11px] text-muted-foreground">{relativeTime(c.created_at, tActivityFeed)}</span>
                       </div>
-                      <p className="mt-1 text-sm text-foreground">{c.body}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{c.body}</p>
                     </div>
                   ))
                 )}
