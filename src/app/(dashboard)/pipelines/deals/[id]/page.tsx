@@ -53,11 +53,33 @@ import {
   Trash2,
   Loader2,
   CalendarClock,
+  Radar,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 import { formatStepDueDate } from "@/lib/deals/next-step-date";
+
+interface ProspectingCandidateDetail {
+  id: string;
+  icp_score: number | null;
+  icp_grade: "A" | "B" | "C" | null;
+  score_reason: string | null;
+  google_rating: number | null;
+  google_review_count: number | null;
+  google_maps_url: string | null;
+  website: string | null;
+  instagram: string | null;
+  updated_at: string;
+}
+
+interface ProspectingSourceDetail {
+  id: string;
+  source_type: "google_places" | "website" | "instagram" | "manual";
+  source_url: string | null;
+  collected_at: string;
+}
 
 function Chip({
   selected,
@@ -106,6 +128,8 @@ export default function DealDetailPage() {
   const [dealFields, setDealFields] = useState<CustomField[]>([]);
   const [dealFieldValues, setDealFieldValues] = useState<Record<string, string>>({});
   const [catalog, setCatalog] = useState<ServiceCatalogItem[]>([]);
+  const [prospectingCandidate, setProspectingCandidate] = useState<ProspectingCandidateDetail | null>(null);
+  const [prospectingSources, setProspectingSources] = useState<ProspectingSourceDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusAction, setStatusAction] = useState<DealStatus | null>(null);
 
@@ -141,6 +165,26 @@ export default function DealDetailPage() {
         }
         setDealFieldValues(valueMap);
         setCatalog((catalogRows.data ?? []) as ServiceCatalogItem[]);
+
+        // "Inteligência comercial" — only present for a deal imported
+        // from Prospecção (deal.prospecting_candidate_id set on create).
+        if (d.prospecting_candidate_id) {
+          const [{ data: candidateRow }, { data: sourceRows }] = await Promise.all([
+            supabase
+              .from("prospecting_candidates")
+              .select("id, icp_score, icp_grade, score_reason, google_rating, google_review_count, google_maps_url, website, instagram, updated_at")
+              .eq("id", d.prospecting_candidate_id)
+              .maybeSingle(),
+            supabase
+              .from("prospecting_sources")
+              .select("id, source_type, source_url, collected_at")
+              .eq("candidate_id", d.prospecting_candidate_id)
+              .order("collected_at", { ascending: false }),
+          ]);
+          if (cancelled) return;
+          setProspectingCandidate((candidateRow as ProspectingCandidateDetail | null) ?? null);
+          setProspectingSources((sourceRows ?? []) as ProspectingSourceDetail[]);
+        }
       }
       setLoading(false);
     })();
@@ -939,6 +983,94 @@ export default function DealDetailPage() {
               <p className="text-xs text-muted-foreground">{t("noContact")}</p>
             )}
           </div>
+
+          {prospectingCandidate && (
+            <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Radar className="h-3.5 w-3.5 text-primary" />
+                {t("commercialIntelligence")}
+              </h3>
+
+              {prospectingCandidate.icp_grade && (
+                <div className="rounded-lg bg-muted/50 p-2.5">
+                  <p className="text-sm font-semibold text-foreground">
+                    {t("icpGradeLabel", { grade: prospectingCandidate.icp_grade, score: prospectingCandidate.icp_score ?? 0 })}
+                  </p>
+                  {prospectingCandidate.score_reason && (
+                    <p className="mt-1 text-xs text-muted-foreground">{prospectingCandidate.score_reason}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-1.5 text-sm">
+                {prospectingCandidate.google_rating !== null && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">{t("googleRating")}</span>
+                    <span className="text-foreground tabular-nums">
+                      {prospectingCandidate.google_rating.toFixed(1)} ({prospectingCandidate.google_review_count ?? 0})
+                    </span>
+                  </div>
+                )}
+                {prospectingCandidate.website && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">{t("analyzedWebsite")}</span>
+                    <a
+                      href={prospectingCandidate.website}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 truncate text-primary hover:underline"
+                    >
+                      {t("linkLabel")} <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  </div>
+                )}
+                {prospectingCandidate.instagram && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">{t("instagram")}</span>
+                    <a
+                      href={`https://instagram.com/${prospectingCandidate.instagram}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate text-primary hover:underline"
+                    >
+                      @{prospectingCandidate.instagram}
+                    </a>
+                  </div>
+                )}
+                {prospectingCandidate.google_maps_url && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">{t("googleMaps")}</span>
+                    <a
+                      href={prospectingCandidate.google_maps_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      {t("linkLabel")} <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {prospectingSources.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs font-medium text-muted-foreground">{t("sources")}</p>
+                  <ul className="space-y-1">
+                    {prospectingSources.map((s) => (
+                      <li key={s.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="capitalize">{s.source_type.replace("_", " ")}</span>
+                        <span>{relativeTime(s.collected_at, tActivityFeed)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-[11px] text-muted-foreground">
+                {t("lastUpdated", { time: relativeTime(prospectingCandidate.updated_at, tActivityFeed) })}
+              </p>
+            </div>
+          )}
 
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <h3 className="text-sm font-semibold text-foreground">{t("nextSteps")}</h3>
