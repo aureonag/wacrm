@@ -1454,7 +1454,29 @@
       "removeDialogDesc": "<bold>{name}</bold>을(를) 이 계정에서 제거하시겠습니까? 이 계정에서 로그아웃되며 다음 로그인 시 새로운 개인 계정이 발급됩니다. 로그인 정보 자체는 삭제되지 않습니다.",
       "cancel": "취소",
       "removing": "제거 중...",
-      "removeBtn": "멤버 제거"
+      "removeBtn": "멤버 제거",
+      "resetPasswordAction": "비밀번호 재설정"
+    },
+    "resetPassword": {
+      "title": "비밀번호 재설정",
+      "desc": "{name}의 새 비밀번호를 설정하세요. 기존 비밀번호는 즉시 사용할 수 없게 됩니다.",
+      "newPasswordLabel": "새 비밀번호",
+      "passwordPlaceholder": "비밀번호를 입력하거나 생성하세요",
+      "generatePassword": "임의 비밀번호 생성",
+      "cancel": "취소",
+      "saving": "저장 중...",
+      "confirmBtn": "비밀번호 재설정",
+      "tooShort": "비밀번호는 최소 {min}자 이상이어야 합니다",
+      "failed": "비밀번호를 재설정할 수 없습니다",
+      "doneTitle": "비밀번호가 재설정되었습니다",
+      "doneDesc": "{name}의 비밀번호가 업데이트되었습니다. 이제 새 비밀번호로 로그인할 수 있습니다.",
+      "saveNow": "이 비밀번호를 지금 저장하세요.",
+      "saveHint": "비밀번호는 평문으로 저장되지 않습니다 — 이 창을 닫으면 사라집니다.",
+      "sendViaWhatsApp": "WhatsApp으로 보내기",
+      "done": "완료",
+      "copied": "복사되었습니다",
+      "clipboardBlocked": "클립보드 접근이 차단되었습니다 — 직접 복사하세요",
+      "whatsappMessage": "wacrm 비밀번호가 재설정되었습니다. 이메일: {email} — 새 비밀번호: {password}. 지금 바로 로그인할 수 있습니다."
     },
     "invite": {
       "inviteCreated": "초대가 생성되었습니다",

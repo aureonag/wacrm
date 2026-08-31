@@ -25,6 +25,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
+  KeyRound,
   Loader2,
   Mail,
   MailX,
@@ -73,6 +74,7 @@ import {
   PresenceDot,
 } from '@/components/presence/presence-dot';
 import { InviteMemberDialog } from './invite-member-dialog';
+import { ResetPasswordDialog } from './reset-password-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
 
@@ -136,6 +138,7 @@ export function MembersTab() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
+  const [resettingMember, setResettingMember] = useState<Member | null>(null);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
   );
@@ -455,6 +458,25 @@ export function MembersTab() {
                         state with a darker shade on hover so the
                         affordance reads at-a-glance. */}
                     {canManageMembers && !isOwnerRow && !isSelf && (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setResettingMember(member)}
+                              disabled={isBusy}
+                              className="border-border text-muted-foreground hover:bg-muted"
+                            />
+                          }
+                        >
+                          <KeyRound className="size-4" />
+                        </TooltipTrigger>
+                        <TooltipContent>{t('resetPasswordAction')}</TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {canManageMembers && !isOwnerRow && !isSelf && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -564,6 +586,14 @@ export function MembersTab() {
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         onCreated={loadEverything}
+      />
+
+      <ResetPasswordDialog
+        open={resettingMember !== null}
+        onOpenChange={(open) => {
+          if (!open) setResettingMember(null);
+        }}
+        member={resettingMember}
       />
 
       <Dialog

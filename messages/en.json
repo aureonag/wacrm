@@ -1454,7 +1454,29 @@
       "removeDialogDesc": "Remove <bold>{name}</bold> from the account? They'll be signed out of this account and given a fresh personal account on their next sign-in. Their login isn't deleted.",
       "cancel": "Cancel",
       "removing": "Removing...",
-      "removeBtn": "Remove member"
+      "removeBtn": "Remove member",
+      "resetPasswordAction": "Reset password"
+    },
+    "resetPassword": {
+      "title": "Reset password",
+      "desc": "Set a new password for {name}. Their current password stops working immediately.",
+      "newPasswordLabel": "New password",
+      "passwordPlaceholder": "Type or generate a password",
+      "generatePassword": "Generate random password",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "confirmBtn": "Reset password",
+      "tooShort": "Password must be at least {min} characters",
+      "failed": "Could not reset the password",
+      "doneTitle": "Password reset",
+      "doneDesc": "{name}'s password has been updated. They can sign in with the new password now.",
+      "saveNow": "Save this password now.",
+      "saveHint": "We never store the plaintext password — once you close this dialog it's gone.",
+      "sendViaWhatsApp": "Send via WhatsApp",
+      "done": "Done",
+      "copied": "Copied",
+      "clipboardBlocked": "Clipboard blocked — copy it manually",
+      "whatsappMessage": "Your wacrm password has been reset. Email: {email} — New password: {password}. You can sign in now."
     },
     "invite": {
       "inviteCreated": "Invite created",

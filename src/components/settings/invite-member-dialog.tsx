@@ -47,6 +47,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { generatePassword } from '@/lib/auth/generate-password';
 
 type InviteRole = 'admin' | 'agent' | 'viewer';
 type Mode = 'link' | 'direct';
@@ -70,17 +71,6 @@ const EXPIRY_OPTIONS = [
 // rather than letting the user submit and bounce off a 400.
 const MAX_LABEL_LEN = 80;
 const MIN_PASSWORD_LEN = 6;
-
-// Unambiguous charset — no 0/O/1/l/I — since an admin may be reading
-// this aloud or over WhatsApp to hand it off.
-const PASSWORD_CHARS =
-  'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-
-function generatePassword(length = 14): string {
-  const bytes = new Uint32Array(length);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (n) => PASSWORD_CHARS[n % PASSWORD_CHARS.length]).join('');
-}
 
 interface LinkResult {
   kind: 'link';

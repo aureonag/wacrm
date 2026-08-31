@@ -1454,7 +1454,29 @@
       "removeDialogDesc": "Remover <bold>{name}</bold> da conta? A pessoa será desconectada desta conta e receberá uma conta pessoal nova no próximo login. O login dela não é excluído.",
       "cancel": "Cancelar",
       "removing": "Removendo...",
-      "removeBtn": "Remover membro"
+      "removeBtn": "Remover membro",
+      "resetPasswordAction": "Redefinir senha"
+    },
+    "resetPassword": {
+      "title": "Redefinir senha",
+      "desc": "Defina uma nova senha para {name}. A senha atual dela para de funcionar imediatamente.",
+      "newPasswordLabel": "Nova senha",
+      "passwordPlaceholder": "Digite ou gere uma senha",
+      "generatePassword": "Gerar senha aleatória",
+      "cancel": "Cancelar",
+      "saving": "Salvando...",
+      "confirmBtn": "Redefinir senha",
+      "tooShort": "A senha deve ter pelo menos {min} caracteres",
+      "failed": "Não foi possível redefinir a senha",
+      "doneTitle": "Senha redefinida",
+      "doneDesc": "A senha de {name} foi atualizada. Ela já pode entrar com a nova senha.",
+      "saveNow": "Salve esta senha agora.",
+      "saveHint": "Nunca armazenamos a senha em texto puro — assim que você fechar esta janela, ela desaparece.",
+      "sendViaWhatsApp": "Enviar pelo WhatsApp",
+      "done": "Concluído",
+      "copied": "Copiado",
+      "clipboardBlocked": "Área de transferência bloqueada — copie manualmente",
+      "whatsappMessage": "Sua senha do wacrm foi redefinida. E-mail: {email} — Nova senha: {password}. Você já pode entrar."
     },
     "invite": {
       "inviteCreated": "Convite criado",
