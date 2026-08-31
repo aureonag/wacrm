@@ -816,6 +816,29 @@
       "aiNotConfiguredCta": "Go to AI Agents setup",
       "googleNotConfiguredBody": "Google Places isn't configured yet — company search will be limited until an administrator sets it up."
     },
+    "external": {
+      "title": "Research without AI/Google cost",
+      "subtitle": "Ask a Claude you already have (Claude Code/Desktop, with browser access) to research the companies, then paste the result or upload a spreadsheet here — no OpenAI or Google Places spend involved.",
+      "selectPipelineFirst": "Select a target pipeline on the side before continuing.",
+      "selectOneFrenteFirst": "Select exactly one frente comercial (Lead Generation or E-commerce AVR) on the side before generating the prompt.",
+      "nicheLabel": "Niche/segment",
+      "nichePlaceholder": "e.g. dental clinics",
+      "regionLabel": "Region (if relevant)",
+      "regionPlaceholder": "e.g. Santo André, SP",
+      "copyPromptButton": "Research with my Claude",
+      "promptCopied": "Prompt copied! Paste it into your Claude session.",
+      "promptCopyFailed": "Couldn't copy the prompt.",
+      "importButton": "Paste or upload results",
+      "importDialogTitle": "Import researched companies",
+      "pasteTab": "Paste text",
+      "uploadTab": "Upload file",
+      "pastePlaceholder": "Paste the CSV your Claude returned here...",
+      "uploadHint": "Accepts .csv and .xlsx, following the template's columns.",
+      "importSubmit": "Import",
+      "downloadTemplate": "Download spreadsheet template",
+      "importSuccess": "{inserted} compan(ies) imported, {skipped} row(s) skipped.",
+      "importFailed": "Couldn't import — check the file/text and try again."
+    },
     "chat": {
       "emptyStateHint": "Describe the companies you're looking for, or try one of these:",
       "suggestions": {

@@ -109,6 +109,7 @@ const baseRun = {
   id: "run-1",
   account_id: "acct-1",
   status: "queued",
+  origin: "ai_chat",
   pipeline_id: "pipe-1",
   entry_stage_id: "stage-1",
   requested_quantity: 4,
@@ -143,6 +144,19 @@ describe("advanceRun — queued", () => {
 
     expect(admin.tables.prospecting_runs[0].status).toBe("failed");
     expect(admin.tables.prospecting_runs[0].error).toBeTruthy();
+  });
+
+  it("skips straight to enriching for an external-origin run — candidates already exist, there's nothing to search", async () => {
+    const admin = fakeAdmin({
+      prospecting_runs: [{ ...baseRun, origin: "external_upload" }],
+      pipelines: [{ id: "pipe-1", account_id: "acct-1" }],
+      pipeline_stages: [{ id: "stage-1", pipeline_id: "pipe-1" }],
+    });
+
+    await advanceRun("run-1", admin as never);
+
+    expect(admin.tables.prospecting_runs[0].status).toBe("enriching");
+    expect(mocks.searchPlacesText).not.toHaveBeenCalled();
   });
 });
 

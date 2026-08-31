@@ -816,6 +816,29 @@
       "aiNotConfiguredCta": "Ir para a configuração de Agentes de IA",
       "googleNotConfiguredBody": "O Google Places ainda não está configurado — a busca de empresas ficará limitada até um administrador configurá-lo."
     },
+    "external": {
+      "title": "Pesquisar sem custo de IA/Google",
+      "subtitle": "Peça a um Claude que você já tem (Claude Code/Desktop, com navegador habilitado) para pesquisar as empresas, depois cole o resultado ou suba uma planilha aqui — sem gastar nada com OpenAI ou Google Places.",
+      "selectPipelineFirst": "Selecione um pipeline de destino ao lado antes de continuar.",
+      "selectOneFrenteFirst": "Selecione exatamente uma frente comercial (Lead Generation ou E-commerce AVR) ao lado antes de gerar o prompt.",
+      "nicheLabel": "Nicho/segmento",
+      "nichePlaceholder": "ex.: clínicas odontológicas",
+      "regionLabel": "Região (se relevante)",
+      "regionPlaceholder": "ex.: Santo André, SP",
+      "copyPromptButton": "Pesquisar com meu Claude",
+      "promptCopied": "Prompt copiado! Cole na conversa do seu Claude.",
+      "promptCopyFailed": "Não foi possível copiar o prompt.",
+      "importButton": "Colar ou subir resultados",
+      "importDialogTitle": "Importar empresas pesquisadas",
+      "pasteTab": "Colar texto",
+      "uploadTab": "Fazer upload",
+      "pastePlaceholder": "Cole aqui o CSV que o Claude devolveu...",
+      "uploadHint": "Aceita .csv e .xlsx, seguindo as colunas do modelo.",
+      "importSubmit": "Importar",
+      "downloadTemplate": "Baixar modelo de planilha",
+      "importSuccess": "{inserted} empresa(s) importada(s), {skipped} linha(s) ignorada(s).",
+      "importFailed": "Não foi possível importar — confira o arquivo/texto e tente novamente."
+    },
     "chat": {
       "emptyStateHint": "Descreva as empresas que você está buscando, ou tente uma destas:",
       "suggestions": {

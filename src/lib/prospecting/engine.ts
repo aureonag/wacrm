@@ -35,6 +35,7 @@ interface ProspectingRunRow {
   account_id: string;
   user_id: string | null;
   status: string;
+  origin: string;
   pipeline_id: string;
   entry_stage_id: string;
   requested_quantity: number;
@@ -106,7 +107,11 @@ async function stepQueued(admin: SupabaseClient, run: ProspectingRunRow): Promis
     await failRun(admin, run.account_id, run.id, "A etapa de destino não existe mais neste pipeline.");
     return;
   }
-  await admin.from("prospecting_runs").update({ status: "searching" }).eq("id", run.id);
+  // External-origin runs (paste/upload) arrive with candidates already
+  // inserted by `createExternalRun` — there's nothing for `searching`
+  // (Google Places) to do, so skip straight to enrichment.
+  const nextStatus = run.origin === "ai_chat" ? "searching" : "enriching";
+  await admin.from("prospecting_runs").update({ status: nextStatus }).eq("id", run.id);
 }
 
 async function stepSearching(admin: SupabaseClient, run: ProspectingRunRow): Promise<void> {

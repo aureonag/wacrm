@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ProspectingChat } from "@/components/prospecting/prospecting-chat";
+import { ProspectingExternalImport } from "@/components/prospecting/prospecting-external-import";
 import {
   ProspectingConfigCard,
   type ProspectingSelections,
@@ -67,6 +68,8 @@ export default function ProspectingPage() {
             selections={selections}
             onRunStarted={setActiveRunId}
           />
+
+          <ProspectingExternalImport selections={selections} onRunStarted={setActiveRunId} />
 
           {activeRunId && candidates.length > 0 && (
             <ProspectingResultsTable
