@@ -45,6 +45,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
   X,
@@ -196,6 +197,23 @@ export default function DealDetailPage() {
     toast.success(
       status === "won" ? t("toastMarkedWon") : status === "lost" ? t("toastMarkedLost") : t("toastReopened"),
     );
+  }
+
+  // ---- Delete deal (mistaken creation, test data, etc.) ----
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingDeal, setDeletingDeal] = useState(false);
+
+  async function handleDeleteDeal() {
+    if (!deal) return;
+    setDeletingDeal(true);
+    const { error } = await supabase.from("deals").delete().eq("id", deal.id);
+    setDeletingDeal(false);
+    if (error) {
+      toast.error(t("toastFailedDeleteDeal"));
+      return;
+    }
+    toast.success(t("toastDealDeleted"));
+    router.push("/pipelines");
   }
 
   async function handleSaveDealField(fieldId: string, value: string) {
@@ -442,6 +460,15 @@ export default function DealDetailPage() {
                 {t("reopenDeal")}
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+              title={t("deleteDeal")}
+              className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
         )}
       </div>
@@ -1003,6 +1030,47 @@ export default function DealDetailPage() {
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {t("markAsLost")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-sm bg-popover border-border text-popover-foreground">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-popover-foreground">
+              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              {t("deleteDealDialogTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t.rich("deleteDealDialogDesc", {
+              title: deal.title,
+              bold: (chunks: React.ReactNode) => <strong className="text-foreground">{chunks}</strong>,
+            })}
+          </p>
+          <DialogFooter className="bg-popover/50 border-border">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="border-border text-muted-foreground hover:bg-muted"
+              disabled={deletingDeal}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={handleDeleteDeal}
+              disabled={deletingDeal}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deletingDeal ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t("deletingDeal")}
+                </>
+              ) : (
+                t("deleteDealBtn")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

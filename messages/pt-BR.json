@@ -729,7 +729,14 @@
       "dealFieldsTitle": "Campos personalizados",
       "noDealFields": "Nenhum campo personalizado de negócio cadastrado",
       "catalogPick": "Escolher do catálogo",
-      "catalogPickPlaceholder": "Selecionar serviço..."
+      "catalogPickPlaceholder": "Selecionar serviço...",
+      "deleteDeal": "Excluir negócio",
+      "deleteDealDialogTitle": "Excluir negócio",
+      "deleteDealDialogDesc": "Tem certeza que deseja excluir permanentemente <bold>{title}</bold>? Essa ação não pode ser desfeita — lançamentos, comentários, atividades e próximos passos desse negócio também serão apagados.",
+      "deletingDeal": "Excluindo...",
+      "deleteDealBtn": "Excluir negócio",
+      "toastDealDeleted": "Negócio excluído",
+      "toastFailedDeleteDeal": "Falha ao excluir o negócio"
     },
     "settings": {
       "managePipeline": "Gerenciar pipeline",

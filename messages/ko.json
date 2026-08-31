@@ -729,7 +729,14 @@
       "dealFieldsTitle": "커스텀 필드",
       "noDealFields": "등록된 딜 커스텀 필드가 없습니다",
       "catalogPick": "카탈로그에서 선택",
-      "catalogPickPlaceholder": "서비스 선택..."
+      "catalogPickPlaceholder": "서비스 선택...",
+      "deleteDeal": "거래 삭제",
+      "deleteDealDialogTitle": "거래 삭제",
+      "deleteDealDialogDesc": "<bold>{title}</bold>을(를) 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다 — 이 거래의 항목, 댓글, 활동, 다음 단계도 함께 삭제됩니다.",
+      "deletingDeal": "삭제 중...",
+      "deleteDealBtn": "거래 삭제",
+      "toastDealDeleted": "거래가 삭제되었습니다",
+      "toastFailedDeleteDeal": "거래를 삭제하지 못했습니다"
     },
     "settings": {
       "managePipeline": "파이프라인 관리",

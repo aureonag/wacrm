@@ -729,7 +729,14 @@
       "dealFieldsTitle": "Custom fields",
       "noDealFields": "No deal custom fields defined yet",
       "catalogPick": "Pick from catalog",
-      "catalogPickPlaceholder": "Select a service..."
+      "catalogPickPlaceholder": "Select a service...",
+      "deleteDeal": "Delete deal",
+      "deleteDealDialogTitle": "Delete deal",
+      "deleteDealDialogDesc": "Are you sure you want to permanently delete <bold>{title}</bold>? This can't be undone — line items, comments, activities, and next steps for this deal will also be deleted.",
+      "deletingDeal": "Deleting...",
+      "deleteDealBtn": "Delete deal",
+      "toastDealDeleted": "Deal deleted",
+      "toastFailedDeleteDeal": "Failed to delete the deal"
     },
     "settings": {
       "managePipeline": "Manage Pipeline",
