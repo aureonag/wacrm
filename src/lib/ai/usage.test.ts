@@ -32,6 +32,29 @@ describe('logAiUsage', () => {
     })
   })
 
+  it('accepts mode: prospecting with a null conversationId', async () => {
+    const { db, insert, from } = fakeDb()
+    await logAiUsage(db, {
+      accountId: 'acct-1',
+      conversationId: null,
+      mode: 'prospecting',
+      provider: 'openai',
+      model: 'gpt-x',
+      usage: { promptTokens: 10, completionTokens: 2, totalTokens: 12 },
+    })
+    expect(from).toHaveBeenCalledWith('ai_usage_log')
+    expect(insert).toHaveBeenCalledWith({
+      account_id: 'acct-1',
+      conversation_id: null,
+      mode: 'prospecting',
+      provider: 'openai',
+      model: 'gpt-x',
+      prompt_tokens: 10,
+      completion_tokens: 2,
+      total_tokens: 12,
+    })
+  })
+
   it('is a no-op when the provider reported no usage', async () => {
     const { db, from } = fakeDb()
     await logAiUsage(db, {

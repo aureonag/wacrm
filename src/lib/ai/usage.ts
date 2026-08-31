@@ -3,10 +3,16 @@ import type { AiProvider, AiUsage } from './types'
 
 export interface LogAiUsageArgs {
   accountId: string
-  /** Null for a draft not tied to one thread, or when the row was
-   *  deleted between generation and logging. */
+  /**
+   * Null for a draft not tied to one thread, or when the row was
+   * deleted between generation and logging. This FKs to `conversations`
+   * (the WhatsApp inbox table) — for `mode: 'prospecting'` calls this
+   * must be `null` (a `prospecting_conversations` id would violate the
+   * FK); the run/conversation linkage for prospecting spend lives in
+   * `prospecting_audit_logs` instead.
+   */
   conversationId: string | null
-  mode: 'auto_reply' | 'draft'
+  mode: 'auto_reply' | 'draft' | 'prospecting'
   provider: AiProvider
   model: string
   /** Provider usage; a no-op when null (nothing worth recording). */
