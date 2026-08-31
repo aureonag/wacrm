@@ -72,6 +72,7 @@
     "inbox": "Caixa de entrada",
     "notifications": "Notificações",
     "contacts": "Contatos",
+    "prospecting": "Prospecção",
     "pipelines": "Pipelines",
     "activities": "Atividades",
     "broadcasts": "Transmissões",
@@ -788,6 +789,12 @@
     "showDone": "Mostrar concluídos",
     "empty": "Nenhuma atividade pendente",
     "emptyHint": "Os próximos passos que você adicionar em qualquer negócio aparecem aqui."
+  },
+  "Prospecting": {
+    "title": "Prospecção",
+    "subtitle": "Encontre e qualifique novas empresas com IA, depois traga as melhores para o seu pipeline.",
+    "comingSoonTitle": "Chat em breve",
+    "comingSoonBody": "O chat de busca de empresas por IA está sendo construído a seguir — o pipeline e as opções de configuração abaixo já estão no ar."
   },
   "Broadcasts": {
     "page": {

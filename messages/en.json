@@ -72,6 +72,7 @@
     "inbox": "Inbox",
     "notifications": "Notifications",
     "contacts": "Contacts",
+    "prospecting": "Prospecting",
     "pipelines": "Pipelines",
     "activities": "Activities",
     "broadcasts": "Broadcasts",
@@ -788,6 +789,12 @@
     "showDone": "Show completed",
     "empty": "No pending activities",
     "emptyHint": "Next steps you add on any deal show up here."
+  },
+  "Prospecting": {
+    "title": "Prospecting",
+    "subtitle": "Find and qualify new companies with AI, then bring the best ones into your pipeline.",
+    "comingSoonTitle": "Chat coming soon",
+    "comingSoonBody": "The AI-driven company search chat is being built next — the pipeline and configuration options below are already live."
   },
   "Broadcasts": {
     "page": {
