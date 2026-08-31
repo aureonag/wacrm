@@ -64,13 +64,26 @@ export function PipelineBoard({
 
   useEffect(() => {
     if (!isPanning) return;
-    function handlePointerMove(e: PointerEvent) {
+    // Coalesce pointermove into one scrollLeft write per animation frame —
+    // pointermove can fire faster than paint, and writing scrollLeft
+    // synchronously on every event causes the janky/sticky feel.
+    let rafId: number | null = null;
+    let pendingClientX: number | null = null;
+
+    function applyPendingScroll() {
+      rafId = null;
       const pan = panRef.current;
       const container = scrollRef.current;
-      if (!pan || !container) return;
-      container.scrollLeft = pan.startScrollLeft - (e.clientX - pan.startX);
+      if (!pan || !container || pendingClientX === null) return;
+      container.scrollLeft = pan.startScrollLeft - (pendingClientX - pan.startX);
+    }
+
+    function handlePointerMove(e: PointerEvent) {
+      pendingClientX = e.clientX;
+      if (rafId === null) rafId = requestAnimationFrame(applyPendingScroll);
     }
     function stopPanning() {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       panRef.current = null;
       setIsPanning(false);
     }
@@ -78,6 +91,7 @@ export function PipelineBoard({
     window.addEventListener("pointerup", stopPanning);
     window.addEventListener("pointercancel", stopPanning);
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", stopPanning);
       window.removeEventListener("pointercancel", stopPanning);
@@ -197,7 +211,10 @@ export function PipelineBoard({
 
       <style jsx>{`
         .pipeline-scroll {
-          scroll-behavior: smooth;
+          /* auto (not smooth) — smooth scrolling animates/interpolates
+             every scrollLeft write with a delay, which fights the 1:1
+             cursor tracking the drag-to-pan handler below needs. */
+          scroll-behavior: auto;
         }
         /* On touch devices the peek/snap layout already signals there's
            more to swipe, so the scrollbar is hidden for a clean look.
