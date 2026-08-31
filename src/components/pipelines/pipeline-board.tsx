@@ -83,7 +83,13 @@ export function PipelineBoard({
       if (rafId === null) rafId = requestAnimationFrame(applyPendingScroll);
     }
     function stopPanning() {
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      // Flush any movement still pending in the cancelled frame — otherwise
+      // a drag that ends before the next frame paints (a quick flick, or a
+      // release right after the last move) drops its final scroll update.
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        applyPendingScroll();
+      }
       panRef.current = null;
       setIsPanning(false);
     }
