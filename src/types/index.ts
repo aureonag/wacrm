@@ -107,6 +107,8 @@ export interface Contact {
   name?: string;
   email?: string;
   company?: string;
+  website?: string | null;
+  instagram?: string | null;
   avatar_url?: string;
   created_at: string;
   updated_at: string;
@@ -129,6 +131,8 @@ export interface ContactTag {
   tag_id: string;
 }
 
+export type CustomFieldEntityType = "contact" | "deal";
+
 export interface CustomField {
   id: string;
   user_id: string;
@@ -137,6 +141,9 @@ export interface CustomField {
   field_name: string;
   field_type: string;
   field_options?: Record<string, unknown>;
+  /** Which entity this field applies to, added in migration 043. Defaults
+   *  to 'contact' for every pre-043 row. */
+  entity_type: CustomFieldEntityType;
   created_at: string;
 }
 
@@ -145,6 +152,13 @@ export interface ContactCustomValue {
   contact_id: string;
   custom_field_id: string;
   value?: string;
+}
+
+export interface DealCustomValue {
+  id: string;
+  deal_id: string;
+  custom_field_id: string;
+  value?: string | null;
 }
 
 export interface ContactNote {
@@ -366,6 +380,69 @@ export interface PipelineStage {
 
 export type DealStatus = 'open' | 'won' | 'lost';
 
+export type DealLineItemType = 'mensal' | 'pontual';
+
+export interface DealLineItem {
+  id: string;
+  deal_id: string;
+  account_id: string;
+  type: DealLineItemType;
+  label?: string | null;
+  value: number;
+  created_at: string;
+}
+
+export interface DealTag {
+  id: string;
+  deal_id: string;
+  account_id: string;
+  label: string;
+  color: string;
+  created_at: string;
+}
+
+export interface DealActivity {
+  id: string;
+  deal_id: string;
+  account_id: string;
+  user_id?: string | null;
+  type: string;
+  title: string;
+  detail?: string | null;
+  created_at: string;
+}
+
+export interface DealComment {
+  id: string;
+  deal_id: string;
+  account_id: string;
+  user_id?: string | null;
+  body: string;
+  created_at: string;
+  /** Hydrated by the detail page so the comment list can show an author name. */
+  author?: Profile;
+}
+
+export interface DealNextStep {
+  id: string;
+  deal_id: string;
+  account_id: string;
+  title: string;
+  done: boolean;
+  due_date?: string | null;
+  position: number;
+  created_at: string;
+}
+
+export interface ServiceCatalogItem {
+  id: string;
+  account_id: string;
+  name: string;
+  type: DealLineItemType;
+  default_value: number;
+  created_at: string;
+}
+
 export interface Deal {
   id: string;
   user_id: string;
@@ -377,7 +454,7 @@ export interface Deal {
    */
   contact_id: string | null;
   conversation_id?: string;
-  assigned_to?: string;
+  assigned_to?: string | null;
   title: string;
   value: number;
   currency?: string;
@@ -389,11 +466,25 @@ export interface Deal {
   /** Set by a DB trigger the instant status flips to won/lost (migration 040);
    *  cleared back to null if the deal is reopened. Null while status is 'open'. */
   closed_at?: string | null;
+  /** Free-text segment ("ex: Estética"), added in migration 041. */
+  segment?: string | null;
+  /** Free-text region ("Cidade, UF"), added in migration 041. */
+  region?: string | null;
+  frente_leadgen?: boolean;
+  frente_avr?: boolean;
+  media_investment?: number | null;
+  proposal_url?: string | null;
+  /** Free-text/select reason captured when the deal is marked Lost (migration 043). */
+  lost_reason?: string | null;
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;
   /** Who created the deal — joined in for the dashboard's user filter. */
   creator?: Profile;
+  /** Batch-hydrated by loadPipelineDeals/loadDealById — the deal's mensal/pontual entries. */
+  lineItems?: DealLineItem[];
+  /** Batch-hydrated by loadPipelineDeals/loadDealById — per-deal colored tags. */
+  dealTags?: DealTag[];
 }
 
 export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';

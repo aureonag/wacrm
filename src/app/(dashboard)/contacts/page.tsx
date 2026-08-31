@@ -765,6 +765,7 @@ export default function ContactsPage() {
         <CustomFieldsManager
           open={customFieldsOpen}
           onOpenChange={setCustomFieldsOpen}
+          entityType="contact"
         />
       )}
 

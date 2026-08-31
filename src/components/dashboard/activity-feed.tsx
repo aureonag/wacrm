@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 import type { ActivityItem, ActivityKind } from '@/lib/dashboard/types'
+import { relativeTime } from '@/lib/dashboard/relative-time'
 import { cn } from '@/lib/utils'
 import { EmptyState } from './empty-state'
 import { Skeleton } from './skeleton'
@@ -156,15 +157,4 @@ export function ActivityFeed({ items, loading, viewAllHref = '/inbox' }: Activit
       )}
     </section>
   )
-}
-
-function relativeTime(iso: string, t: ReturnType<typeof useTranslations>): string {
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ''
-  const diffSec = Math.round((Date.now() - then) / 1000)
-  if (diffSec < 60) return t('timeS', { sec: Math.max(1, diffSec) })
-  if (diffSec < 3600) return t('timeM', { min: Math.floor(diffSec / 60) })
-  if (diffSec < 86400) return t('timeH', { hr: Math.floor(diffSec / 3600) })
-  if (diffSec < 2_592_000) return t('timeD', { day: Math.floor(diffSec / 86400) })
-  return new Date(iso).toLocaleDateString()
 }

@@ -74,6 +74,8 @@ export function ContactDetailView({
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editCompany, setEditCompany] = useState('');
+  const [editWebsite, setEditWebsite] = useState('');
+  const [editInstagram, setEditInstagram] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
 
   // Tags tab
@@ -113,6 +115,8 @@ export function ContactDetailView({
       setEditPhone(data.phone);
       setEditEmail(data.email ?? '');
       setEditCompany(data.company ?? '');
+      setEditWebsite(data.website ?? '');
+      setEditInstagram(data.instagram ?? '');
     }
     setLoading(false);
   }, [contactId, supabase]);
@@ -211,6 +215,8 @@ export function ContactDetailView({
         phone: editPhone.trim(),
         email: editEmail.trim() || null,
         company: editCompany.trim() || null,
+        website: editWebsite.trim() || null,
+        instagram: editInstagram.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', contactId);
@@ -518,6 +524,22 @@ export function ContactDetailView({
                     <Input
                       value={editCompany}
                       onChange={(e) => setEditCompany(e.target.value)}
+                      className="bg-muted border-border text-foreground h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground text-xs">{t('website')}</Label>
+                    <Input
+                      value={editWebsite}
+                      onChange={(e) => setEditWebsite(e.target.value)}
+                      className="bg-muted border-border text-foreground h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground text-xs">{t('instagram')}</Label>
+                    <Input
+                      value={editInstagram}
+                      onChange={(e) => setEditInstagram(e.target.value)}
                       className="bg-muted border-border text-foreground h-8 text-sm"
                     />
                   </div>

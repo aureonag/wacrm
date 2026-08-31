@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
-import type { CustomField } from '@/types';
+import type { CustomField, CustomFieldEntityType } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import { useTranslations } from 'next-intl';
 interface CustomFieldsManagerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  entityType: CustomFieldEntityType;
 }
 
 /**
@@ -31,6 +32,7 @@ interface CustomFieldsManagerProps {
 export function CustomFieldsManager({
   open,
   onOpenChange,
+  entityType,
 }: CustomFieldsManagerProps) {
   const t = useTranslations('Contacts.customFields');
   return (
@@ -42,19 +44,21 @@ export function CustomFieldsManager({
             {t('desc')}
           </DialogDescription>
         </DialogHeader>
-        <CustomFieldsPanel />
+        <CustomFieldsPanel entityType={entityType} />
       </DialogContent>
     </Dialog>
   );
 }
 
 /**
- * Create / rename / delete account-wide custom contact field definitions.
- * Per-contact values are edited elsewhere (contact detail → Custom Fields);
- * this only manages the field catalogue. Admin+ gated by the caller — the
- * `custom_fields` RLS also rejects non-admin writes as defense in depth.
+ * Create / rename / delete account-wide custom field definitions for one
+ * entity type (contacts or deals — migration 043's `entity_type` column).
+ * Per-record values are edited elsewhere (contact/deal detail → Custom
+ * Fields); this only manages the field catalogue. Admin+ gated by the
+ * caller — the `custom_fields` RLS also rejects non-admin writes as
+ * defense in depth.
  */
-export function CustomFieldsPanel() {
+export function CustomFieldsPanel({ entityType }: { entityType: CustomFieldEntityType }) {
   const t = useTranslations('Contacts.customFields');
   const supabase = createClient();
   const { user, accountId } = useAuth();
@@ -71,10 +75,11 @@ export function CustomFieldsPanel() {
     const { data } = await supabase
       .from('custom_fields')
       .select('*')
+      .eq('entity_type', entityType)
       .order('field_name');
     setFields((data as CustomField[] | null) ?? []);
     setLoading(false);
-  }, [supabase, accountId]);
+  }, [supabase, accountId, entityType]);
 
   // Load the field list on mount once the account is known. The setters
   // inside fetchFields run after the Supabase await — not synchronously in
@@ -110,6 +115,7 @@ export function CustomFieldsPanel() {
     const { error } = await supabase.from('custom_fields').insert({
       field_name: name,
       field_type: 'text',
+      entity_type: entityType,
       user_id: user.id,
       account_id: accountId,
     });

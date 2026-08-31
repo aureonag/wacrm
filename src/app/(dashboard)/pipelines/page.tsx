@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Pipeline, PipelineStage, Deal } from "@/types";
+import type { Pipeline, PipelineStage, Deal, DealTag } from "@/types";
 import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
-import { DealForm } from "@/components/pipelines/deal-form";
+import { DealCreateModal } from "@/components/pipelines/deal-create-modal";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { PipelineSelector } from "@/components/pipelines/pipeline-selector";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ const SPEC_DEFAULT_STAGES = [
 
 export default function PipelinesPage() {
   const t = useTranslations("Pipelines.page");
+  const tActivity = useTranslations("Pipelines.activity");
   const supabase = createClient();
   const canEditSettings = useCan("edit-settings");
   const canCreateDeals = useCan("send-messages");
@@ -63,10 +64,9 @@ export default function PipelinesPage() {
   const [creating, setCreating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Deal form state is lifted here so both the top-bar "Add Deal" and
-  // the per-column "+" trigger the same Sheet.
+  // Deal creation modal state is lifted here so both the top-bar "Add
+  // Deal" and the per-column "+" trigger the same modal.
   const [dealFormOpen, setDealFormOpen] = useState(false);
-  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
@@ -202,24 +202,36 @@ export default function PipelinesPage() {
       if (error) {
         toast.error(t("toastFailedMoveDeal"));
         refreshDeals();
+        return;
       }
+
+      const newStage = stages.find((s) => s.id === newStageId);
+      if (!newStage || !accountId) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      await supabase.from("deal_activities").insert({
+        deal_id: dealId,
+        account_id: accountId,
+        user_id: session?.user?.id ?? null,
+        type: "stage_changed",
+        title: tActivity("movedTo", { stage: newStage.name }),
+        detail: tActivity("movedDetail"),
+      });
     },
-    [supabase, refreshDeals, t],
+    [supabase, refreshDeals, t, tActivity, stages, accountId],
   );
 
   const handleAddDeal = useCallback(
     (stageId?: string) => {
-      setEditingDeal(null);
       setDefaultStageId(stageId ?? stages[0]?.id ?? "");
       setDealFormOpen(true);
     },
     [stages],
   );
 
-  const handleEditDeal = useCallback((deal: Deal) => {
-    setEditingDeal(deal);
-    setDefaultStageId(deal.stage_id);
-    setDealFormOpen(true);
+  const handleTagsChanged = useCallback((dealId: string, tags: DealTag[]) => {
+    setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, dealTags: tags } : d)));
   }, []);
 
   async function handleCreatePipeline() {
@@ -356,7 +368,7 @@ export default function PipelinesPage() {
             deals={deals}
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
-            onEditDeal={handleEditDeal}
+            onTagsChanged={handleTagsChanged}
           />
         </>
       )}
@@ -417,11 +429,10 @@ export default function PipelinesPage() {
         />
       )}
 
-      {/* Deal Form (Sheet) */}
-      <DealForm
+      {/* New deal modal */}
+      <DealCreateModal
         open={dealFormOpen}
         onOpenChange={setDealFormOpen}
-        deal={editingDeal}
         pipelineId={selectedPipelineId}
         stages={stages}
         defaultStageId={defaultStageId}

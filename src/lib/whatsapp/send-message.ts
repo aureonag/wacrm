@@ -21,6 +21,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logMessageActivityForContact } from '@/lib/deals/log-message-activity';
 import {
   sendTextMessage,
   sendTemplateMessage,
@@ -494,6 +495,11 @@ export async function sendMessageToConversation(
       500
     );
   }
+
+  // Best-effort bridge to the Pipeline — see the function's own doc
+  // comment for why this is one entry per deal/day, not per message.
+  // Swallows its own errors; never affects the send response.
+  await logMessageActivityForContact(db, accountId, contact.id);
 
   const lastMessageText =
     messageType === 'interactive'

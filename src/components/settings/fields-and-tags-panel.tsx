@@ -5,6 +5,8 @@ import { useCan } from '@/hooks/use-can';
 import { useTranslations } from 'next-intl';
 
 import { CustomFieldsSettings } from './custom-fields-settings';
+import { DuplicateContactsPanel } from './duplicate-contacts-panel';
+import { ServiceCatalogSettings } from './service-catalog-settings';
 import { SettingsPanelHead } from './settings-panel-head';
 import { TagManager } from './tag-manager';
 
@@ -26,7 +28,10 @@ export function FieldsAndTagsPanel() {
         description={t('description')}
       />
       <TagManager />
-      {canEditSettings ? <CustomFieldsSettings /> : null}
+      {canEditSettings ? <CustomFieldsSettings entityType="contact" /> : null}
+      {canEditSettings ? <CustomFieldsSettings entityType="deal" /> : null}
+      {canEditSettings ? <ServiceCatalogSettings /> : null}
+      {canEditSettings ? <DuplicateContactsPanel /> : null}
     </section>
   );
 }

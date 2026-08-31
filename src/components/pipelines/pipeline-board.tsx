@@ -14,7 +14,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { Deal, PipelineStage } from "@/types";
+import type { Deal, DealTag, PipelineStage } from "@/types";
 import { DealCard } from "./deal-card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -27,7 +27,7 @@ interface PipelineBoardProps {
   deals: Deal[];
   onDealMoved: (dealId: string, newStageId: string) => void;
   onAddDeal: (stageId: string) => void;
-  onEditDeal: (deal: Deal) => void;
+  onTagsChanged: (dealId: string, tags: DealTag[]) => void;
 }
 
 export function PipelineBoard({
@@ -35,10 +35,13 @@ export function PipelineBoard({
   deals,
   onDealMoved,
   onAddDeal,
-  onEditDeal,
+  onTagsChanged,
 }: PipelineBoardProps) {
   const { defaultCurrency } = useAuth();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  // Only one deal's inline tag editor may be open at a time, across
+  // the whole board — a single piece of state here (not per-card).
+  const [tagEditorDealId, setTagEditorDealId] = useState<string | null>(null);
 
   const sortedStages = useMemo(
     () => [...stages].sort((a, b) => a.position - b.position),
@@ -118,7 +121,9 @@ export function PipelineBoard({
               totalValue={totalValue}
               currency={defaultCurrency}
               onAddDeal={onAddDeal}
-              onEditDeal={onEditDeal}
+              tagEditorDealId={tagEditorDealId}
+              onToggleTagEditor={setTagEditorDealId}
+              onTagsChanged={onTagsChanged}
             />
           );
         })}
@@ -137,7 +142,6 @@ export function PipelineBoard({
               stage={
                 sortedStages.find((s) => s.id === activeDeal.stage_id) ?? null
               }
-              onEdit={() => {}}
               isOverlay
             />
           </div>
@@ -192,14 +196,18 @@ function StageColumn({
   totalValue,
   currency,
   onAddDeal,
-  onEditDeal,
+  tagEditorDealId,
+  onToggleTagEditor,
+  onTagsChanged,
 }: {
   stage: PipelineStage;
   deals: Deal[];
   totalValue: number;
   currency: string;
   onAddDeal: (stageId: string) => void;
-  onEditDeal: (deal: Deal) => void;
+  tagEditorDealId: string | null;
+  onToggleTagEditor: (dealId: string | null) => void;
+  onTagsChanged: (dealId: string, tags: DealTag[]) => void;
 }) {
   const t = useTranslations("Pipelines.board");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
@@ -247,7 +255,9 @@ function StageColumn({
               key={deal.id}
               deal={deal}
               stage={stage}
-              onEdit={onEditDeal}
+              tagEditorOpen={tagEditorDealId === deal.id}
+              onToggleTagEditor={onToggleTagEditor}
+              onTagsChanged={onTagsChanged}
             />
           ))
         )}
@@ -269,11 +279,15 @@ function StageColumn({
 function DraggableDealCard({
   deal,
   stage,
-  onEdit,
+  tagEditorOpen,
+  onToggleTagEditor,
+  onTagsChanged,
 }: {
   deal: Deal;
   stage: PipelineStage;
-  onEdit: (deal: Deal) => void;
+  tagEditorOpen: boolean;
+  onToggleTagEditor: (dealId: string | null) => void;
+  onTagsChanged: (dealId: string, tags: DealTag[]) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: deal.id,
@@ -286,7 +300,13 @@ function DraggableDealCard({
       {...attributes}
       style={{ opacity: isDragging ? 0.3 : 1, touchAction: "none" }}
     >
-      <DealCard deal={deal} stage={stage} onEdit={onEdit} />
+      <DealCard
+        deal={deal}
+        stage={stage}
+        tagEditorOpen={tagEditorOpen}
+        onToggleTagEditor={onToggleTagEditor}
+        onTagsChanged={onTagsChanged}
+      />
     </div>
   );
 }

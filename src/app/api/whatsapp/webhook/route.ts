@@ -11,6 +11,7 @@ import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply'
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver'
+import { logMessageActivityForContact } from '@/lib/deals/log-message-activity'
 import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
@@ -738,6 +739,12 @@ async function processMessage(
     )
     return
   }
+
+  // Best-effort bridge to the Pipeline: drop one activity entry today
+  // on this contact's open deals, if any. Already inside the route's
+  // `after()` block (see the comment on that call) and the helper
+  // swallows its own errors, so this can't affect the webhook's ack.
+  await logMessageActivityForContact(supabaseAdmin(), accountId, contactRecord.id)
 
   // Update conversation. The unread bump is done DB-side (migration 037's
   // bump_conversation_on_inbound) rather than as a read-modify-write of the
