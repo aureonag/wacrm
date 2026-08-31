@@ -850,8 +850,10 @@ export default function DealDetailPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
+        {/* Sidebar — lg:mt-14 lines its first card up with the tabs'
+            content (TabsList's h-8 + the gap-2/mt-4 above TabsContent),
+            since the sidebar has no tab strip of its own to push it down. */}
+        <div className="space-y-4 lg:mt-14">
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <h3 className="text-sm font-semibold text-foreground">{t("mainContact")}</h3>
             {deal.contact ? (
