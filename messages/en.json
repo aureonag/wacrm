@@ -793,8 +793,34 @@
   "Prospecting": {
     "title": "Prospecting",
     "subtitle": "Find and qualify new companies with AI, then bring the best ones into your pipeline.",
-    "comingSoonTitle": "Chat coming soon",
-    "comingSoonBody": "The AI-driven company search chat is being built next — the pipeline and configuration options below are already live."
+    "config": {
+      "pipelineLabel": "Destination pipeline",
+      "pipelinePlaceholder": "Select a pipeline",
+      "ownerLabel": "Owner",
+      "ownerPlaceholder": "Select an owner (optional)",
+      "frenteLabel": "Commercial front",
+      "quantityLabel": "Number of companies",
+      "quantityCustomPlaceholder": "Custom",
+      "quantityHint": "The agent will look for up to {quantity} companies — availability from each source may return fewer.",
+      "aiNotConfiguredTitle": "AI assistant not set up yet",
+      "aiNotConfiguredBody": "Prospecting reuses the same OpenAI key configured for AI Agents. Set it up there to start chatting.",
+      "aiNotConfiguredCta": "Go to AI Agents setup",
+      "googleNotConfiguredBody": "Google Places isn't configured yet — company search will be limited until an administrator sets it up."
+    },
+    "chat": {
+      "emptyStateHint": "Describe the companies you're looking for, or try one of these:",
+      "suggestions": {
+        "suggestion1": "Find dental clinics in Santo André.",
+        "suggestion2": "Find stores with good reviews and weak digital presence.",
+        "suggestion3": "Find cosmetics companies in Santa Catarina.",
+        "suggestion4": "Find 30 companies with phone and Instagram."
+      },
+      "inputPlaceholder": "Describe the companies you want to find...",
+      "notConfiguredMessage": "The AI assistant isn't set up for this account yet. Go to AI Agents to configure it, then come back here.",
+      "notConfiguredToast": "AI assistant not configured",
+      "toastFailedCreateConversation": "Could not start a new conversation",
+      "toastFailedSend": "Could not send the message"
+    }
   },
   "Broadcasts": {
     "page": {

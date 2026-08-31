@@ -793,8 +793,34 @@
   "Prospecting": {
     "title": "Prospecção",
     "subtitle": "Encontre e qualifique novas empresas com IA, depois traga as melhores para o seu pipeline.",
-    "comingSoonTitle": "Chat em breve",
-    "comingSoonBody": "O chat de busca de empresas por IA está sendo construído a seguir — o pipeline e as opções de configuração abaixo já estão no ar."
+    "config": {
+      "pipelineLabel": "Pipeline de destino",
+      "pipelinePlaceholder": "Selecione um pipeline",
+      "ownerLabel": "Responsável",
+      "ownerPlaceholder": "Selecione um responsável (opcional)",
+      "frenteLabel": "Frente comercial",
+      "quantityLabel": "Quantidade de empresas",
+      "quantityCustomPlaceholder": "Outro",
+      "quantityHint": "O agente vai buscar até {quantity} empresas — a disponibilidade de cada fonte pode retornar menos.",
+      "aiNotConfiguredTitle": "Assistente de IA ainda não configurado",
+      "aiNotConfiguredBody": "A Prospecção reaproveita a mesma chave da OpenAI configurada em Agentes de IA. Configure lá para começar a conversar.",
+      "aiNotConfiguredCta": "Ir para a configuração de Agentes de IA",
+      "googleNotConfiguredBody": "O Google Places ainda não está configurado — a busca de empresas ficará limitada até um administrador configurá-lo."
+    },
+    "chat": {
+      "emptyStateHint": "Descreva as empresas que você está buscando, ou tente uma destas:",
+      "suggestions": {
+        "suggestion1": "Buscar clínicas odontológicas em Santo André.",
+        "suggestion2": "Encontrar lojas com boas avaliações e presença digital fraca.",
+        "suggestion3": "Buscar empresas do segmento de cosméticos em Santa Catarina.",
+        "suggestion4": "Encontrar 30 empresas com telefone e Instagram."
+      },
+      "inputPlaceholder": "Descreva as empresas que você quer encontrar...",
+      "notConfiguredMessage": "O assistente de IA ainda não está configurado para esta conta. Vá em Agentes de IA para configurá-lo e volte aqui depois.",
+      "notConfiguredToast": "Assistente de IA não configurado",
+      "toastFailedCreateConversation": "Não foi possível iniciar uma nova conversa",
+      "toastFailedSend": "Não foi possível enviar a mensagem"
+    }
   },
   "Broadcasts": {
     "page": {

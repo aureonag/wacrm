@@ -1,10 +1,24 @@
 "use client";
 
-import { Radar } from "lucide-react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { ProspectingChat } from "@/components/prospecting/prospecting-chat";
+import {
+  ProspectingConfigCard,
+  type ProspectingSelections,
+} from "@/components/prospecting/prospecting-config-card";
+import { PROSPECTING_DEFAULT_QUANTITY } from "@/lib/prospecting/constants";
 
 export default function ProspectingPage() {
   const t = useTranslations("Prospecting");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [selections, setSelections] = useState<ProspectingSelections>({
+    pipelineId: "",
+    ownerId: "",
+    frenteLeadgen: false,
+    frenteAvr: false,
+    quantity: PROSPECTING_DEFAULT_QUANTITY,
+  });
 
   return (
     <div className="space-y-6">
@@ -14,15 +28,14 @@ export default function ProspectingPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="flex min-h-[420px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/60 p-8 text-center">
-          <Radar className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">{t("comingSoonTitle")}</p>
-          <p className="max-w-sm text-sm text-muted-foreground">{t("comingSoonBody")}</p>
-        </div>
+        <ProspectingChat
+          conversationId={conversationId}
+          onConversationCreated={setConversationId}
+          selections={selections}
+        />
 
         <div className="rounded-xl border border-border bg-card p-4">
-          {/* Config card (pipeline, responsible, frente, quantity, source
-              status) lands in M3/M4 — see plan modular-jingling-quill.md. */}
+          <ProspectingConfigCard selections={selections} onChange={setSelections} />
         </div>
       </div>
     </div>

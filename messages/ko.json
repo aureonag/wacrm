@@ -793,8 +793,34 @@
   "Prospecting": {
     "title": "잠재고객 발굴",
     "subtitle": "AI로 새로운 기업을 찾고 검증한 다음, 가장 좋은 기업을 파이프라인으로 가져오세요.",
-    "comingSoonTitle": "채팅 기능 준비 중",
-    "comingSoonBody": "AI 기반 기업 검색 채팅은 다음 단계에서 구축됩니다 — 아래의 파이프라인 및 설정 옵션은 이미 사용할 수 있습니다."
+    "config": {
+      "pipelineLabel": "대상 파이프라인",
+      "pipelinePlaceholder": "파이프라인을 선택하세요",
+      "ownerLabel": "담당자",
+      "ownerPlaceholder": "담당자를 선택하세요 (선택 사항)",
+      "frenteLabel": "커머셜 프런트",
+      "quantityLabel": "기업 수",
+      "quantityCustomPlaceholder": "직접 입력",
+      "quantityHint": "에이전트가 최대 {quantity}개 기업을 찾습니다 — 각 소스의 가용성에 따라 더 적을 수 있습니다.",
+      "aiNotConfiguredTitle": "AI 어시스턴트가 아직 설정되지 않았습니다",
+      "aiNotConfiguredBody": "잠재고객 발굴은 AI 에이전트에 설정된 것과 동일한 OpenAI 키를 사용합니다. 그곳에서 설정한 후 채팅을 시작하세요.",
+      "aiNotConfiguredCta": "AI 에이전트 설정으로 이동",
+      "googleNotConfiguredBody": "Google Places가 아직 설정되지 않았습니다 — 관리자가 설정할 때까지 기업 검색이 제한됩니다."
+    },
+    "chat": {
+      "emptyStateHint": "찾고 있는 기업을 설명하거나 아래 예시 중 하나를 시도해보세요:",
+      "suggestions": {
+        "suggestion1": "산투안드레에서 치과 클리닉을 찾아주세요.",
+        "suggestion2": "평판이 좋지만 디지털 활동이 약한 매장을 찾아주세요.",
+        "suggestion3": "산타카타리나의 화장품 업체를 찾아주세요.",
+        "suggestion4": "전화번호와 인스타그램이 있는 기업 30곳을 찾아주세요."
+      },
+      "inputPlaceholder": "찾고 싶은 기업을 설명해주세요...",
+      "notConfiguredMessage": "이 계정에는 아직 AI 어시스턴트가 설정되지 않았습니다. AI 에이전트에서 설정한 후 다시 돌아와주세요.",
+      "notConfiguredToast": "AI 어시스턴트가 설정되지 않았습니다",
+      "toastFailedCreateConversation": "새 대화를 시작할 수 없습니다",
+      "toastFailedSend": "메시지를 보낼 수 없습니다"
+    }
   },
   "Broadcasts": {
     "page": {
