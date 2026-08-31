@@ -61,7 +61,7 @@ const TOOL_HANDLERS: Record<string, ToolDispatch> = {
   verificar_duplicidade: (db, accountId, _userId, toolArgs) => verificarDuplicidade(db, accountId, toolArgs),
   pontuar_icp: (db, accountId, _userId, toolArgs) => pontuarIcp(db, accountId, toolArgs),
   consultar_status_da_pesquisa: (db, accountId, _userId, toolArgs) => consultarStatusDaPesquisa(db, accountId, toolArgs),
-  cancelar_pesquisa: (db, accountId, _userId, toolArgs) => cancelarPesquisa(db, accountId, toolArgs),
+  cancelar_pesquisa: (db, accountId, userId, toolArgs) => cancelarPesquisa(db, accountId, userId, toolArgs),
   preparar_importacao: (db, accountId, _userId, toolArgs) => prepararImportacao(db, accountId, toolArgs),
   criar_contatos_e_negocios: (db, accountId, userId, toolArgs) => criarContatosENegocios(db, accountId, userId, toolArgs),
 };

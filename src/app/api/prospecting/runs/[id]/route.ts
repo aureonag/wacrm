@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAccount, requireRole, toErrorResponse } from "@/lib/auth/account";
-import { PROSPECTING_TERMINAL_STATUSES } from "@/lib/prospecting/constants";
-import { supabaseAdmin } from "@/lib/prospecting/admin-client";
+import { cancelarPesquisa } from "@/lib/prospecting/tools/status";
+import { ProspectingToolError } from "@/lib/prospecting/tools/errors";
 
 /**
  * GET /api/prospecting/runs/[id]
@@ -36,14 +36,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 /**
  * PATCH /api/prospecting/runs/[id]  (agent+)
  *
- * Body `{ action: "cancel" }` — the only supported action. Writes go
- * through the service-role client (`prospecting_runs` has no
- * client-writable policy); ownership is verified first via the
- * caller's own RLS-scoped client.
+ * Body `{ action: "cancel" }` — the only supported action. Delegates
+ * to the same `cancelarPesquisa` the agent's `cancelar_pesquisa` tool
+ * uses, so both paths share one ownership check, one terminal-state
+ * guard, and one audit trail entry.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { supabase, accountId } = await requireRole("agent");
+    const { supabase, accountId, userId } = await requireRole("agent");
     const { id } = await params;
     const body = (await request.json().catch(() => null)) as { action?: unknown } | null;
 
@@ -51,24 +51,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Only action: 'cancel' is supported" }, { status: 400 });
     }
 
-    const { data: run } = await supabase
-      .from("prospecting_runs")
-      .select("id, status")
-      .eq("id", id)
-      .eq("account_id", accountId)
-      .maybeSingle();
-    if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
-    if (PROSPECTING_TERMINAL_STATUSES.includes(run.status as never)) {
-      return NextResponse.json({ error: "This run has already ended" }, { status: 400 });
-    }
-
-    await supabaseAdmin()
-      .from("prospecting_runs")
-      .update({ status: "cancelled", completed_at: new Date().toISOString() })
-      .eq("id", id);
-
-    return NextResponse.json({ run_id: id, status: "cancelled" });
+    const result = await cancelarPesquisa(supabase, accountId, userId, { run_id: id });
+    return NextResponse.json(result);
   } catch (err) {
+    if (err instanceof ProspectingToolError) {
+      const status = err.code === "run_not_found" ? 404 : 400;
+      return NextResponse.json({ error: err.message }, { status });
+    }
     return toErrorResponse(err);
   }
 }

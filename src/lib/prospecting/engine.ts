@@ -23,6 +23,7 @@ import { findInstagramFromWebsiteLinks } from "./instagram-lookup";
 import { checkDuplicate } from "./dedupe";
 import { scoreIcp, type IcpScoringInput } from "./icp-rubric";
 import { importCandidates } from "./import";
+import { logProspectingAudit } from "./audit";
 import { PROSPECTING_TERMINAL_STATUSES } from "./constants";
 
 const SEARCH_TARGET_MULTIPLIER = 1.5;
@@ -63,11 +64,12 @@ export interface CandidateRow {
   icp_score: number | null;
 }
 
-async function failRun(admin: SupabaseClient, runId: string, message: string): Promise<void> {
+async function failRun(admin: SupabaseClient, accountId: string, runId: string, message: string): Promise<void> {
   await admin
     .from("prospecting_runs")
     .update({ status: "failed", error: message.slice(0, 2000), completed_at: new Date().toISOString() })
     .eq("id", runId);
+  void logProspectingAudit(admin, { accountId, runId, action: "run_failed", status: "failed", error: message });
 }
 
 async function loadCandidates(admin: SupabaseClient, runId: string): Promise<CandidateRow[]> {
@@ -91,7 +93,7 @@ async function stepQueued(admin: SupabaseClient, run: ProspectingRunRow): Promis
     .eq("account_id", run.account_id)
     .maybeSingle();
   if (!pipeline) {
-    await failRun(admin, run.id, "O pipeline de destino não existe mais ou não pertence a esta conta.");
+    await failRun(admin, run.account_id, run.id, "O pipeline de destino não existe mais ou não pertence a esta conta.");
     return;
   }
   const { data: stage } = await admin
@@ -101,7 +103,7 @@ async function stepQueued(admin: SupabaseClient, run: ProspectingRunRow): Promis
     .eq("pipeline_id", run.pipeline_id)
     .maybeSingle();
   if (!stage) {
-    await failRun(admin, run.id, "A etapa de destino não existe mais neste pipeline.");
+    await failRun(admin, run.account_id, run.id, "A etapa de destino não existe mais neste pipeline.");
     return;
   }
   await admin.from("prospecting_runs").update({ status: "searching" }).eq("id", run.id);
@@ -109,14 +111,14 @@ async function stepQueued(admin: SupabaseClient, run: ProspectingRunRow): Promis
 
 async function stepSearching(admin: SupabaseClient, run: ProspectingRunRow): Promise<void> {
   if (!isGooglePlacesConfigured()) {
-    await failRun(admin, run.id, "O Google Places não está configurado nesta instalação.");
+    await failRun(admin, run.account_id, run.id, "O Google Places não está configurado nesta instalação.");
     return;
   }
 
   const niche = run.parsed_request?.niche?.trim();
   const region = run.parsed_request?.region?.trim();
   if (!niche || !region) {
-    await failRun(admin, run.id, "Nicho ou região ausentes na solicitação de busca.");
+    await failRun(admin, run.account_id, run.id, "Nicho ou região ausentes na solicitação de busca.");
     return;
   }
 
@@ -129,7 +131,7 @@ async function stepSearching(admin: SupabaseClient, run: ProspectingRunRow): Pro
     result = await searchPlacesText({ niche, region, pageToken });
   } catch (err) {
     const message = err instanceof GooglePlacesError ? err.message : "Falha ao consultar o Google Places.";
-    await failRun(admin, run.id, message);
+    await failRun(admin, run.account_id, run.id, message);
     return;
   }
 
@@ -395,7 +397,12 @@ export async function advanceRun(runId: string, admin: SupabaseClient): Promise<
     }
   } catch (err) {
     console.error("[prospecting engine] advanceRun failed:", err);
-    await failRun(admin, runId, err instanceof Error ? err.message : "Erro inesperado no motor de prospecção.");
+    await failRun(
+      admin,
+      run.account_id as string,
+      runId,
+      err instanceof Error ? err.message : "Erro inesperado no motor de prospecção.",
+    );
   }
 }
 

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../admin-client";
 import { startRun } from "../engine";
 import { PROSPECTING_MAX_QUANTITY, PROSPECTING_MIN_QUANTITY } from "../constants";
 import { assertPipelineOwnership, obterPrimeiraEtapa } from "./pipelines";
+import { logProspectingAudit } from "../audit";
 import { ProspectingToolError } from "./errors";
 
 /**
@@ -69,6 +70,17 @@ export async function pesquisarEmpresas(
     .select("status, found_count, error")
     .eq("id", run.id)
     .maybeSingle();
+
+  void logProspectingAudit(admin, {
+    accountId,
+    userId,
+    runId: run.id as string,
+    action: "create_run",
+    pipelineId,
+    quantity,
+    status: refreshed?.status ?? (run.status as string),
+    metadata: { niche, region },
+  });
 
   return {
     run_id: run.id,

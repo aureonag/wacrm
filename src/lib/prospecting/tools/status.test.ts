@@ -45,7 +45,7 @@ describe("consultarStatusDaPesquisa", () => {
 describe("cancelarPesquisa", () => {
   it("rejects cancelling a run that already ended", async () => {
     const db = fakeDb({ id: "run-1", status: "completed" }) as never;
-    await expect(cancelarPesquisa(db, "acct-1", { run_id: "run-1" })).rejects.toMatchObject({
+    await expect(cancelarPesquisa(db, "acct-1", "user-1", { run_id: "run-1" })).rejects.toMatchObject({
       code: "run_already_terminal",
     });
     expect(mocks.supabaseAdmin).not.toHaveBeenCalled();
@@ -57,7 +57,7 @@ describe("cancelarPesquisa", () => {
     const eq = vi.fn().mockResolvedValue({ data: null, error: null });
     mocks.supabaseAdmin.mockReturnValue({ from: vi.fn(() => ({ update })) });
 
-    const result = await cancelarPesquisa(db, "acct-1", { run_id: "run-1" });
+    const result = await cancelarPesquisa(db, "acct-1", "user-1", { run_id: "run-1" });
 
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ status: "cancelled" }));
     expect(result).toEqual({ run_id: "run-1", status: "cancelled" });

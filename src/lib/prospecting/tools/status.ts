@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../admin-client";
 import { PROSPECTING_TERMINAL_STATUSES } from "../constants";
+import { logProspectingAudit } from "../audit";
 import { ProspectingToolError } from "./errors";
 
 function requireRunId(args: Record<string, unknown>): string {
@@ -24,7 +25,12 @@ export async function consultarStatusDaPesquisa(db: SupabaseClient, accountId: s
   return loadOwnedRun(db, accountId, requireRunId(args));
 }
 
-export async function cancelarPesquisa(db: SupabaseClient, accountId: string, args: Record<string, unknown>) {
+export async function cancelarPesquisa(
+  db: SupabaseClient,
+  accountId: string,
+  userId: string | null,
+  args: Record<string, unknown>,
+) {
   const runId = requireRunId(args);
   const run = await loadOwnedRun(db, accountId, runId);
 
@@ -32,10 +38,19 @@ export async function cancelarPesquisa(db: SupabaseClient, accountId: string, ar
     throw new ProspectingToolError("Esta execução já foi encerrada e não pode ser cancelada.", "run_already_terminal");
   }
 
-  await supabaseAdmin()
+  const admin = supabaseAdmin();
+  await admin
     .from("prospecting_runs")
     .update({ status: "cancelled", completed_at: new Date().toISOString() })
     .eq("id", runId);
+
+  void logProspectingAudit(admin, {
+    accountId,
+    userId,
+    runId,
+    action: "cancel_run",
+    status: "cancelled",
+  });
 
   return { run_id: runId, status: "cancelled" };
 }
