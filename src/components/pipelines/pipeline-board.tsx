@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -42,6 +42,47 @@ export function PipelineBoard({
   // Only one deal's inline tag editor may be open at a time, across
   // the whole board — a single piece of state here (not per-card).
   const [tagEditorDealId, setTagEditorDealId] = useState<string | null>(null);
+
+  // Click-and-drag-to-pan (Kommo-style): mousedown on empty board space
+  // scrolls the board horizontally by following the cursor, instead of
+  // requiring the native scrollbar. Only for mouse pointers — touch
+  // already scrolls natively via the snap layout above.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ startX: number; startScrollLeft: number } | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+
+  function handleScrollPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-dnd-card], button, a, input, textarea, select")) return;
+    const container = scrollRef.current;
+    if (!container) return;
+    e.preventDefault();
+    panRef.current = { startX: e.clientX, startScrollLeft: container.scrollLeft };
+    setIsPanning(true);
+  }
+
+  useEffect(() => {
+    if (!isPanning) return;
+    function handlePointerMove(e: PointerEvent) {
+      const pan = panRef.current;
+      const container = scrollRef.current;
+      if (!pan || !container) return;
+      container.scrollLeft = pan.startScrollLeft - (e.clientX - pan.startX);
+    }
+    function stopPanning() {
+      panRef.current = null;
+      setIsPanning(false);
+    }
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopPanning);
+    window.addEventListener("pointercancel", stopPanning);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopPanning);
+      window.removeEventListener("pointercancel", stopPanning);
+    };
+  }, [isPanning]);
 
   const sortedStages = useMemo(
     () => [...stages].sort((a, b) => a.position - b.position),
@@ -106,7 +147,13 @@ export function PipelineBoard({
           natural layout. The board can still overflow horizontally on
           lg+ once a pipeline has many stages (columns keep a 260px
           min-width), so a thin scrollbar stays visible on desktop. */}
-      <div className="pipeline-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 lg:snap-none">
+      <div
+        ref={scrollRef}
+        onPointerDown={handleScrollPointerDown}
+        className={`pipeline-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 lg:snap-none ${
+          isPanning ? "cursor-grabbing select-none" : "cursor-grab"
+        }`}
+      >
         {sortedStages.map((stage) => {
           const stageDeals = dealsByStage.get(stage.id) ?? [];
           const totalValue = stageDeals.reduce(
@@ -296,6 +343,7 @@ function DraggableDealCard({
   return (
     <div
       ref={setNodeRef}
+      data-dnd-card="true"
       {...listeners}
       {...attributes}
       style={{ opacity: isDragging ? 0.3 : 1, touchAction: "none" }}
