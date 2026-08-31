@@ -819,7 +819,46 @@
       "notConfiguredMessage": "The AI assistant isn't set up for this account yet. Go to AI Agents to configure it, then come back here.",
       "notConfiguredToast": "AI assistant not configured",
       "toastFailedCreateConversation": "Could not start a new conversation",
-      "toastFailedSend": "Could not send the message"
+      "toastFailedSend": "Could not send the message",
+      "toolActivity": "Using {tool}..."
+    },
+    "runStatus": {
+      "queued": "Queued",
+      "searching": "Searching companies",
+      "enriching": "Enriching results",
+      "scoring": "Scoring candidates",
+      "awaiting_review": "Ready for review",
+      "importing": "Importing",
+      "completed": "Completed",
+      "partially_completed": "Partially completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "foundCount": "{count} found",
+      "validatedCount": "{count} enriched",
+      "duplicateCount": "{count} duplicates",
+      "importedCount": "{count} imported"
+    },
+    "results": {
+      "colCompany": "Company",
+      "colSegment": "Segment",
+      "colRegion": "Region",
+      "colPhone": "Phone",
+      "colWebsite": "Website",
+      "colInstagram": "Instagram",
+      "colRating": "Google rating",
+      "colScore": "ICP score",
+      "colDuplicate": "Status",
+      "linkLabel": "Visit",
+      "statusImported": "Imported",
+      "statusExisting": "Already a contact",
+      "statusPossibleDuplicate": "Possible duplicate",
+      "statusNew": "New",
+      "selectedCount": "{count} selected",
+      "importButton": "Import selected",
+      "toastFailedToggle": "Could not update the selection",
+      "toastFailedImport": "Could not import the selected companies",
+      "toastImported": "{count} deals imported",
+      "selectRowLabel": "Select {company}"
     }
   },
   "Broadcasts": {

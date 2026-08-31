@@ -26,6 +26,7 @@ import { enriquecerGoogle, analisarSite, localizarInstagram } from "./tools/enri
 import { verificarDuplicidade } from "./tools/dedupe";
 import { pontuarIcp } from "./tools/scoring";
 import { consultarStatusDaPesquisa, cancelarPesquisa } from "./tools/status";
+import { prepararImportacao, criarContatosENegocios } from "./tools/import";
 import { ProspectingToolError } from "./tools/errors";
 
 export interface AgentChatMessage {
@@ -48,10 +49,6 @@ type ToolDispatch = (
   args: Record<string, unknown>,
 ) => Promise<unknown>;
 
-// `criar_contatos_e_negocios`/`preparar_importacao` are not wired yet
-// (the import flow lands in a later milestone) — calling either
-// returns a clear "not available yet" error to the model instead of
-// throwing.
 const TOOL_HANDLERS: Record<string, ToolDispatch> = {
   listar_pipelines: (db) => listarPipelines(db),
   obter_primeira_etapa: (db, accountId, _userId, toolArgs) => obterPrimeiraEtapa(db, accountId, toolArgs),
@@ -65,6 +62,8 @@ const TOOL_HANDLERS: Record<string, ToolDispatch> = {
   pontuar_icp: (db, accountId, _userId, toolArgs) => pontuarIcp(db, accountId, toolArgs),
   consultar_status_da_pesquisa: (db, accountId, _userId, toolArgs) => consultarStatusDaPesquisa(db, accountId, toolArgs),
   cancelar_pesquisa: (db, accountId, _userId, toolArgs) => cancelarPesquisa(db, accountId, toolArgs),
+  preparar_importacao: (db, accountId, _userId, toolArgs) => prepararImportacao(db, accountId, toolArgs),
+  criar_contatos_e_negocios: (db, accountId, userId, toolArgs) => criarContatosENegocios(db, accountId, userId, toolArgs),
 };
 
 // Guards against a pathological tool-call loop (the model repeatedly

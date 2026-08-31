@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   pontuarIcp: vi.fn(),
   consultarStatusDaPesquisa: vi.fn(),
   cancelarPesquisa: vi.fn(),
+  prepararImportacao: vi.fn(),
+  criarContatosENegocios: vi.fn(),
 }));
 
 vi.mock("openai", () => ({
@@ -42,6 +44,10 @@ vi.mock("./tools/scoring", () => ({ pontuarIcp: mocks.pontuarIcp }));
 vi.mock("./tools/status", () => ({
   consultarStatusDaPesquisa: mocks.consultarStatusDaPesquisa,
   cancelarPesquisa: mocks.cancelarPesquisa,
+}));
+vi.mock("./tools/import", () => ({
+  prepararImportacao: mocks.prepararImportacao,
+  criarContatosENegocios: mocks.criarContatosENegocios,
 }));
 
 import { runProspectingTurn } from "./openai-agent";
@@ -99,6 +105,8 @@ beforeEach(() => {
   mocks.pontuarIcp.mockReset();
   mocks.consultarStatusDaPesquisa.mockReset();
   mocks.cancelarPesquisa.mockReset();
+  mocks.prepararImportacao.mockReset();
+  mocks.criarContatosENegocios.mockReset();
 });
 
 describe("runProspectingTurn", () => {
@@ -206,10 +214,10 @@ describe("runProspectingTurn", () => {
     expect(h.onDone).toHaveBeenCalledWith("Não encontrei esse pipeline.");
   });
 
-  it("returns a graceful 'not available' tool result for a tool with no handler yet (import lands in a later milestone), instead of crashing", async () => {
+  it("returns a graceful 'not available' tool result for a name the model hallucinated (not in our schema at all), instead of crashing", async () => {
     mocks.create
-      .mockResolvedValueOnce(toolCallStream("preparar_importacao", { run_id: "run-1", candidate_ids: ["c1"] }))
-      .mockResolvedValueOnce(textOnlyStream("Essa função ainda não está pronta.", "resp-2"));
+      .mockResolvedValueOnce(toolCallStream("deletar_tudo", { run_id: "run-1" }))
+      .mockResolvedValueOnce(textOnlyStream("Essa função não existe.", "resp-2"));
     const h = handlers();
 
     await runProspectingTurn({
@@ -224,9 +232,38 @@ describe("runProspectingTurn", () => {
     });
 
     expect(h.onToolResult).toHaveBeenCalledWith(
-      "preparar_importacao",
+      "deletar_tudo",
       undefined,
       expect.stringContaining("não está disponível"),
+    );
+  });
+
+  it("dispatches criar_contatos_e_negocios to the real import tool, threading accountId and userId through", async () => {
+    mocks.criarContatosENegocios.mockResolvedValue({ imported: 2, alreadyImported: 0, failed: 0, results: [] });
+    mocks.create
+      .mockResolvedValueOnce(toolCallStream("criar_contatos_e_negocios", { run_id: "run-1", candidate_ids: ["c1", "c2"] }))
+      .mockResolvedValueOnce(textOnlyStream("Importei 2 negócios!", "resp-2"));
+    const h = handlers();
+
+    await runProspectingTurn({
+      db: {} as never,
+      accountId: "acct-1",
+      userId: "user-1",
+      apiKey: "sk-test",
+      model: "gpt-5.4-mini",
+      provider: "openai",
+      history: [],
+      handlers: h,
+    });
+
+    expect(mocks.criarContatosENegocios).toHaveBeenCalledWith({}, "acct-1", "user-1", {
+      run_id: "run-1",
+      candidate_ids: ["c1", "c2"],
+    });
+    expect(h.onToolResult).toHaveBeenCalledWith(
+      "criar_contatos_e_negocios",
+      { imported: 2, alreadyImported: 0, failed: 0, results: [] },
+      undefined,
     );
   });
 

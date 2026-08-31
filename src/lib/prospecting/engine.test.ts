@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   findInstagramFromWebsiteLinks: vi.fn(),
   checkDuplicate: vi.fn(),
   scoreIcp: vi.fn(),
+  importCandidates: vi.fn(),
 }));
 
 vi.mock("./google-places", async () => {
@@ -23,6 +24,7 @@ vi.mock("./website-analyzer", () => ({ analyzeWebsite: mocks.analyzeWebsite }));
 vi.mock("./instagram-lookup", () => ({ findInstagramFromWebsiteLinks: mocks.findInstagramFromWebsiteLinks }));
 vi.mock("./dedupe", () => ({ checkDuplicate: mocks.checkDuplicate }));
 vi.mock("./icp-rubric", () => ({ scoreIcp: mocks.scoreIcp }));
+vi.mock("./import", () => ({ importCandidates: mocks.importCandidates }));
 
 import { advanceRun } from "./engine";
 
@@ -47,6 +49,10 @@ function fakeAdmin(seed: Record<string, Record<string, unknown>[]>) {
       },
       eq(col: string, val: unknown) {
         filters.push((r) => r[col] === val);
+        return builder;
+      },
+      is(col: string, val: null) {
+        filters.push((r) => (r[col] ?? null) === val);
         return builder;
       },
       maybeSingle: async () => {
@@ -96,6 +102,7 @@ beforeEach(() => {
   mocks.findInstagramFromWebsiteLinks.mockReset().mockReturnValue({ handle: null, profileUrl: null, source: null, followers: null, engagement: null });
   mocks.checkDuplicate.mockReset().mockResolvedValue({ status: "new", contactId: null, dealId: null, matchedOn: null });
   mocks.scoreIcp.mockReset().mockReturnValue({ score: 80, grade: "A", reason: "ICP A", rubricVersion: "v1" });
+  mocks.importCandidates.mockReset().mockResolvedValue({ imported: 0, alreadyImported: 0, failed: 0, results: [] });
 });
 
 const baseRun = {
@@ -309,6 +316,48 @@ describe("advanceRun — scoring", () => {
 
     expect(mocks.checkDuplicate).not.toHaveBeenCalled();
     expect(admin.tables.prospecting_runs[0].status).toBe("awaiting_review");
+  });
+});
+
+describe("advanceRun — importing (resuming an interrupted import)", () => {
+  it("resumes only the candidates still selected with no imported_deal_id yet", async () => {
+    const admin = fakeAdmin({
+      prospecting_runs: [{ ...baseRun, status: "importing", user_id: "user-1" }],
+      prospecting_candidates: [
+        { id: "c1", run_id: "run-1", selected: true, imported_deal_id: null },
+        { id: "c2", run_id: "run-1", selected: true, imported_deal_id: "deal-already" },
+        { id: "c3", run_id: "run-1", selected: false, imported_deal_id: null },
+      ],
+    });
+
+    await advanceRun("run-1", admin as never);
+
+    expect(mocks.importCandidates).toHaveBeenCalledWith(
+      admin,
+      expect.objectContaining({ runId: "run-1", accountId: "acct-1", userId: "user-1", candidateIds: ["c1"] }),
+    );
+  });
+
+  it("does nothing when no candidate is left pending import", async () => {
+    const admin = fakeAdmin({
+      prospecting_runs: [{ ...baseRun, status: "importing", user_id: "user-1" }],
+      prospecting_candidates: [{ id: "c1", run_id: "run-1", selected: true, imported_deal_id: "deal-1" }],
+    });
+
+    await advanceRun("run-1", admin as never);
+
+    expect(mocks.importCandidates).not.toHaveBeenCalled();
+  });
+
+  it("skips resuming when the run has no user_id to attribute the import to", async () => {
+    const admin = fakeAdmin({
+      prospecting_runs: [{ ...baseRun, status: "importing", user_id: null }],
+      prospecting_candidates: [{ id: "c1", run_id: "run-1", selected: true, imported_deal_id: null }],
+    });
+
+    await advanceRun("run-1", admin as never);
+
+    expect(mocks.importCandidates).not.toHaveBeenCalled();
   });
 });
 

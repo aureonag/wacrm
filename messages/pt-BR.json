@@ -819,7 +819,46 @@
       "notConfiguredMessage": "O assistente de IA ainda não está configurado para esta conta. Vá em Agentes de IA para configurá-lo e volte aqui depois.",
       "notConfiguredToast": "Assistente de IA não configurado",
       "toastFailedCreateConversation": "Não foi possível iniciar uma nova conversa",
-      "toastFailedSend": "Não foi possível enviar a mensagem"
+      "toastFailedSend": "Não foi possível enviar a mensagem",
+      "toolActivity": "Usando {tool}..."
+    },
+    "runStatus": {
+      "queued": "Na fila",
+      "searching": "Buscando empresas",
+      "enriching": "Enriquecendo resultados",
+      "scoring": "Pontuando candidatos",
+      "awaiting_review": "Pronto para revisão",
+      "importing": "Importando",
+      "completed": "Concluído",
+      "partially_completed": "Concluído parcialmente",
+      "failed": "Falhou",
+      "cancelled": "Cancelado",
+      "foundCount": "{count} encontradas",
+      "validatedCount": "{count} enriquecidas",
+      "duplicateCount": "{count} duplicadas",
+      "importedCount": "{count} importadas"
+    },
+    "results": {
+      "colCompany": "Empresa",
+      "colSegment": "Segmento",
+      "colRegion": "Região",
+      "colPhone": "Telefone",
+      "colWebsite": "Site",
+      "colInstagram": "Instagram",
+      "colRating": "Nota do Google",
+      "colScore": "Score ICP",
+      "colDuplicate": "Status",
+      "linkLabel": "Visitar",
+      "statusImported": "Importado",
+      "statusExisting": "Já é contato",
+      "statusPossibleDuplicate": "Possível duplicidade",
+      "statusNew": "Novo",
+      "selectedCount": "{count} selecionadas",
+      "importButton": "Importar selecionados",
+      "toastFailedToggle": "Não foi possível atualizar a seleção",
+      "toastFailedImport": "Não foi possível importar as empresas selecionadas",
+      "toastImported": "{count} negócios importados",
+      "selectRowLabel": "Selecionar {company}"
     }
   },
   "Broadcasts": {

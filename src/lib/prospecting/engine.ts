@@ -22,6 +22,7 @@ import { analyzeWebsite } from "./website-analyzer";
 import { findInstagramFromWebsiteLinks } from "./instagram-lookup";
 import { checkDuplicate } from "./dedupe";
 import { scoreIcp, type IcpScoringInput } from "./icp-rubric";
+import { importCandidates } from "./import";
 import { PROSPECTING_TERMINAL_STATUSES } from "./constants";
 
 const SEARCH_TARGET_MULTIPLIER = 1.5;
@@ -31,6 +32,7 @@ const ENRICH_BATCH_SIZE = 5;
 interface ProspectingRunRow {
   id: string;
   account_id: string;
+  user_id: string | null;
   status: string;
   pipeline_id: string;
   entry_stage_id: string;
@@ -335,11 +337,35 @@ async function stepScoring(admin: SupabaseClient, run: ProspectingRunRow): Promi
     .eq("id", run.id);
 }
 
-/** `importing` is driven synchronously by the import route (a later milestone) — the
- * cron only needs to resume a run that got interrupted mid-import. No-op until that
- * route exists; claiming this status is harmless (it just leaves the row as-is). */
-async function stepImporting(): Promise<void> {
-  // Intentionally empty — see doc comment above.
+/**
+ * `importing` is normally driven synchronously by
+ * `POST /api/prospecting/runs/[id]/import` (the user clicks "Importar
+ * selecionados" and waits for the response) — that route already
+ * moves the run on to `completed`/`partially_completed` itself. This
+ * step only matters when that request was interrupted (a function
+ * timeout, a dropped connection) mid-import: it resumes by finding
+ * candidates still marked `selected` with no `imported_deal_id` yet
+ * and running them back through the same idempotent `importCandidates`
+ * — safe to call again because the idempotency marker is per-candidate.
+ */
+async function stepImporting(admin: SupabaseClient, run: ProspectingRunRow): Promise<void> {
+  if (!run.user_id) return; // can't attribute deal ownership — leave for manual follow-up
+
+  const { data: pending } = await admin
+    .from("prospecting_candidates")
+    .select("id")
+    .eq("run_id", run.id)
+    .eq("selected", true)
+    .is("imported_deal_id", null);
+
+  if (!pending || pending.length === 0) return;
+
+  await importCandidates(admin, {
+    runId: run.id,
+    candidateIds: pending.map((c) => c.id as string),
+    accountId: run.account_id,
+    userId: run.user_id,
+  });
 }
 
 export async function advanceRun(runId: string, admin: SupabaseClient): Promise<void> {
@@ -364,7 +390,7 @@ export async function advanceRun(runId: string, admin: SupabaseClient): Promise<
         await stepScoring(admin, run as ProspectingRunRow);
         break;
       case "importing":
-        await stepImporting();
+        await stepImporting(admin, run as ProspectingRunRow);
         break;
     }
   } catch (err) {

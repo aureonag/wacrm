@@ -9,10 +9,11 @@
 // schema only bounds the *shape* the model may send, it is never
 // trusted as an authorization check.
 //
-// All tools are wired to a real handler in `openai-agent.ts` except
-// `preparar_importacao`/`criar_contatos_e_negocios`, which land with
-// the import flow in a later milestone (they return a clear "not
-// available yet" tool error until then).
+// Every tool is wired to a real handler in `openai-agent.ts`. A tool
+// name the model calls that isn't in this list (hallucinated, or a
+// future addition the model was told about incorrectly) still
+// resolves gracefully — `openai-agent.ts` returns a clear "not
+// available" tool error instead of crashing the turn.
 // ============================================================
 
 import { PROSPECTING_MAX_QUANTITY, PROSPECTING_MIN_QUANTITY } from "./constants";

@@ -20,6 +20,9 @@ interface ProspectingChatProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
   selections: ProspectingSelections;
+  /** Fired when the agent's `pesquisar_empresas` tool call returns a run id, so the
+   * page can start tracking that run's progress independently of the chat stream. */
+  onRunStarted?: (runId: string) => void;
 }
 
 const SUGGESTIONS = [
@@ -49,11 +52,17 @@ function parseSseChunk(chunk: string): { event: string; data: unknown }[] {
   return events;
 }
 
-export function ProspectingChat({ conversationId, onConversationCreated, selections }: ProspectingChatProps) {
+export function ProspectingChat({
+  conversationId,
+  onConversationCreated,
+  selections,
+  onRunStarted,
+}: ProspectingChatProps) {
   const t = useTranslations("Prospecting.chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [toolActivity, setToolActivity] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -152,9 +161,19 @@ export function ProspectingChat({ conversationId, onConversationCreated, selecti
               setMessages((prev) =>
                 prev.map((m) => (m.id === assistantMsgId ? { ...m, content: assistantText } : m)),
               );
+            } else if (event === "tool_call") {
+              setToolActivity((data as { name: string }).name);
+            } else if (event === "tool_result") {
+              setToolActivity(null);
+              const { name, result } = data as { name: string; result?: { run_id?: string } };
+              if (name === "pesquisar_empresas" && result?.run_id) {
+                onRunStarted?.(result.run_id);
+              }
             } else if (event === "error") {
+              setToolActivity(null);
               toast.error((data as { message: string }).message);
             } else if (event === "done") {
+              setToolActivity(null);
               setMessages((prev) =>
                 prev.map((m) => (m.id === assistantMsgId ? { ...m, pending: false } : m)),
               );
@@ -169,6 +188,7 @@ export function ProspectingChat({ conversationId, onConversationCreated, selecti
       setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
     } finally {
       setSending(false);
+      setToolActivity(null);
     }
   }
 
@@ -215,12 +235,19 @@ export function ProspectingChat({ conversationId, onConversationCreated, selecti
         )}
       </div>
 
+      {toolActivity && (
+        <div className="flex items-center gap-1.5 border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          {t("toolActivity", { tool: toolActivity })}
+        </div>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
           void sendMessage(input);
         }}
-        className="flex items-end gap-2 border-t border-border p-3"
+        className={cn("flex items-end gap-2 p-3", !toolActivity && "border-t border-border")}
       >
         <Textarea
           value={input}

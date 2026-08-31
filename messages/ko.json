@@ -819,7 +819,46 @@
       "notConfiguredMessage": "이 계정에는 아직 AI 어시스턴트가 설정되지 않았습니다. AI 에이전트에서 설정한 후 다시 돌아와주세요.",
       "notConfiguredToast": "AI 어시스턴트가 설정되지 않았습니다",
       "toastFailedCreateConversation": "새 대화를 시작할 수 없습니다",
-      "toastFailedSend": "메시지를 보낼 수 없습니다"
+      "toastFailedSend": "메시지를 보낼 수 없습니다",
+      "toolActivity": "{tool} 사용 중..."
+    },
+    "runStatus": {
+      "queued": "대기 중",
+      "searching": "기업 검색 중",
+      "enriching": "결과 보강 중",
+      "scoring": "후보 점수 산정 중",
+      "awaiting_review": "검토 준비 완료",
+      "importing": "가져오는 중",
+      "completed": "완료됨",
+      "partially_completed": "부분적으로 완료됨",
+      "failed": "실패함",
+      "cancelled": "취소됨",
+      "foundCount": "{count}개 발견",
+      "validatedCount": "{count}개 보강됨",
+      "duplicateCount": "{count}개 중복",
+      "importedCount": "{count}개 가져옴"
+    },
+    "results": {
+      "colCompany": "기업",
+      "colSegment": "세그먼트",
+      "colRegion": "지역",
+      "colPhone": "전화번호",
+      "colWebsite": "웹사이트",
+      "colInstagram": "인스타그램",
+      "colRating": "구글 평점",
+      "colScore": "ICP 점수",
+      "colDuplicate": "상태",
+      "linkLabel": "방문",
+      "statusImported": "가져옴",
+      "statusExisting": "이미 연락처에 있음",
+      "statusPossibleDuplicate": "중복 가능성",
+      "statusNew": "신규",
+      "selectedCount": "{count}개 선택됨",
+      "importButton": "선택 항목 가져오기",
+      "toastFailedToggle": "선택 항목을 업데이트할 수 없습니다",
+      "toastFailedImport": "선택한 기업을 가져올 수 없습니다",
+      "toastImported": "{count}개의 딜을 가져왔습니다",
+      "selectRowLabel": "{company} 선택"
     }
   },
   "Broadcasts": {
