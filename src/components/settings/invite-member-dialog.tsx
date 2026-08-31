@@ -3,20 +3,28 @@
 // ============================================================
 // InviteMemberDialog
 //
-// Two-step modal:
-//   1. Form  — role + expiry + optional label → POST creates the invite.
-//   2. Result — the share URL, returned ONCE. Copy-to-clipboard, plus a
-//              "Send via WhatsApp" deep link that pre-fills wa.me with
-//              a friendly message containing the URL.
+// Two modes, picked via a tab at the top of the form step:
 //
-// The plaintext token is server-stored only as a SHA-256 hash, so once
-// the result step is dismissed the link is gone forever — the dialog
-// shouts this in copy.
+//   'link'   — the original flow. Role + expiry + optional label
+//              → POST creates a shareable one-time invite link.
+//              The invitee self-registers (or logs in) and redeems
+//              it themselves; no password ever passes through us.
+//
+//   'direct' — "Criar acesso agora". Full name + email + password
+//              + role → POST creates the auth user immediately
+//              (server-side, service-role, email pre-confirmed) and
+//              assigns them into the account. No self-signup round
+//              trip — the admin hands the credentials to the new
+//              teammate directly.
+//
+// Both modes end on the same kind of result step: a one-time
+// reveal (link, or email+password) that disappears once the modal
+// closes, with copy buttons and a WhatsApp share shortcut.
 // ============================================================
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, Loader2, MessageCircle, Sparkles } from 'lucide-react';
+import { Copy, Dices, Loader2, MessageCircle, Sparkles } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -36,16 +44,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 
 type InviteRole = 'admin' | 'agent' | 'viewer';
+type Mode = 'link' | 'direct';
 
 interface InviteMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Called after a successful create so the parent re-fetches the
-   *  pending-invitations list. */
+   *  roster / pending-invitations list. */
   onCreated: () => void;
 }
 
@@ -59,15 +69,36 @@ const EXPIRY_OPTIONS = [
 // Mirror it on the client so we short-circuit before the round-trip
 // rather than letting the user submit and bounce off a 400.
 const MAX_LABEL_LEN = 80;
+const MIN_PASSWORD_LEN = 6;
 
-interface CreatedInvite {
+// Unambiguous charset — no 0/O/1/l/I — since an admin may be reading
+// this aloud or over WhatsApp to hand it off.
+const PASSWORD_CHARS =
+  'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+
+function generatePassword(length = 14): string {
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (n) => PASSWORD_CHARS[n % PASSWORD_CHARS.length]).join('');
+}
+
+interface LinkResult {
+  kind: 'link';
   url: string;
   role: InviteRole;
   expiresInDays: number;
-  /** Snapshotted at creation time so a later account rename can't
-   *  retroactively change the wa.me message text on the result step. */
   accountName: string;
 }
+
+interface DirectResult {
+  kind: 'direct';
+  email: string;
+  password: string;
+  role: InviteRole;
+  accountName: string;
+}
+
+type CreatedResult = LinkResult | DirectResult;
 
 export function InviteMemberDialog({
   open,
@@ -77,21 +108,35 @@ export function InviteMemberDialog({
   const t = useTranslations('Settings.invite');
   const tRoles = useTranslations('Settings.roles');
   const { account } = useAuth();
+
+  const [mode, setMode] = useState<Mode>('link');
+
+  // Link-mode fields
   const [role, setRole] = useState<InviteRole>('agent');
   const [expiry, setExpiry] = useState<string>('7');
   const [label, setLabel] = useState('');
+
+  // Direct-mode fields
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<CreatedInvite | null>(null);
+  const [result, setResult] = useState<CreatedResult | null>(null);
 
   function reset() {
+    setMode('link');
     setRole('agent');
     setExpiry('7');
     setLabel('');
+    setFullName('');
+    setEmail('');
+    setPassword('');
     setResult(null);
     setSubmitting(false);
   }
 
-  async function handleCreate() {
+  async function handleCreateLink() {
     // Mirror the server's max-length check so we don't ship an
     // obviously-too-long label across the wire just to bounce off
     // a 400. The Input also has a `maxLength={MAX_LABEL_LEN}` cap
@@ -127,6 +172,7 @@ export function InviteMemberDialog({
       };
 
       setResult({
+        kind: 'link',
         url: data.url,
         role,
         expiresInDays: data.expiresInDays,
@@ -146,26 +192,81 @@ export function InviteMemberDialog({
     }
   }
 
-  async function copyToClipboard() {
-    if (!result) return;
+  async function handleCreateDirect() {
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+    if (!trimmedName || !trimmedEmail) {
+      toast.error(t('directRequiredFields'));
+      return;
+    }
+    if (password.length < MIN_PASSWORD_LEN) {
+      toast.error(t('directPasswordTooShort', { min: MIN_PASSWORD_LEN }));
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await navigator.clipboard.writeText(result.url);
-      toast.success(t('copied'));
+      const res = await fetch('/api/account/members/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: trimmedName,
+          email: trimmedEmail,
+          password,
+          role,
+        }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        toast.error(payload.error || t('directCreateFailed'));
+        return;
+      }
+
+      setResult({
+        kind: 'direct',
+        email: trimmedEmail,
+        password,
+        role,
+        accountName: account?.name ?? 'our wacrm account',
+      });
+      onCreated();
+    } catch (err) {
+      console.error('[InviteMemberDialog] direct create error:', err);
+      toast.error('Could not reach the server. Try again?');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function copyToClipboard(value: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(successMessage);
     } catch {
       // Most likely "not in a secure context" — happens on http://
-      // local IPs. Surface the link in the toast so the admin can
-      // hand-copy it.
+      // local IPs. The value stays visible in the field so the
+      // admin can hand-select it.
       toast.error(t('clipboardBlocked'));
     }
   }
 
-  function whatsappShareUrl(url: string): string {
-    // Include the account name so the recipient knows which team
-    // they're being invited to before clicking through. This matters
-    // for users in multi-team contexts where "our wacrm account"
-    // wouldn't be enough to disambiguate.
-    const accountName = result?.accountName ?? 'our wacrm account';
-    const message = t('whatsappMessage', { accountName, expiresInDays: result?.expiresInDays ?? 0, url });
+  function whatsappShareUrl(): string {
+    if (!result) return '#';
+    const accountName = result.accountName;
+    if (result.kind === 'link') {
+      const message = t('whatsappMessage', {
+        accountName,
+        expiresInDays: result.expiresInDays,
+        url: result.url,
+      });
+      return `https://wa.me/?text=${encodeURIComponent(message)}`;
+    }
+    const message = t('whatsappMessageDirect', {
+      accountName,
+      email: result.email,
+      password: result.password,
+    });
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   }
 
@@ -174,8 +275,9 @@ export function InviteMemberDialog({
       open={open}
       onOpenChange={(next) => {
         // Reset state when the dialog closes — both for cancel and
-        // for dismissal after a successful create. The plaintext URL
-        // is intentionally NOT preserved across opens.
+        // for dismissal after a successful create. Neither the
+        // plaintext link nor the plaintext password is preserved
+        // across opens.
         if (!next) reset();
         onOpenChange(next);
       }}
@@ -186,35 +288,85 @@ export function InviteMemberDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-popover-foreground">
                 <Sparkles className="size-4 text-primary" />
-                {t('inviteCreated')}
+                {result.kind === 'link' ? t('inviteCreated') : t('accountCreated')}
               </DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                {t.rich('inviteCreatedDesc', {
-                  role: tRoles(result.role),
-                  days: result.expiresInDays,
-                  bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>
-                })}
+                {result.kind === 'link' ? (
+                  t.rich('inviteCreatedDesc', {
+                    role: tRoles(result.role),
+                    days: result.expiresInDays,
+                    bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
+                  })
+                ) : (
+                  t.rich('accountCreatedDesc', {
+                    role: tRoles(result.role),
+                    bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
+                  })
+                )}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 py-2">
-              <Label className="text-muted-foreground">{t('inviteLink')}</Label>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={result.url}
-                  className="bg-muted border-border text-foreground font-mono text-xs"
-                  onFocus={(e) => e.currentTarget.select()}
-                />
-                <Button
-                  type="button"
-                  onClick={copyToClipboard}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
-                >
-                  <Copy className="size-4" />
-                  {t('copy')}
-                </Button>
-              </div>
+              {result.kind === 'link' ? (
+                <>
+                  <Label className="text-muted-foreground">{t('inviteLink')}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={result.url}
+                      className="bg-muted border-border text-foreground font-mono text-xs"
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => copyToClipboard(result.url, t('copied'))}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                    >
+                      <Copy className="size-4" />
+                      {t('copy')}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground">{t('emailLabel')}</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={result.email}
+                        className="bg-muted border-border text-foreground font-mono text-xs"
+                        onFocus={(e) => e.currentTarget.select()}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => copyToClipboard(result.email, t('copied'))}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                      >
+                        <Copy className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground">{t('passwordLabel')}</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={result.password}
+                        className="bg-muted border-border text-foreground font-mono text-xs"
+                        onFocus={(e) => e.currentTarget.select()}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => copyToClipboard(result.password, t('copied'))}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                      >
+                        <Copy className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Higher-contrast amber than the original 10% / amber-200.
                   Reviewed against slate-900 to meet WCAG AAA for body
@@ -225,7 +377,7 @@ export function InviteMemberDialog({
                 <strong className="font-semibold text-amber-100">
                   {t('saveLinkNow')}
                 </strong>{' '}
-                {t('saveLinkHint')}
+                {result.kind === 'link' ? t('saveLinkHint') : t('savePasswordHint')}
               </div>
 
               {/* Anchor styled with `buttonVariants` rather than wrapping
@@ -234,7 +386,7 @@ export function InviteMemberDialog({
                   Direct anchor preserves right-click "Open in new tab"
                   behaviour too. */}
               <a
-                href={whatsappShareUrl(result.url)}
+                href={whatsappShareUrl()}
                 target="_blank"
                 rel="noreferrer noopener"
                 className={buttonVariants({
@@ -262,11 +414,70 @@ export function InviteMemberDialog({
             <DialogHeader>
               <DialogTitle className="text-popover-foreground">{t('dialogTitle')}</DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                {t('dialogDesc')}
+                {mode === 'link' ? t('dialogDesc') : t('dialogDescDirect')}
               </DialogDescription>
             </DialogHeader>
 
+            <Tabs value={mode} onValueChange={(v) => v && setMode(v as Mode)}>
+              <TabsList className="w-full">
+                <TabsTrigger value="link" className="flex-1">
+                  {t('modeLink')}
+                </TabsTrigger>
+                <TabsTrigger value="direct" className="flex-1">
+                  {t('modeDirect')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
             <div className="space-y-4 py-2">
+              {mode === 'direct' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">{t('fullNameLabel')}</Label>
+                    <Input
+                      placeholder={t('fullNamePlaceholder')}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">{t('emailLabel')}</Label>
+                    <Input
+                      type="email"
+                      placeholder={t('emailPlaceholder')}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">{t('passwordLabel')}</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder={t('passwordPlaceholder')}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground font-mono text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setPassword(generatePassword())}
+                        className="border-border text-muted-foreground hover:bg-muted shrink-0"
+                        title={t('generatePassword')}
+                      >
+                        <Dices className="size-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('directPasswordHint')}
+                    </p>
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
                 <Label className="text-muted-foreground">{t('roleLabel')}</Label>
                 <Select
@@ -287,41 +498,45 @@ export function InviteMemberDialog({
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('validForLabel')}</Label>
-                <Select
-                  value={expiry}
-                  onValueChange={(v) => v && setExpiry(v)}
-                >
-                  <SelectTrigger className="w-full bg-muted border-border text-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EXPIRY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {t(opt.labelKey as Parameters<typeof t>[0])}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {mode === 'link' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">{t('validForLabel')}</Label>
+                    <Select
+                      value={expiry}
+                      onValueChange={(v) => v && setExpiry(v)}
+                    >
+                      <SelectTrigger className="w-full bg-muted border-border text-foreground">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXPIRY_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {t(opt.labelKey as Parameters<typeof t>[0])}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">
-                  {t('labelTitle')}{' '}
-                  <span className="text-xs text-muted-foreground">{t('optional')}</span>
-                </Label>
-                <Input
-                  placeholder={t('labelPlaceholder')}
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  maxLength={MAX_LABEL_LEN}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t('labelHint')}
-                </p>
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">
+                      {t('labelTitle')}{' '}
+                      <span className="text-xs text-muted-foreground">{t('optional')}</span>
+                    </Label>
+                    <Input
+                      placeholder={t('labelPlaceholder')}
+                      value={label}
+                      onChange={(e) => setLabel(e.target.value)}
+                      maxLength={MAX_LABEL_LEN}
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('labelHint')}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             <DialogFooter className="bg-popover border-border">
@@ -333,7 +548,7 @@ export function InviteMemberDialog({
                 {t('cancel')}
               </Button>
               <Button
-                onClick={handleCreate}
+                onClick={mode === 'link' ? handleCreateLink : handleCreateDirect}
                 disabled={submitting}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
@@ -342,8 +557,10 @@ export function InviteMemberDialog({
                     <Loader2 className="size-4 animate-spin" />
                     {t('creating')}
                   </>
-                ) : (
+                ) : mode === 'link' ? (
                   t('generateLink')
+                ) : (
+                  t('createAccess')
                 )}
               </Button>
             </DialogFooter>
