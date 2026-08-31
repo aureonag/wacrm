@@ -23,7 +23,7 @@ import { runProspectingTurn, type AgentChatMessage } from "@/lib/prospecting/ope
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { supabase, accountId } = await requireRole("agent");
+    const { supabase, accountId, userId } = await requireRole("agent");
     const { id: conversationId } = await params;
 
     const { data: conversation, error: convError } = await supabase
@@ -106,6 +106,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         await runProspectingTurn({
           db: supabase,
           accountId,
+          userId,
           apiKey: aiConfig.apiKey,
           model: aiConfig.model,
           provider: aiConfig.provider,

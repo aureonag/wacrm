@@ -21,6 +21,11 @@ import { logAiUsage } from "@/lib/ai/usage";
 import { PROSPECTING_SYSTEM_PROMPT } from "./system-prompt";
 import { PROSPECTING_TOOL_SCHEMAS } from "./tool-schemas";
 import { listarFrentes, listarPipelines, listarResponsaveis, obterPrimeiraEtapa } from "./tools/pipelines";
+import { pesquisarEmpresas } from "./tools/search";
+import { enriquecerGoogle, analisarSite, localizarInstagram } from "./tools/enrichment";
+import { verificarDuplicidade } from "./tools/dedupe";
+import { pontuarIcp } from "./tools/scoring";
+import { consultarStatusDaPesquisa, cancelarPesquisa } from "./tools/status";
 import { ProspectingToolError } from "./tools/errors";
 
 export interface AgentChatMessage {
@@ -39,18 +44,27 @@ export interface AgentStreamHandlers {
 type ToolDispatch = (
   db: SupabaseClient,
   accountId: string,
+  userId: string,
   args: Record<string, unknown>,
 ) => Promise<unknown>;
 
-// Only the read-only, cheap tools are wired to a real handler so far —
-// search/enrichment/scoring/import land with the background engine in
-// a later milestone. Calling an unwired tool returns a clear "not
-// available yet" error to the model instead of throwing.
+// `criar_contatos_e_negocios`/`preparar_importacao` are not wired yet
+// (the import flow lands in a later milestone) — calling either
+// returns a clear "not available yet" error to the model instead of
+// throwing.
 const TOOL_HANDLERS: Record<string, ToolDispatch> = {
   listar_pipelines: (db) => listarPipelines(db),
-  obter_primeira_etapa: (db, accountId, toolArgs) => obterPrimeiraEtapa(db, accountId, toolArgs),
+  obter_primeira_etapa: (db, accountId, _userId, toolArgs) => obterPrimeiraEtapa(db, accountId, toolArgs),
   listar_responsaveis: (db) => listarResponsaveis(db),
   listar_frentes: () => Promise.resolve(listarFrentes()),
+  pesquisar_empresas: (db, accountId, userId, toolArgs) => pesquisarEmpresas(db, accountId, userId, toolArgs),
+  enriquecer_google: (db, accountId, _userId, toolArgs) => enriquecerGoogle(db, accountId, toolArgs),
+  analisar_site: (db, accountId, _userId, toolArgs) => analisarSite(db, accountId, toolArgs),
+  localizar_instagram: (db, accountId, _userId, toolArgs) => localizarInstagram(db, accountId, toolArgs),
+  verificar_duplicidade: (db, accountId, _userId, toolArgs) => verificarDuplicidade(db, accountId, toolArgs),
+  pontuar_icp: (db, accountId, _userId, toolArgs) => pontuarIcp(db, accountId, toolArgs),
+  consultar_status_da_pesquisa: (db, accountId, _userId, toolArgs) => consultarStatusDaPesquisa(db, accountId, toolArgs),
+  cancelar_pesquisa: (db, accountId, _userId, toolArgs) => cancelarPesquisa(db, accountId, toolArgs),
 };
 
 // Guards against a pathological tool-call loop (the model repeatedly
@@ -61,6 +75,7 @@ const MAX_TOOL_ROUNDS = 6;
 export interface RunProspectingTurnArgs {
   db: SupabaseClient;
   accountId: string;
+  userId: string;
   apiKey: string;
   model: string;
   provider: string;
@@ -69,7 +84,7 @@ export interface RunProspectingTurnArgs {
 }
 
 export async function runProspectingTurn(args: RunProspectingTurnArgs): Promise<void> {
-  const { db, accountId, apiKey, model, provider, history, handlers } = args;
+  const { db, accountId, userId, apiKey, model, provider, history, handlers } = args;
 
   if (provider !== "openai") {
     handlers.onError(
@@ -156,7 +171,7 @@ export async function runProspectingTurn(args: RunProspectingTurnArgs): Promise<
           errorMessage = "Esta ferramenta ainda não está disponível nesta versão do módulo.";
         } else {
           try {
-            output = await handler(db, accountId, parsedArgs);
+            output = await handler(db, accountId, userId, parsedArgs);
           } catch (err) {
             errorMessage =
               err instanceof ProspectingToolError ? err.message : "Falha ao executar a ferramenta.";

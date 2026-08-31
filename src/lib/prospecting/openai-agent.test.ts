@@ -7,6 +7,14 @@ const mocks = vi.hoisted(() => ({
   obterPrimeiraEtapa: vi.fn(),
   listarResponsaveis: vi.fn(),
   listarFrentes: vi.fn(),
+  pesquisarEmpresas: vi.fn(),
+  enriquecerGoogle: vi.fn(),
+  analisarSite: vi.fn(),
+  localizarInstagram: vi.fn(),
+  verificarDuplicidade: vi.fn(),
+  pontuarIcp: vi.fn(),
+  consultarStatusDaPesquisa: vi.fn(),
+  cancelarPesquisa: vi.fn(),
 }));
 
 vi.mock("openai", () => ({
@@ -22,6 +30,18 @@ vi.mock("./tools/pipelines", () => ({
   obterPrimeiraEtapa: mocks.obterPrimeiraEtapa,
   listarResponsaveis: mocks.listarResponsaveis,
   listarFrentes: mocks.listarFrentes,
+}));
+vi.mock("./tools/search", () => ({ pesquisarEmpresas: mocks.pesquisarEmpresas }));
+vi.mock("./tools/enrichment", () => ({
+  enriquecerGoogle: mocks.enriquecerGoogle,
+  analisarSite: mocks.analisarSite,
+  localizarInstagram: mocks.localizarInstagram,
+}));
+vi.mock("./tools/dedupe", () => ({ verificarDuplicidade: mocks.verificarDuplicidade }));
+vi.mock("./tools/scoring", () => ({ pontuarIcp: mocks.pontuarIcp }));
+vi.mock("./tools/status", () => ({
+  consultarStatusDaPesquisa: mocks.consultarStatusDaPesquisa,
+  cancelarPesquisa: mocks.cancelarPesquisa,
 }));
 
 import { runProspectingTurn } from "./openai-agent";
@@ -71,6 +91,14 @@ beforeEach(() => {
   mocks.obterPrimeiraEtapa.mockReset();
   mocks.listarResponsaveis.mockReset();
   mocks.listarFrentes.mockReset();
+  mocks.pesquisarEmpresas.mockReset();
+  mocks.enriquecerGoogle.mockReset();
+  mocks.analisarSite.mockReset();
+  mocks.localizarInstagram.mockReset();
+  mocks.verificarDuplicidade.mockReset();
+  mocks.pontuarIcp.mockReset();
+  mocks.consultarStatusDaPesquisa.mockReset();
+  mocks.cancelarPesquisa.mockReset();
 });
 
 describe("runProspectingTurn", () => {
@@ -81,6 +109,7 @@ describe("runProspectingTurn", () => {
     await runProspectingTurn({
       db: {} as never,
       accountId: "acct-1",
+      userId: "user-1",
       apiKey: "sk-test",
       model: "gpt-5.4-mini",
       provider: "openai",
@@ -110,6 +139,7 @@ describe("runProspectingTurn", () => {
     await runProspectingTurn({
       db: {} as never,
       accountId: "acct-1",
+      userId: "user-1",
       apiKey: "sk-test",
       model: "claude-x",
       provider: "anthropic",
@@ -130,6 +160,7 @@ describe("runProspectingTurn", () => {
     await runProspectingTurn({
       db: {} as never,
       accountId: "acct-1",
+      userId: "user-1",
       apiKey: "sk-test",
       model: "gpt-5.4-mini",
       provider: "openai",
@@ -162,6 +193,7 @@ describe("runProspectingTurn", () => {
     await runProspectingTurn({
       db: {} as never,
       accountId: "acct-1",
+      userId: "user-1",
       apiKey: "sk-test",
       model: "gpt-5.4-mini",
       provider: "openai",
@@ -174,15 +206,16 @@ describe("runProspectingTurn", () => {
     expect(h.onDone).toHaveBeenCalledWith("Não encontrei esse pipeline.");
   });
 
-  it("returns a graceful 'not available' tool result for a tool with no handler yet, instead of crashing", async () => {
+  it("returns a graceful 'not available' tool result for a tool with no handler yet (import lands in a later milestone), instead of crashing", async () => {
     mocks.create
-      .mockResolvedValueOnce(toolCallStream("pesquisar_empresas", { pipeline_id: "p1", niche: "x", region: "y", quantity: 10 }))
+      .mockResolvedValueOnce(toolCallStream("preparar_importacao", { run_id: "run-1", candidate_ids: ["c1"] }))
       .mockResolvedValueOnce(textOnlyStream("Essa função ainda não está pronta.", "resp-2"));
     const h = handlers();
 
     await runProspectingTurn({
       db: {} as never,
       accountId: "acct-1",
+      userId: "user-1",
       apiKey: "sk-test",
       model: "gpt-5.4-mini",
       provider: "openai",
@@ -191,9 +224,42 @@ describe("runProspectingTurn", () => {
     });
 
     expect(h.onToolResult).toHaveBeenCalledWith(
-      "pesquisar_empresas",
+      "preparar_importacao",
       undefined,
       expect.stringContaining("não está disponível"),
+    );
+  });
+
+  it("dispatches pesquisar_empresas to the real search tool, threading accountId and userId through", async () => {
+    mocks.pesquisarEmpresas.mockResolvedValue({ run_id: "run-1", status: "searching", found_count: 3, error: null });
+    mocks.create
+      .mockResolvedValueOnce(
+        toolCallStream("pesquisar_empresas", { pipeline_id: "p1", niche: "dentista", region: "SP", quantity: 10 }),
+      )
+      .mockResolvedValueOnce(textOnlyStream("Comecei a busca!", "resp-2"));
+    const h = handlers();
+
+    await runProspectingTurn({
+      db: {} as never,
+      accountId: "acct-1",
+      userId: "user-1",
+      apiKey: "sk-test",
+      model: "gpt-5.4-mini",
+      provider: "openai",
+      history: [],
+      handlers: h,
+    });
+
+    expect(mocks.pesquisarEmpresas).toHaveBeenCalledWith(
+      {},
+      "acct-1",
+      "user-1",
+      { pipeline_id: "p1", niche: "dentista", region: "SP", quantity: 10 },
+    );
+    expect(h.onToolResult).toHaveBeenCalledWith(
+      "pesquisar_empresas",
+      { run_id: "run-1", status: "searching", found_count: 3, error: null },
+      undefined,
     );
   });
 });
