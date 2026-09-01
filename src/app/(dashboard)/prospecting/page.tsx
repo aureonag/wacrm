@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { ProspectingChat } from "@/components/prospecting/prospecting-chat";
 import { ProspectingExternalImport } from "@/components/prospecting/prospecting-external-import";
 import {
@@ -18,6 +20,7 @@ import { PROSPECTING_DEFAULT_QUANTITY } from "@/lib/prospecting/constants";
 
 export default function ProspectingPage() {
   const t = useTranslations("Prospecting");
+  const { user } = useAuth();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<ProspectingCandidate[]>([]);
@@ -41,6 +44,30 @@ export default function ProspectingPage() {
       // shows status, and the user can retry by reopening the run.
     }
   }, []);
+
+  // Rehydrate the user's most recent run on mount/reload — without this,
+  // uploading a list and then simply reloading the page (or coming back to
+  // it later while enrichment finishes) makes the results/import UI vanish
+  // even though the run and its candidates are still there server-side.
+  useEffect(() => {
+    if (!user?.id || activeRunId) return;
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("prospecting_runs")
+        .select("id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && data?.id) setActiveRunId(data.id as string);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Fetch candidates once the run reaches a state where there's something
   // to review, and again whenever counts change (new candidates enriched).
