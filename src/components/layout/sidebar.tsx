@@ -104,7 +104,7 @@ const navItems: NavItem[] = [
   { href: "/inbox", labelKey: "inbox", icon: MessageSquare },
   { href: "/notifications", labelKey: "notifications", icon: Bell },
   { href: "/contacts", labelKey: "contacts", icon: Users },
-  { href: "/prospecting", labelKey: "prospecting", icon: Radar },
+  { href: "/prospecting", labelKey: "prospecting", icon: Radar, beta: true },
   { href: "/pipelines", labelKey: "pipelines", icon: GitBranch },
   { href: "/activities", labelKey: "activities", icon: CheckSquare },
   { href: "/broadcasts", labelKey: "broadcasts", icon: Radio },
