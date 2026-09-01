@@ -97,7 +97,7 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
   }
 
   const selectedPipeline = pipelines.find((p) => p.id === selections.pipelineId);
-  const selectedOwner = profiles.find((p) => p.user_id === selections.ownerId);
+  const selectedOwner = profiles.find((p) => p.id === selections.ownerId);
 
   return (
     <div className="space-y-5">
@@ -125,7 +125,7 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
           </SelectTrigger>
           <SelectContent>
             {profiles.map((p) => (
-              <SelectItem key={p.id} value={p.user_id}>
+              <SelectItem key={p.id} value={p.id}>
                 {p.full_name || p.email}
               </SelectItem>
             ))}
