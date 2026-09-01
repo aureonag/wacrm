@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { CircleCheck, ExternalLink, Loader2, Sparkle, Star, TriangleAlert, UserRound } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useCan } from "@/hooks/use-can";
 import { useTranslations } from "next-intl";
 
@@ -35,11 +34,65 @@ interface ProspectingResultsTableProps {
   onImported: () => void;
 }
 
-const GRADE_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
-  A: "default",
-  B: "secondary",
-  C: "destructive",
-};
+/** A row's label-over-value cell — the building block for both card lines. */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 space-y-0.5">
+      <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+      <div className="truncate text-sm text-foreground">{children}</div>
+    </div>
+  );
+}
+
+/** Five-star rating, filled up to `value` (out of `max`) — used for both the Google rating and the ICP score. */
+function RatingStars({ value, max, tone }: { value: number | null; max: number; tone: "amber" | "primary" }) {
+  if (value === null) return <span className="text-sm text-muted-foreground">—</span>;
+  const filled = Math.round((value / max) * 5);
+  const starClass = tone === "amber" ? "fill-amber-400 text-amber-400" : "fill-primary text-primary";
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-sm tabular-nums text-foreground">{tone === "amber" ? value.toFixed(1).replace(".", ",") : value}</span>
+      <div className="flex">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Star key={i} className={cn("h-3 w-3", i < filled ? starClass : "text-muted-foreground/30")} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({ candidate, t }: { candidate: ProspectingCandidate; t: ReturnType<typeof useTranslations> }) {
+  if (candidate.imported_deal_id) {
+    return (
+      <span className="inline-flex items-center gap-1 text-emerald-400">
+        <CircleCheck className="h-3.5 w-3.5" />
+        {t("statusImported")}
+      </span>
+    );
+  }
+  if (candidate.duplicate_status === "existing") {
+    return (
+      <span className="inline-flex items-center gap-1 text-muted-foreground">
+        <UserRound className="h-3.5 w-3.5" />
+        {t("statusExisting")}
+      </span>
+    );
+  }
+  if (candidate.duplicate_status === "possible_duplicate") {
+    return (
+      <span className="inline-flex items-center gap-1 text-amber-400">
+        <TriangleAlert className="h-3.5 w-3.5" />
+        {t("statusPossibleDuplicate")}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-primary">
+      <Sparkle className="h-3.5 w-3.5" />
+      {t("statusNew")}
+    </span>
+  );
+}
 
 export function ProspectingResultsTable({
   runId,
@@ -51,25 +104,51 @@ export function ProspectingResultsTable({
   const canImport = useCan("send-messages");
   const [importing, setImporting] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [selectingAll, setSelectingAll] = useState(false);
 
+  const selectableCandidates = useMemo(() => candidates.filter((c) => !c.imported_deal_id), [candidates]);
   const selectedIds = candidates.filter((c) => c.selected && !c.imported_deal_id).map((c) => c.id);
+  const allSelected = selectableCandidates.length > 0 && selectedIds.length === selectableCandidates.length;
 
-  async function toggleSelected(candidate: ProspectingCandidate, selected: boolean) {
-    setSavingId(candidate.id);
-    onCandidatesChange(candidates.map((c) => (c.id === candidate.id ? { ...c, selected } : c)));
+  async function patchSelected(candidateId: string, selected: boolean): Promise<boolean> {
     try {
       const res = await fetch(`/api/prospecting/runs/${runId}/candidates`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidate_id: candidate.id, selected }),
+        body: JSON.stringify({ candidate_id: candidateId, selected }),
       });
-      if (!res.ok) throw new Error("failed");
+      return res.ok;
     } catch {
+      return false;
+    }
+  }
+
+  async function toggleSelected(candidate: ProspectingCandidate, selected: boolean) {
+    setSavingId(candidate.id);
+    onCandidatesChange(candidates.map((c) => (c.id === candidate.id ? { ...c, selected } : c)));
+    const ok = await patchSelected(candidate.id, selected);
+    if (!ok) {
       toast.error(t("toastFailedToggle"));
       onCandidatesChange(candidates.map((c) => (c.id === candidate.id ? { ...c, selected: !selected } : c)));
-    } finally {
-      setSavingId(null);
     }
+    setSavingId(null);
+  }
+
+  async function handleSelectAll() {
+    const nextSelected = !allSelected;
+    setSelectingAll(true);
+    const previous = candidates;
+    onCandidatesChange(
+      candidates.map((c) => (c.imported_deal_id ? c : { ...c, selected: nextSelected })),
+    );
+    const results = await Promise.all(
+      selectableCandidates.map((c) => patchSelected(c.id, nextSelected)),
+    );
+    if (results.some((ok) => !ok)) {
+      toast.error(t("toastFailedToggle"));
+      onCandidatesChange(previous);
+    }
+    setSelectingAll(false);
   }
 
   async function handleImport() {
@@ -97,100 +176,95 @@ export function ProspectingResultsTable({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-8" />
-              <TableHead>{t("colCompany")}</TableHead>
-              <TableHead>{t("colSegment")}</TableHead>
-              <TableHead>{t("colRegion")}</TableHead>
-              <TableHead>{t("colPhone")}</TableHead>
-              <TableHead>{t("colWebsite")}</TableHead>
-              <TableHead>{t("colInstagram")}</TableHead>
-              <TableHead>{t("colRating")}</TableHead>
-              <TableHead>{t("colScore")}</TableHead>
-              <TableHead>{t("colDuplicate")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {candidates.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell>
-                  <Checkbox
-                    checked={c.selected}
-                    disabled={!canImport || !!c.imported_deal_id || savingId === c.id}
-                    onCheckedChange={(checked) => toggleSelected(c, checked === true)}
-                    aria-label={t("selectRowLabel", { company: c.company_name })}
-                  />
-                </TableCell>
-                <TableCell className="font-medium text-foreground">{c.company_name}</TableCell>
-                <TableCell className="text-muted-foreground">{c.segment ?? "—"}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {[c.city, c.state].filter(Boolean).join(", ") || "—"}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{c.phone ?? "—"}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {c.website ? (
-                    <a href={c.website} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-                      {t("linkLabel")}
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {c.instagram ? (
-                    <a
-                      href={`https://instagram.com/${c.instagram}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      @{c.instagram}
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground tabular-nums">
-                  {c.google_rating !== null ? `${c.google_rating.toFixed(1)} (${c.google_review_count ?? 0})` : "—"}
-                </TableCell>
-                <TableCell>
-                  {c.icp_grade ? (
-                    <Badge variant={GRADE_VARIANT[c.icp_grade]}>
-                      {c.icp_grade} · {c.icp_score}
-                    </Badge>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-                <TableCell>
-                  {c.imported_deal_id ? (
-                    <Badge variant="secondary">{t("statusImported")}</Badge>
-                  ) : c.duplicate_status === "existing" ? (
-                    <Badge variant="destructive">{t("statusExisting")}</Badge>
-                  ) : c.duplicate_status === "possible_duplicate" ? (
-                    <Badge variant="outline">{t("statusPossibleDuplicate")}</Badge>
-                  ) : (
-                    <Badge variant="outline">{t("statusNew")}</Badge>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
       {canImport && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">{t("selectedCount", { count: selectedIds.length })}</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-3">
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <Checkbox
+              checked={allSelected}
+              disabled={selectingAll || selectableCandidates.length === 0}
+              onCheckedChange={() => void handleSelectAll()}
+            />
+            {t("selectAllLabel")}
+            <span className="text-xs text-muted-foreground">{t("selectedCount", { count: selectedIds.length })}</span>
+          </label>
           <Button size="sm" onClick={handleImport} disabled={importing || selectedIds.length === 0}>
             {importing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {t("importButton")}
           </Button>
         </div>
       )}
+
+      <div className="space-y-2">
+        {candidates.map((c) => {
+          const region = [c.city, c.state].filter(Boolean).join(", ");
+          return (
+            <div key={c.id} className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  className="mt-0.5 shrink-0"
+                  checked={c.selected}
+                  disabled={!canImport || !!c.imported_deal_id || savingId === c.id}
+                  onCheckedChange={(checked) => toggleSelected(c, checked === true)}
+                  aria-label={t("selectRowLabel", { company: c.company_name })}
+                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  {/* Line 1 — who they are */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                    <Field label={t("colCompany")}>
+                      <span className="font-medium">{c.company_name}</span>
+                    </Field>
+                    <Field label={t("colSegment")}>{c.segment ?? "—"}</Field>
+                    <Field label={t("colRegion")}>{region || "—"}</Field>
+                    <Field label={t("colPhone")}>{c.phone ?? "—"}</Field>
+                  </div>
+
+                  {/* Line 2 — what we found about them */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60 pt-2 sm:grid-cols-5">
+                    <Field label={t("colWebsite")}>
+                      {c.website ? (
+                        <a
+                          href={c.website}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          {t("linkLabel")}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </Field>
+                    <Field label={t("colInstagram")}>
+                      {c.instagram ? (
+                        <a
+                          href={`https://instagram.com/${c.instagram}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          @{c.instagram}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </Field>
+                    <Field label={t("colRating")}>
+                      <RatingStars value={c.google_rating} max={5} tone="amber" />
+                    </Field>
+                    <Field label={t("colScore")}>
+                      <RatingStars value={c.icp_score} max={100} tone="primary" />
+                    </Field>
+                    <Field label={t("colDuplicate")}>
+                      <StatusPill candidate={c} t={t} />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -881,6 +881,7 @@
       "colScore": "ICP 점수",
       "colDuplicate": "상태",
       "linkLabel": "방문",
+      "selectAllLabel": "전체 선택",
       "statusImported": "가져옴",
       "statusExisting": "이미 연락처에 있음",
       "statusPossibleDuplicate": "중복 가능성",

@@ -88,6 +88,26 @@ describe("normalizeExternalRow", () => {
     const result = normalizeExternalRow({ company_name: "Acme", notes: "Site fraco, sem Instagram ativo." });
     expect(result?.notes).toBe("Site fraco, sem Instagram ativo.");
   });
+
+  it("parses a pt-BR decimal comma rating", () => {
+    const result = normalizeExternalRow({ company_name: "Acme", google_rating: "4,5" });
+    expect(result?.google_rating).toBe(4.5);
+  });
+
+  it("also accepts a period decimal for rating", () => {
+    const result = normalizeExternalRow({ company_name: "Acme", google_rating: "4.5" });
+    expect(result?.google_rating).toBe(4.5);
+  });
+
+  it("drops an out-of-range or malformed rating rather than guessing", () => {
+    expect(normalizeExternalRow({ company_name: "Acme", google_rating: "9,9" })?.google_rating).toBeNull();
+    expect(normalizeExternalRow({ company_name: "Acme", google_rating: "ótimo" })?.google_rating).toBeNull();
+  });
+
+  it("pulls the leading integer out of a review-count cell even with extra text", () => {
+    const result = normalizeExternalRow({ company_name: "Acme", google_review_count: "290 avaliações" });
+    expect(result?.google_review_count).toBe(290);
+  });
 });
 
 function fakeDbs() {
@@ -180,6 +200,17 @@ describe("createExternalRun", () => {
     expect(candidateInsertCalls[0]).toHaveLength(1);
     expect((candidateInsertCalls[0][0] as { run_id: string }).run_id).toBe("run-1");
     expect(mocks.startRun).toHaveBeenCalledWith("run-1", admin);
+  });
+
+  it("carries a parsed Google rating/review count into the candidate insert", async () => {
+    const { admin, candidateInsertCalls } = fakeDbs();
+    await createExternalRun({} as never, admin as never, {
+      ...baseArgs,
+      parsedRows: [{ company_name: "Acme", google_rating: "4,7", google_review_count: "373 avaliações" }],
+    });
+    const row = candidateInsertCalls[0][0] as { google_rating: number | null; google_review_count: number | null };
+    expect(row.google_rating).toBe(4.7);
+    expect(row.google_review_count).toBe(373);
   });
 
   it("stores the notes column in source_data.external_notes", async () => {

@@ -881,6 +881,7 @@
       "colScore": "ICP score",
       "colDuplicate": "Status",
       "linkLabel": "Visit",
+      "selectAllLabel": "Select all",
       "statusImported": "Imported",
       "statusExisting": "Already a contact",
       "statusPossibleDuplicate": "Possible duplicate",

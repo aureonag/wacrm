@@ -46,6 +46,25 @@ export const PROSPECTING_TEMPLATE_COLUMNS: TemplateColumn[] = [
   { key: "state", header: "Estado", required: false, aliases: ["estado", "uf", "state"] },
   { key: "address", header: "Endereço", required: false, aliases: ["endereço", "endereco", "address"] },
   {
+    key: "google_rating",
+    header: "Nota do Google (0-5)",
+    required: false,
+    aliases: ["nota do google (0-5)", "nota do google", "avaliação do google", "google rating", "nota google"],
+  },
+  {
+    key: "google_review_count",
+    header: "Avaliações do Google",
+    required: false,
+    aliases: [
+      "avaliações do google",
+      "avaliacoes do google",
+      "número de avaliações",
+      "numero de avaliacoes",
+      "quantidade de avaliações",
+      "google review count",
+    ],
+  },
+  {
     key: "notes",
     header: "Observações / sinais encontrados",
     required: false,
@@ -240,12 +259,32 @@ export interface NormalizedExternalCandidate {
   city: string | null;
   state: string | null;
   address: string | null;
+  google_rating: number | null;
+  google_review_count: number | null;
   notes: string | null;
 }
 
 function pick(raw: Record<string, string>, key: string): string | null {
   const v = raw[key]?.trim();
   return v ? v : null;
+}
+
+/** Accepts both "4,5" (pt-BR) and "4.5" — never invents a value from a malformed cell, just drops it. */
+function pickDecimal(raw: Record<string, string>, key: string, max: number): number | null {
+  const v = pick(raw, key);
+  if (!v) return null;
+  const n = Number(v.replace(",", "."));
+  if (!Number.isFinite(n) || n < 0 || n > max) return null;
+  return n;
+}
+
+/** Tolerant of extra text like "290 avaliações" — pulls out the leading integer. */
+function pickInt(raw: Record<string, string>, key: string): number | null {
+  const v = pick(raw, key);
+  if (!v) return null;
+  const match = v.match(/\d+/);
+  if (!match) return null;
+  return Number.parseInt(match[0], 10);
 }
 
 /** Never fabricates a field — an absent cell stays `null`, matching the "no placeholder text" rule (migration 047). */
@@ -264,6 +303,8 @@ export function normalizeExternalRow(raw: Record<string, string>): NormalizedExt
     city: pick(raw, "city"),
     state: pick(raw, "state"),
     address: pick(raw, "address"),
+    google_rating: pickDecimal(raw, "google_rating", 5),
+    google_review_count: pickInt(raw, "google_review_count"),
     notes: pick(raw, "notes"),
   };
 }
@@ -355,6 +396,8 @@ export async function createExternalRun(
     email: c.email,
     website: c.website,
     instagram: c.instagram,
+    google_rating: c.google_rating,
+    google_review_count: c.google_review_count,
     source_data: {
       origin: args.origin,
       imported_at: new Date().toISOString(),
