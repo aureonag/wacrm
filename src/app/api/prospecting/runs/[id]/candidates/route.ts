@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAccount, requireRole, toErrorResponse } from "@/lib/auth/account";
+import { supabaseAdmin } from "@/lib/prospecting/admin-client";
+import { logProspectingAudit } from "@/lib/prospecting/audit";
 
 /**
  * GET /api/prospecting/runs/[id]/candidates
@@ -73,6 +75,67 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     return NextResponse.json({ ok: true });
+  } catch (err) {
+    return toErrorResponse(err);
+  }
+}
+
+/**
+ * DELETE /api/prospecting/runs/[id]/candidates  (agent+)
+ *
+ * Body `{ candidate_ids: string[] }` — discards candidates from the
+ * review list (e.g. "Excluir selecionados"). `prospecting_candidates`
+ * has no client-writable DELETE policy (migration 047), so this uses
+ * the service-role client after re-verifying ownership through the
+ * caller's own RLS-scoped client. Already-imported candidates are
+ * never deleted — they're real deals now, not review-stage rows.
+ */
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { supabase, accountId, userId } = await requireRole("agent");
+    const { id: runId } = await params;
+    const body = (await request.json().catch(() => null)) as { candidate_ids?: unknown } | null;
+
+    const candidateIds = Array.isArray(body?.candidate_ids)
+      ? body.candidate_ids.filter((v): v is string => typeof v === "string")
+      : [];
+    if (candidateIds.length === 0) {
+      return NextResponse.json({ error: "candidate_ids is required" }, { status: 400 });
+    }
+
+    const { data: run } = await supabase
+      .from("prospecting_runs")
+      .select("id")
+      .eq("id", runId)
+      .eq("account_id", accountId)
+      .maybeSingle();
+    if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+
+    const admin = supabaseAdmin();
+    const { data: deleted, error } = await admin
+      .from("prospecting_candidates")
+      .delete()
+      .in("id", candidateIds)
+      .eq("run_id", runId)
+      .eq("account_id", accountId)
+      .is("imported_deal_id", null)
+      .select("id");
+
+    if (error) {
+      console.error("[prospecting/runs/[id]/candidates DELETE] delete error:", error);
+      return NextResponse.json({ error: "Failed to delete candidates" }, { status: 500 });
+    }
+
+    void logProspectingAudit(admin, {
+      accountId,
+      userId,
+      runId,
+      action: "delete_candidates",
+      status: "success",
+      metadata: { candidateIds: (deleted ?? []).map((c) => c.id) },
+    });
+
+    return NextResponse.json({ deleted: deleted?.length ?? 0 });
   } catch (err) {
     return toErrorResponse(err);
   }

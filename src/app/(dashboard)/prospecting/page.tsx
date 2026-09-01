@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { ProspectingChat } from "@/components/prospecting/prospecting-chat";
 import { ProspectingExternalImport } from "@/components/prospecting/prospecting-external-import";
 import {
   ProspectingConfigCard,
@@ -21,7 +20,6 @@ import { PROSPECTING_DEFAULT_QUANTITY } from "@/lib/prospecting/constants";
 export default function ProspectingPage() {
   const t = useTranslations("Prospecting");
   const { user } = useAuth();
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<ProspectingCandidate[]>([]);
   const [selections, setSelections] = useState<ProspectingSelections>({
@@ -88,13 +86,6 @@ export default function ProspectingPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-3">
           {run && <ProspectingRunProgress run={run} />}
-
-          <ProspectingChat
-            conversationId={conversationId}
-            onConversationCreated={setConversationId}
-            selections={selections}
-            onRunStarted={setActiveRunId}
-          />
 
           <ProspectingExternalImport selections={selections} onRunStarted={setActiveRunId} />
 

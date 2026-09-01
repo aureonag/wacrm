@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentAccount: vi.fn(),
   requireRole: vi.fn(),
+  supabaseAdmin: vi.fn(),
+  logProspectingAudit: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/account", () => ({
@@ -10,8 +12,10 @@ vi.mock("@/lib/auth/account", () => ({
   requireRole: mocks.requireRole,
   toErrorResponse: vi.fn(() => Response.json({ error: "auth failed" }, { status: 401 })),
 }));
+vi.mock("@/lib/prospecting/admin-client", () => ({ supabaseAdmin: mocks.supabaseAdmin }));
+vi.mock("@/lib/prospecting/audit", () => ({ logProspectingAudit: mocks.logProspectingAudit }));
 
-import { GET, PATCH } from "./route";
+import { DELETE, GET, PATCH } from "./route";
 
 const params = { params: Promise.resolve({ id: "run-1" }) };
 
@@ -50,9 +54,31 @@ function patchRequest(body: unknown) {
   });
 }
 
+function deleteRequest(body: unknown) {
+  return new Request("http://localhost", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Fake service-role client covering exactly the DELETE handler's chain. */
+function fakeAdmin(result: { data: unknown; error: unknown }) {
+  const deleteBuilder: Record<string, unknown> = {};
+  deleteBuilder.delete = vi.fn(() => deleteBuilder);
+  deleteBuilder.in = vi.fn(() => deleteBuilder);
+  deleteBuilder.eq = vi.fn(() => deleteBuilder);
+  deleteBuilder.is = vi.fn(() => deleteBuilder);
+  deleteBuilder.select = vi.fn().mockResolvedValue(result);
+  deleteBuilder.insert = vi.fn().mockResolvedValue({ data: null, error: null }); // logProspectingAudit isn't mocked at this depth
+  return { from: vi.fn(() => deleteBuilder), _builder: deleteBuilder };
+}
+
 beforeEach(() => {
   mocks.getCurrentAccount.mockReset();
   mocks.requireRole.mockReset();
+  mocks.supabaseAdmin.mockReset();
+  mocks.logProspectingAudit.mockReset().mockResolvedValue(undefined);
 });
 
 describe("GET /api/prospecting/runs/[id]/candidates", () => {
@@ -96,5 +122,50 @@ describe("PATCH /api/prospecting/runs/[id]/candidates", () => {
 
     expect(response.status).toBe(200);
     expect(db.candidatesBuilder.update).toHaveBeenCalledWith({ selected: false });
+  });
+});
+
+describe("DELETE /api/prospecting/runs/[id]/candidates", () => {
+  it("requires candidate_ids", async () => {
+    mocks.requireRole.mockResolvedValue({ supabase: fakeDb({}), accountId: "acct-1", userId: "user-1" });
+    const response = await DELETE(deleteRequest({}), params);
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 404 when the run doesn't belong to this account, without deleting anything", async () => {
+    mocks.requireRole.mockResolvedValue({ supabase: fakeDb({ run: null }), accountId: "acct-1", userId: "user-1" });
+    const response = await DELETE(deleteRequest({ candidate_ids: ["c1"] }), params);
+    expect(response.status).toBe(404);
+    expect(mocks.supabaseAdmin).not.toHaveBeenCalled();
+  });
+
+  it("deletes only non-imported candidates scoped to this run/account", async () => {
+    mocks.requireRole.mockResolvedValue({
+      supabase: fakeDb({ run: { id: "run-1" } }),
+      accountId: "acct-1",
+      userId: "user-1",
+    });
+    const admin = fakeAdmin({ data: [{ id: "c1" }, { id: "c2" }], error: null });
+    mocks.supabaseAdmin.mockReturnValue(admin);
+
+    const response = await DELETE(deleteRequest({ candidate_ids: ["c1", "c2"] }), params);
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.deleted).toBe(2);
+    expect(admin._builder.in).toHaveBeenCalledWith("id", ["c1", "c2"]);
+    expect(admin._builder.is).toHaveBeenCalledWith("imported_deal_id", null);
+  });
+
+  it("surfaces a 500 when the delete itself errors", async () => {
+    mocks.requireRole.mockResolvedValue({
+      supabase: fakeDb({ run: { id: "run-1" } }),
+      accountId: "acct-1",
+      userId: "user-1",
+    });
+    mocks.supabaseAdmin.mockReturnValue(fakeAdmin({ data: null, error: { message: "boom" } }));
+
+    const response = await DELETE(deleteRequest({ candidate_ids: ["c1"] }), params);
+    expect(response.status).toBe(500);
   });
 });

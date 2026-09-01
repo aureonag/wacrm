@@ -888,9 +888,16 @@
       "statusNew": "New",
       "selectedCount": "{count} selected",
       "importButton": "Import selected",
+      "deleteButton": "Delete selected",
+      "deletingButton": "Deleting...",
+      "deleteDialogTitle": "Delete selected companies?",
+      "deleteDialogDesc": "{count} companies will be removed from this list. This action cannot be undone.",
+      "cancel": "Cancel",
       "toastFailedToggle": "Could not update the selection",
       "toastFailedImport": "Could not import the selected companies",
       "toastImported": "{count} deals imported",
+      "toastDeleted": "{count} companies deleted",
+      "toastFailedDelete": "Could not delete the selected companies",
       "selectRowLabel": "Select {company}"
     }
   },

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { loadPipelines } from "@/lib/pipelines/queries";
@@ -22,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export interface ProspectingSelections {
@@ -70,8 +68,6 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
-  const [googleConfigured, setGoogleConfigured] = useState<boolean | null>(null);
   const [customQuantity, setCustomQuantity] = useState("");
 
   useEffect(() => {
@@ -91,27 +87,6 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
     };
   }, [accountId, supabase]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/prospecting/config", { cache: "no-store" });
-        const json = await res.json().catch(() => null);
-        if (cancelled) return;
-        setAiConfigured(res.ok ? !!json?.ai_configured : false);
-        setGoogleConfigured(res.ok ? !!json?.google_places_configured : false);
-      } catch {
-        if (!cancelled) {
-          setAiConfigured(false);
-          setGoogleConfigured(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   function patch(partial: Partial<ProspectingSelections>) {
     onChange({ ...selections, ...partial });
   }
@@ -126,26 +101,6 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
 
   return (
     <div className="space-y-5">
-      {aiConfigured === false && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <div>
-            <p className="font-medium text-amber-100">{t("aiNotConfiguredTitle")}</p>
-            <p className="mt-0.5 text-amber-200/80">{t("aiNotConfiguredBody")}</p>
-            <Link href="/agents?tab=setup" className="mt-1 inline-block font-medium text-amber-100 underline">
-              {t("aiNotConfiguredCta")}
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {googleConfigured === false && (
-        <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <p>{t("googleNotConfiguredBody")}</p>
-        </div>
-      )}
-
       <div className="space-y-1.5">
         <Label className="text-muted-foreground">{t("pipelineLabel")}</Label>
         <Select value={selections.pipelineId} onValueChange={(v) => patch({ pipelineId: v as string })}>

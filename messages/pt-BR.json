@@ -888,9 +888,16 @@
       "statusNew": "Novo",
       "selectedCount": "{count} selecionadas",
       "importButton": "Importar selecionados",
+      "deleteButton": "Excluir selecionados",
+      "deletingButton": "Excluindo...",
+      "deleteDialogTitle": "Excluir empresas selecionadas?",
+      "deleteDialogDesc": "{count} empresa(s) serão removidas desta lista. Essa ação não pode ser desfeita.",
+      "cancel": "Cancelar",
       "toastFailedToggle": "Não foi possível atualizar a seleção",
       "toastFailedImport": "Não foi possível importar as empresas selecionadas",
       "toastImported": "{count} negócios importados",
+      "toastDeleted": "{count} empresa(s) excluída(s)",
+      "toastFailedDelete": "Não foi possível excluir as empresas selecionadas",
       "selectRowLabel": "Selecionar {company}"
     }
   },

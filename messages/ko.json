@@ -888,9 +888,16 @@
       "statusNew": "신규",
       "selectedCount": "{count}개 선택됨",
       "importButton": "선택 항목 가져오기",
+      "deleteButton": "선택 항목 삭제",
+      "deletingButton": "삭제 중...",
+      "deleteDialogTitle": "선택한 기업을 삭제할까요?",
+      "deleteDialogDesc": "{count}개 기업이 이 목록에서 제거됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "cancel": "취소",
       "toastFailedToggle": "선택 항목을 업데이트할 수 없습니다",
       "toastFailedImport": "선택한 기업을 가져올 수 없습니다",
       "toastImported": "{count}개의 딜을 가져왔습니다",
+      "toastDeleted": "{count}개 기업이 삭제되었습니다",
+      "toastFailedDelete": "선택한 기업을 삭제할 수 없습니다",
       "selectRowLabel": "{company} 선택"
     }
   },

@@ -2,9 +2,27 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CircleCheck, ExternalLink, Loader2, Sparkle, Star, TriangleAlert, UserRound } from "lucide-react";
+import {
+  AlertTriangle,
+  CircleCheck,
+  ExternalLink,
+  Import,
+  Loader2,
+  Sparkle,
+  Star,
+  Trash2,
+  TriangleAlert,
+  UserRound,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/hooks/use-can";
 import { useTranslations } from "next-intl";
@@ -105,6 +123,8 @@ export function ProspectingResultsTable({
   const [importing, setImporting] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selectingAll, setSelectingAll] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const selectableCandidates = useMemo(() => candidates.filter((c) => !c.imported_deal_id), [candidates]);
   const selectedIds = candidates.filter((c) => c.selected && !c.imported_deal_id).map((c) => c.id);
@@ -174,6 +194,30 @@ export function ProspectingResultsTable({
     }
   }
 
+  async function handleDeleteSelected() {
+    if (selectedIds.length === 0) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/prospecting/runs/${runId}/candidates`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate_ids: selectedIds }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(json?.error ?? t("toastFailedDelete"));
+        return;
+      }
+      toast.success(t("toastDeleted", { count: json.deleted ?? selectedIds.length }));
+      onCandidatesChange(candidates.filter((c) => !selectedIds.includes(c.id)));
+      setDeleteDialogOpen(false);
+    } catch {
+      toast.error(t("toastFailedDelete"));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       {canImport && (
@@ -187,12 +231,56 @@ export function ProspectingResultsTable({
             {t("selectAllLabel")}
             <span className="text-xs text-muted-foreground">{t("selectedCount", { count: selectedIds.length })}</span>
           </label>
-          <Button size="sm" onClick={handleImport} disabled={importing || selectedIds.length === 0}>
-            {importing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {t("importButton")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={selectedIds.length === 0}
+              title={t("deleteButton")}
+              className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" onClick={handleImport} disabled={importing || selectedIds.length === 0}>
+              {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Import className="h-3.5 w-3.5" />}
+              {t("importButton")}
+            </Button>
+          </div>
         </div>
       )}
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-sm bg-popover border-border text-popover-foreground">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-popover-foreground">
+              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              {t("deleteDialogTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("deleteDialogDesc", { count: selectedIds.length })}</p>
+          <DialogFooter className="bg-popover/50 border-border">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="border-border text-muted-foreground hover:bg-muted"
+              disabled={deleting}
+            >
+              {t("cancel")}
+            </Button>
+            <Button onClick={handleDeleteSelected} disabled={deleting} className="bg-red-600 text-white hover:bg-red-700">
+              {deleting ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t("deletingButton")}
+                </>
+              ) : (
+                t("deleteButton")
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-2">
         {candidates.map((c) => {
