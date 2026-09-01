@@ -21,7 +21,7 @@
 // independently of a code deploy.
 // ============================================================
 
-import { PROSPECTING_TEMPLATE_COLUMNS } from "./external-import";
+import { PROSPECTING_TEMPLATE_COLUMNS } from "./template-columns";
 
 export const PROSPECTING_CLAUDE_ASSISTED_PROMPT_VERSION = "v1";
 

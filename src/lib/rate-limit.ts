@@ -173,6 +173,19 @@ export const RATE_LIMITS = {
    *  capping a stampede; excess inbounds simply don't get an auto-reply
    *  (they still land in the inbox for a human). */
   aiAutoReplyAccount: { limit: 30, windowMs: 60_000 },
+  /** Contract peek (public, per-IP) — same reasoning as invitationPeek. */
+  contractPeek: { limit: 30, windowMs: 60_000 },
+  /** Contract OTP send (public, per-IP). Deliberately tight — each
+   *  success sends a real email, so this is the anti-spam bucket, not
+   *  just abuse-of-compute. 3 codes per 10 minutes is enough for a
+   *  legitimate "didn't arrive, try again" retry without letting a
+   *  script mail-bomb an inbox. */
+  contractSendCode: { limit: 3, windowMs: 600_000 },
+  /** Contract OTP verify (public, per-IP) — tighter than peek, same
+   *  tier as invitationRedeem: a successful call mutates the contract
+   *  to 'signed'. The RPC's own `otp_attempts` cap (5) is the primary
+   *  brute-force defense; this is belt-and-braces at the IP layer. */
+  contractVerifyCode: { limit: 10, windowMs: 60_000 },
 } as const;
 
 /** Test-only helper. Clears the in-memory state so unit tests don't

@@ -33,6 +33,7 @@ import {
   Plus,
   GripVertical,
   AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -95,13 +96,23 @@ export function PipelineSettings({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
+  // The "Contrato fechado" stage (migration 054) is excluded from the
+  // draggable/editable list entirely — it always renders as a fixed last
+  // row with no drag handle, name/color fields, or delete button. Reorder
+  // and add-stage logic below operate on `editableStages` and then splice
+  // the locked stage back in at the end, so it can never end up anywhere
+  // but last.
+  const editableStages = localStages.filter((s) => s.kind !== "contract_closed");
+  const lockedStage = localStages.find((s) => s.kind === "contract_closed");
+
   function handleReorder(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = localStages.findIndex((s) => s.id === active.id);
-    const newIndex = localStages.findIndex((s) => s.id === over.id);
+    const oldIndex = editableStages.findIndex((s) => s.id === active.id);
+    const newIndex = editableStages.findIndex((s) => s.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
-    setLocalStages(arrayMove(localStages, oldIndex, newIndex));
+    const reordered = arrayMove(editableStages, oldIndex, newIndex);
+    setLocalStages(lockedStage ? [...reordered, lockedStage] : reordered);
   }
 
   async function handleSave() {
@@ -148,7 +159,7 @@ export function PipelineSettings({
         pipeline_id: pipeline.id,
         name: trimmed,
         color: newStageColor,
-        position: localStages.length,
+        position: editableStages.length,
       })
       .select()
       .single();
@@ -156,9 +167,10 @@ export function PipelineSettings({
       toast.error(t("toastFailedAddStage"));
       return;
     }
-    setLocalStages([...localStages, data as PipelineStage]);
+    // Insert before the locked stage so it always stays last.
+    setLocalStages([...editableStages, data as PipelineStage, ...(lockedStage ? [lockedStage] : [])]);
     setNewStageName("");
-    setNewStageColor(STAGE_COLORS[(localStages.length + 1) % STAGE_COLORS.length]);
+    setNewStageColor(STAGE_COLORS[(editableStages.length + 1) % STAGE_COLORS.length]);
   }
 
   async function handleRemoveStage(stageId: string) {
@@ -256,23 +268,23 @@ export function PipelineSettings({
                   onDragEnd={handleReorder}
                 >
                   <SortableContext
-                    items={localStages.map((s) => s.id)}
+                    items={editableStages.map((s) => s.id)}
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="space-y-2">
-                      {localStages.map((stage, index) => (
+                      {editableStages.map((stage, index) => (
                         <SortableStageRow
                           key={stage.id}
                           stage={stage}
                           onNameChange={(v) => {
-                            const updated = [...localStages];
+                            const updated = [...editableStages];
                             updated[index] = { ...updated[index], name: v };
-                            setLocalStages(updated);
+                            setLocalStages(lockedStage ? [...updated, lockedStage] : updated);
                           }}
                           onColorChange={(v) => {
-                            const updated = [...localStages];
+                            const updated = [...editableStages];
                             updated[index] = { ...updated[index], color: v };
-                            setLocalStages(updated);
+                            setLocalStages(lockedStage ? [...updated, lockedStage] : updated);
                           }}
                           onRemove={() => handleRemoveStage(stage.id)}
                           colors={STAGE_COLORS}
@@ -282,6 +294,21 @@ export function PipelineSettings({
                     </div>
                   </SortableContext>
                 </DndContext>
+
+                {/* "Contrato fechado" (migration 054) — always last, never
+                    draggable/editable/deletable. A signed contract moves
+                    the deal here automatically. */}
+                {lockedStage && (
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/60 p-2 opacity-80">
+                    <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span
+                      className="h-4 w-4 shrink-0 rounded-full"
+                      style={{ backgroundColor: lockedStage.color }}
+                    />
+                    <span className="flex-1 text-sm text-foreground">{lockedStage.name}</span>
+                    <span className="text-[11px] text-muted-foreground">{t("automaticStage")}</span>
+                  </div>
+                )}
 
                 {/* Add new stage */}
                 <div className="mt-1 flex flex-wrap gap-1">

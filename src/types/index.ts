@@ -201,7 +201,7 @@ export interface Conversation {
 // Notifications (migration 027)
 // ============================================================
 
-export type NotificationType = 'conversation_assigned';
+export type NotificationType = 'conversation_assigned' | 'contract_signed';
 
 export interface Notification {
   id: string;
@@ -211,6 +211,9 @@ export interface Notification {
   type: NotificationType;
   conversation_id?: string;
   contact_id?: string;
+  /** Set for `contract_signed` (migration 054). */
+  deal_id?: string;
+  contract_id?: string;
   /** Who triggered it. Null when an automation/system assigned it. */
   actor_user_id?: string;
   title: string;
@@ -375,6 +378,13 @@ export interface PipelineStage {
   name: string;
   position: number;
   color: string;
+  /**
+   * 'contract_closed' marks the single, automatically-created stage every
+   * pipeline gets (see migration 054) — a signed contract moves the deal
+   * here automatically. Locked in the Pipeline settings UI: no rename,
+   * recolor, reorder, or delete.
+   */
+  kind: "custom" | "contract_closed";
   created_at: string;
 }
 
@@ -398,6 +408,80 @@ export interface DealTag {
   account_id: string;
   label: string;
   color: string;
+  created_at: string;
+}
+
+// ---- Contrato (migration 052-054) --------------------------------------
+
+export interface ContractTemplate {
+  id: string;
+  account_id: string;
+  name: string;
+  /** Plain text/paragraphs with {{variable}} placeholders — see CONTRACT_TEMPLATE_VARIABLES. */
+  content: string;
+  is_active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ContractSigningMethod = 'clicksign' | 'virtual';
+export type ContractStatus =
+  | 'draft'
+  | 'sent'
+  | 'viewed'
+  | 'signed'
+  | 'declined'
+  | 'expired'
+  | 'cancelled';
+
+export interface DealContract {
+  id: string;
+  account_id: string;
+  deal_id: string;
+  template_id?: string | null;
+  razao_social: string;
+  cnpj: string;
+  endereco: string;
+  nome_representante: string;
+  cpf_representante: string;
+  client_email: string;
+  rendered_content?: string | null;
+  signing_method: ContractSigningMethod;
+  status: ContractStatus;
+  clicksign_envelope_id?: string | null;
+  clicksign_document_id?: string | null;
+  clicksign_signer_id?: string | null;
+  clicksign_sign_url?: string | null;
+  signed_pdf_path?: string | null;
+  token_hash?: string | null;
+  signed_at?: string | null;
+  signed_ip?: string | null;
+  signed_user_agent?: string | null;
+  created_by?: string | null;
+  sent_at?: string | null;
+  expires_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DealContractEventType =
+  | 'created'
+  | 'sent'
+  | 'viewed'
+  | 'signed'
+  | 'declined'
+  | 'expired'
+  | 'cancelled'
+  | 'webhook_received';
+
+export interface DealContractEvent {
+  id: string;
+  contract_id: string;
+  account_id: string;
+  event_type: DealContractEventType;
+  actor_user_id?: string | null;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 

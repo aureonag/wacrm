@@ -50,14 +50,27 @@ function persistSelectedPipeline(pipelineId: string) {
   }
 }
 
-// Spec-defined seed — name and color per the product spec.
+// Default seed for a new pipeline. Names are pt-BR (not localized via
+// next-intl) — every real pipeline in this account already uses Portuguese
+// stage names, and a freshly created one should match, not default to
+// English regardless of the UI's own language setting.
 const SPEC_DEFAULT_STAGES = [
-  { name: "New Lead", color: "#3b82f6", position: 0 }, // blue
-  { name: "Qualified", color: "#eab308", position: 1 }, // yellow
-  { name: "Proposal Sent", color: "#f97316", position: 2 }, // orange
-  { name: "Negotiation", color: "#8b5cf6", position: 3 }, // purple
-  { name: "Won", color: "#22c55e", position: 4 }, // green
+  { name: "Novo Lead", color: "#3b82f6", position: 0 }, // blue
+  { name: "Qualificado", color: "#eab308", position: 1 }, // yellow
+  { name: "Proposta Enviada", color: "#f97316", position: 2 }, // orange
+  { name: "Negociação", color: "#8b5cf6", position: 3 }, // purple
+  { name: "Ganho", color: "#22c55e", position: 4 }, // green
 ];
+
+// Every pipeline gets this stage — see migration 054. Backfilled for
+// existing pipelines there; new pipelines get it seeded right here so
+// there's never a window where a pipeline lacks it.
+const CONTRACT_CLOSED_STAGE = {
+  name: "Contrato fechado",
+  color: "#22c55e",
+  position: SPEC_DEFAULT_STAGES.length,
+  kind: "contract_closed" as const,
+};
 
 export default function PipelinesPage() {
   const t = useTranslations("Pipelines.page");
@@ -119,12 +132,20 @@ export default function PipelinesPage() {
       return null;
     }
 
-    const stagesPayload = SPEC_DEFAULT_STAGES.map((s) => ({
-      pipeline_id: pipeline.id,
-      name: s.name,
-      color: s.color,
-      position: s.position,
-    }));
+    const stagesPayload = [
+      ...SPEC_DEFAULT_STAGES.map((s) => ({
+        pipeline_id: pipeline.id,
+        name: s.name,
+        color: s.color,
+        position: s.position,
+        // PostgREST fills a row's missing key with an explicit NULL rather
+        // than the column default when other rows in the same bulk insert
+        // DO have that key — `kind` must be set on every row, not just
+        // the locked one, or this insert 400s with a not-null violation.
+        kind: "custom" as const,
+      })),
+      { pipeline_id: pipeline.id, ...CONTRACT_CLOSED_STAGE },
+    ];
     await supabase.from("pipeline_stages").insert(stagesPayload);
 
     return pipeline as Pipeline;
@@ -293,12 +314,20 @@ export default function PipelinesPage() {
       return;
     }
 
-    const stagesPayload = SPEC_DEFAULT_STAGES.map((s) => ({
-      pipeline_id: pipeline.id,
-      name: s.name,
-      color: s.color,
-      position: s.position,
-    }));
+    const stagesPayload = [
+      ...SPEC_DEFAULT_STAGES.map((s) => ({
+        pipeline_id: pipeline.id,
+        name: s.name,
+        color: s.color,
+        position: s.position,
+        // PostgREST fills a row's missing key with an explicit NULL rather
+        // than the column default when other rows in the same bulk insert
+        // DO have that key — `kind` must be set on every row, not just
+        // the locked one, or this insert 400s with a not-null violation.
+        kind: "custom" as const,
+      })),
+      { pipeline_id: pipeline.id, ...CONTRACT_CLOSED_STAGE },
+    ];
     await supabase.from("pipeline_stages").insert(stagesPayload);
 
     setNewPipelineName("");

@@ -60,6 +60,7 @@ import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 import { formatStepDueDate } from "@/lib/deals/next-step-date";
+import { ContractTab } from "@/components/pipelines/contract-tab";
 
 interface ProspectingCandidateDetail {
   id: string;
@@ -486,7 +487,7 @@ export default function DealDetailPage() {
               size="sm"
               onClick={() => handleStatusChange("won")}
               disabled={!!statusAction || deal.status === "won"}
-              className="border-border"
+              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:text-emerald-200"
             >
               {statusAction === "won" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsWon")}
             </Button>
@@ -495,7 +496,7 @@ export default function DealDetailPage() {
               size="sm"
               onClick={openLostReasonDialog}
               disabled={!!statusAction || deal.status === "lost"}
-              className="border-border"
+              className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
             >
               {statusAction === "lost" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsLost")}
             </Button>
@@ -523,6 +524,7 @@ export default function DealDetailPage() {
             <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
             <TabsTrigger value="activities">{t("tabActivities")}</TabsTrigger>
             <TabsTrigger value="deals">{t("tabDeals")}</TabsTrigger>
+            <TabsTrigger value="contracts">{t("tabContracts")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4 space-y-4">
@@ -891,6 +893,10 @@ export default function DealDetailPage() {
                 </a>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="contracts" className="mt-4 space-y-4">
+            <ContractTab dealId={deal.id} accountId={accountId} contact={deal.contact} canEdit={canEdit} />
           </TabsContent>
         </Tabs>
 
