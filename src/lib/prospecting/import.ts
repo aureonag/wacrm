@@ -86,6 +86,11 @@ export interface ImportCandidatesArgs {
   userId: string;
 }
 
+// Generous vs. the cron's own 2-minute lease (src/app/api/prospecting/cron/route.ts)
+// — this path does the same per-candidate work synchronously in one request, so it
+// needs enough headroom for a full batch, not just one tick's worth of progress.
+const IMPORT_LEASE_MS = 5 * 60 * 1000;
+
 function failAll(candidateIds: string[], error: string): ImportCandidatesResult {
   return {
     imported: 0,
@@ -238,7 +243,25 @@ export async function importCandidates(
     .maybeSingle();
   if (!run) return failAll(candidateIds, "Execução não encontrada ou não pertence a esta conta.");
 
-  await admin.from("prospecting_runs").update({ status: "importing" }).eq("id", runId);
+  // Claim the same `claimed_until` lease the cron sweep uses (see
+  // src/app/api/prospecting/cron/route.ts) before doing any writes. Without
+  // this, a cron tick landing while this request is mid-loop sees
+  // status="importing" with an expired/absent lease, claims the run itself,
+  // and runs `stepImporting` concurrently — two processes racing to
+  // find-or-create the same contacts for the same candidates, which
+  // surfaces as intermittent "Falha ao criar o contato." failures.
+  const nowIso = new Date().toISOString();
+  const leaseUntil = new Date(Date.now() + IMPORT_LEASE_MS).toISOString();
+  const { data: claimed } = await admin
+    .from("prospecting_runs")
+    .update({ status: "importing", claimed_until: leaseUntil })
+    .eq("id", runId)
+    .or(`claimed_until.is.null,claimed_until.lt.${nowIso}`)
+    .select("id")
+    .maybeSingle();
+  if (!claimed) {
+    return failAll(candidateIds, "Esta execução já está sendo importada por outro processo. Tente novamente em instantes.");
+  }
 
   const { data: accountRow } = await db.from("accounts").select("default_currency").eq("id", accountId).maybeSingle();
   const currency = (accountRow?.default_currency as string | undefined) || DEFAULT_CURRENCY;

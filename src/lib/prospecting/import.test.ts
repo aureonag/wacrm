@@ -110,10 +110,18 @@ beforeEach(() => {
   mocks.findExistingContact.mockReset().mockResolvedValue(null);
   mocks.isUniqueViolation.mockReset().mockReturnValue(false);
   mocks.supabaseAdmin.mockReset().mockReturnValue({
-    from: vi.fn(() => ({
-      update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
-      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
-    })),
+    from: vi.fn(() => {
+      // Chainable enough for both the claim (`.update().eq().or().select().maybeSingle()`)
+      // and the plain final status update (`.update().eq()`, awaited but not chained further).
+      const builder: Record<string, unknown> = {};
+      builder.update = vi.fn(() => builder);
+      builder.eq = vi.fn(() => builder);
+      builder.or = vi.fn(() => builder);
+      builder.select = vi.fn(() => builder);
+      builder.maybeSingle = vi.fn().mockResolvedValue({ data: { id: "run-1" }, error: null });
+      builder.insert = vi.fn().mockResolvedValue({ data: null, error: null });
+      return builder;
+    }),
   });
   mocks.logProspectingAudit.mockReset().mockResolvedValue(undefined);
 });
@@ -133,6 +141,35 @@ describe("importCandidates", () => {
       failed: 1,
       results: [{ candidateId: "c1", status: "failed", error: expect.any(String) }],
     });
+    expect(db.inserted.deals).toHaveLength(0);
+  });
+
+  it("fails all candidates without writing anything when the run's lease is already claimed by a concurrent process", async () => {
+    mocks.supabaseAdmin.mockReturnValue({
+      from: vi.fn(() => {
+        const builder: Record<string, unknown> = {};
+        builder.update = vi.fn(() => builder);
+        builder.eq = vi.fn(() => builder);
+        builder.or = vi.fn(() => builder);
+        builder.select = vi.fn(() => builder);
+        // Someone else (e.g. the cron sweep's stepImporting) already holds the lease.
+        builder.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+        builder.insert = vi.fn().mockResolvedValue({ data: null, error: null });
+        return builder;
+      }),
+    });
+    const db = fakeDb({ run: RUN_ROW, account: { default_currency: "BRL" }, candidate: candidateRow() });
+
+    const result = await importCandidates(db as never, {
+      runId: "run-1",
+      candidateIds: ["cand-1"],
+      accountId: "acct-1",
+      userId: "user-1",
+    });
+
+    expect(result.failed).toBe(1);
+    expect(result.imported).toBe(0);
+    expect(db.inserted.contacts).toHaveLength(0);
     expect(db.inserted.deals).toHaveLength(0);
   });
 
