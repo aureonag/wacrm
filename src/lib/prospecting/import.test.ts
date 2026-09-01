@@ -56,8 +56,8 @@ function candidateRow(overrides: Record<string, unknown> = {}) {
 }
 
 /** In-memory fake covering exactly what import.ts touches: prospecting_runs,
- * accounts, prospecting_candidates, contacts, deals, deal_tags, deal_comments. */
-function fakeDb(seed: { run?: unknown; account?: unknown; candidate?: unknown }) {
+ * accounts, profiles, prospecting_candidates, contacts, deals, deal_tags, deal_comments. */
+function fakeDb(seed: { run?: unknown; account?: unknown; candidate?: unknown; ownerProfile?: unknown }) {
   const inserted: Record<string, unknown[]> = { contacts: [], deals: [], deal_tags: [], deal_comments: [] };
   const candidateUpdates: Record<string, unknown>[] = [];
   let nextDealId = 1;
@@ -75,6 +75,8 @@ function fakeDb(seed: { run?: unknown; account?: unknown; candidate?: unknown })
       builder.update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }));
     } else if (table === "accounts") {
       builder.maybeSingle = vi.fn().mockResolvedValue({ data: seed.account ?? null, error: null });
+    } else if (table === "profiles") {
+      builder.maybeSingle = vi.fn().mockResolvedValue({ data: seed.ownerProfile ?? null, error: null });
     } else if (table === "prospecting_candidates") {
       builder.maybeSingle = vi.fn().mockResolvedValue({ data: seed.candidate ?? null, error: null });
       builder.update = vi.fn((patch: Record<string, unknown>) => {
@@ -186,7 +188,12 @@ describe("importCandidates", () => {
   });
 
   it("creates a contact and a deal, tags the deal, and only fills fields that were actually found", async () => {
-    const db = fakeDb({ run: RUN_ROW, account: { default_currency: "BRL" }, candidate: candidateRow() });
+    const db = fakeDb({
+      run: RUN_ROW,
+      account: { default_currency: "BRL" },
+      candidate: candidateRow(),
+      ownerProfile: { id: "profile-owner-1" },
+    });
 
     const result = await importCandidates(db as never, {
       runId: "run-1",
@@ -207,6 +214,9 @@ describe("importCandidates", () => {
       currency: "BRL",
       frente_leadgen: true,
       frente_avr: false,
+      // RUN_ROW.assigned_to ("owner-1") is an auth user id; the deal must get
+      // the matching profiles.id instead — see the FK translation in import.ts.
+      assigned_to: "profile-owner-1",
     });
     const tagLabels = db.inserted.deal_tags.map((t) => (t as { label: string }).label);
     expect(tagLabels).toEqual(
@@ -220,6 +230,20 @@ describe("importCandidates", () => {
     expect(comment.body).toContain("Instagram: @clinicaexemplo (512 seguidores)");
     expect(comment.body).toContain("Score ICP: ICP A · 82 pontos.");
     expect(comment.body).toContain("Site desatualizado, Instagram pouco ativo.");
+  });
+
+  it("leaves the deal unassigned when the run's owner user id doesn't match any profile", async () => {
+    const db = fakeDb({ run: RUN_ROW, account: { default_currency: "BRL" }, candidate: candidateRow() });
+
+    const result = await importCandidates(db as never, {
+      runId: "run-1",
+      candidateIds: ["cand-1"],
+      accountId: "acct-1",
+      userId: "user-1",
+    });
+
+    expect(result.imported).toBe(1);
+    expect(db.inserted.deals[0]).toMatchObject({ assigned_to: null });
   });
 
   it("skips the summary comment when nothing was actually found for the candidate", async () => {

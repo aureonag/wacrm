@@ -319,6 +319,23 @@ export async function importCandidates(
   const { data: accountRow } = await db.from("accounts").select("default_currency").eq("id", accountId).maybeSingle();
   const currency = (accountRow?.default_currency as string | undefined) || DEFAULT_CURRENCY;
 
+  // `prospecting_runs.assigned_to` is an auth user id (FK to auth.users —
+  // set from the "Responsável" picker), but `deals.assigned_to` is a FK to
+  // `profiles(id)` — a different id for the same person. Copying one
+  // straight into the other violates `deals_assigned_to_fkey` on every
+  // insert, so resolve the matching profile once per import batch.
+  let assignedToProfileId: string | null = null;
+  if (run.assigned_to) {
+    const { data: ownerProfile } = await db
+      .from("profiles")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("user_id", run.assigned_to)
+      .maybeSingle();
+    assignedToProfileId = (ownerProfile?.id as string | undefined) ?? null;
+  }
+  const runForImport: RunForImport = { ...(run as RunForImport), assigned_to: assignedToProfileId };
+
   const results: ImportOneResult[] = [];
   let imported = 0;
   let alreadyImported = 0;
@@ -339,7 +356,7 @@ export async function importCandidates(
       continue;
     }
 
-    const result = await importOne(db, admin, run as RunForImport, candidate as CandidateForImport, currency, userId);
+    const result = await importOne(db, admin, runForImport, candidate as CandidateForImport, currency, userId);
     results.push(result);
     if (result.status === "imported") imported++;
     else if (result.status === "already_imported") alreadyImported++;
