@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   dedupeByPhone,
@@ -93,5 +93,24 @@ describe("findExistingContact", () => {
   it("returns null for an empty phone without querying", async () => {
     const db = stubDb([{ id: "c1", phone: "15551234567" }]);
     expect(await findExistingContact(db, "acct", "   ")).toBeNull();
+  });
+
+  // Regression: the suffix pre-filter must run against `phone_normalized`
+  // (digits-only, generated — migration 022), never the raw `phone` column.
+  // A stored value like "(11) 4479-5157" has a hyphen sitting inside the
+  // very 8-digit window the suffix targets, so filtering on `phone` there
+  // silently matches nothing and every re-import treats the contact as new.
+  it("filters on phone_normalized, not the raw formatted phone column", async () => {
+    const likeSpy = vi.fn().mockResolvedValue({
+      data: [{ id: "c1", phone: "(11) 4479-5157" }],
+      error: null,
+    });
+    const builder = { select: () => builder, eq: () => builder, like: likeSpy };
+    const db = { from: () => builder } as unknown as SupabaseClient;
+
+    const hit = await findExistingContact(db, "acct", "(11) 4479-5157");
+
+    expect(likeSpy).toHaveBeenCalledWith("phone_normalized", "%44795157");
+    expect(hit?.id).toBe("c1");
   });
 });

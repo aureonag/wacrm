@@ -42,11 +42,16 @@ export async function findExistingContact(
 
   const suffix = normalized.length >= 8 ? normalized.slice(-8) : normalized;
 
+  // Pre-filter on `phone_normalized` (a digits-only generated column — see
+  // migration 022), never the raw `phone` column: a stored value like
+  // "(11) 4479-5157" has a hyphen sitting inside the very 8-digit window
+  // this suffix targets, so a LIKE on `phone` silently matches nothing for
+  // any formatted number and every duplicate looks new.
   const { data, error } = await db
     .from("contacts")
     .select("*")
     .eq("account_id", accountId)
-    .like("phone", `%${suffix}`);
+    .like("phone_normalized", `%${suffix}`);
 
   if (error || !data) return null;
 
