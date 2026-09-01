@@ -282,6 +282,19 @@ function pick(raw: Record<string, string>, key: string): string | null {
   return v ? v : null;
 }
 
+/**
+ * Instagram handles get typed both with and without the leading "@" (the
+ * "pesquisar com meu Claude" checklist has produced both). Every place that
+ * displays or links a handle prepends its own "@" (e.g. `@${instagram}` in
+ * the results table, the deal page, and the import summary comment), so a
+ * stored value that already has one renders as "@@handle". Strip it once
+ * here so `instagram` is always a bare handle downstream.
+ */
+function pickInstagramHandle(raw: Record<string, string>, key: string): string | null {
+  const v = pick(raw, key);
+  return v ? v.replace(/^@+/, "") : null;
+}
+
 /** Accepts both "4,5" (pt-BR) and "4.5" — never invents a value from a malformed cell, just drops it. */
 function pickDecimal(raw: Record<string, string>, key: string, max: number): number | null {
   const v = pick(raw, key);
@@ -312,7 +325,7 @@ export function normalizeExternalRow(raw: Record<string, string>): NormalizedExt
     phone: pick(raw, "phone"),
     email: pick(raw, "email"),
     website: pick(raw, "website"),
-    instagram: pick(raw, "instagram"),
+    instagram: pickInstagramHandle(raw, "instagram"),
     instagram_followers: pickInt(raw, "instagram_followers"),
     city: pick(raw, "city"),
     state: pick(raw, "state"),

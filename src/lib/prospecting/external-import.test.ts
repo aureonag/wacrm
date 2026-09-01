@@ -89,6 +89,11 @@ describe("normalizeExternalRow", () => {
     expect(result?.notes).toBe("Site fraco, sem Instagram ativo.");
   });
 
+  it("strips a leading @ from the Instagram handle — every display site prepends its own", () => {
+    expect(normalizeExternalRow({ company_name: "Acme", instagram: "@acme_oficial" })?.instagram).toBe("acme_oficial");
+    expect(normalizeExternalRow({ company_name: "Acme", instagram: "acme_oficial" })?.instagram).toBe("acme_oficial");
+  });
+
   it("parses a pt-BR decimal comma rating", () => {
     const result = normalizeExternalRow({ company_name: "Acme", google_rating: "4,5" });
     expect(result?.google_rating).toBe(4.5);
