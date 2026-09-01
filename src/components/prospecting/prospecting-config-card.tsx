@@ -121,6 +121,9 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
     patch({ quantity: clamped });
   }
 
+  const selectedPipeline = pipelines.find((p) => p.id === selections.pipelineId);
+  const selectedOwner = profiles.find((p) => p.user_id === selections.ownerId);
+
   return (
     <div className="space-y-5">
       {aiConfigured === false && (
@@ -147,7 +150,7 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
         <Label className="text-muted-foreground">{t("pipelineLabel")}</Label>
         <Select value={selections.pipelineId} onValueChange={(v) => patch({ pipelineId: v as string })}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("pipelinePlaceholder")} />
+            <SelectValue>{selectedPipeline?.name ?? t("pipelinePlaceholder")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {pipelines.map((p) => (
@@ -163,7 +166,7 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
         <Label className="text-muted-foreground">{t("ownerLabel")}</Label>
         <Select value={selections.ownerId} onValueChange={(v) => patch({ ownerId: v as string })}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("ownerPlaceholder")} />
+            <SelectValue>{(selectedOwner?.full_name || selectedOwner?.email) ?? t("ownerPlaceholder")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {profiles.map((p) => (
