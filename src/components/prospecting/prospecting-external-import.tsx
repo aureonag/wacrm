@@ -151,16 +151,22 @@ export function ProspectingExternalImport({ selections, onRunStarted }: Prospect
               </TabsList>
 
               <TabsContent value="paste" className="space-y-3 pt-3">
-                <Textarea
-                  value={pastedText}
-                  onChange={(e) => setPastedText(e.target.value)}
-                  placeholder={t("pastePlaceholder")}
-                  // A pesquisa real pode devolver um CSV de várias linhas
-                  // bem longas — sem um teto de altura, `field-sizing:
-                  // content` (padrão do Textarea) deixa a caixa (e o
-                  // diálogo inteiro) crescer sem limite até estourar a tela.
-                  className="min-h-[180px] max-h-[340px] overflow-y-auto font-mono text-xs"
-                />
+                {/* The scrollbar this needs (see the Textarea comment below)
+                    would otherwise square off the rounded corners where it
+                    meets the border — clipping it at this wrapper keeps the
+                    corners looking right regardless of scrollbar width. */}
+                <div className="overflow-hidden rounded-lg border border-input">
+                  <Textarea
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                    placeholder={t("pastePlaceholder")}
+                    // A pesquisa real pode devolver um CSV de várias linhas
+                    // bem longas — sem um teto de altura, `field-sizing:
+                    // content` (padrão do Textarea) deixa a caixa (e o
+                    // diálogo inteiro) crescer sem limite até estourar a tela.
+                    className="min-h-[180px] max-h-[340px] resize-none overflow-y-auto rounded-none border-0 font-mono text-xs"
+                  />
+                </div>
                 <Button type="button" size="sm" onClick={handleSubmitPaste} disabled={submitting || !pastedText.trim()}>
                   {t("importSubmit")}
                 </Button>
