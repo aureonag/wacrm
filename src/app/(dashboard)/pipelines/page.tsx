@@ -35,6 +35,21 @@ import {
 // agent+. The two CTAs gate on different `useCan` capabilities,
 // not on different copy.
 
+// Remembers the last pipeline the user viewed so navigating away (e.g. into
+// a deal's detail page) and back via the header's back link — a plain
+// `<Link href="/pipelines">`, which remounts this page and resets all local
+// state — doesn't silently drop them back to whichever pipeline happens to
+// load first.
+const SELECTED_PIPELINE_STORAGE_KEY = "wacrm:pipelines:selected-pipeline-id";
+
+function persistSelectedPipeline(pipelineId: string) {
+  try {
+    localStorage.setItem(SELECTED_PIPELINE_STORAGE_KEY, pipelineId);
+  } catch {
+    // Persistence is best-effort; ignore storage failures.
+  }
+}
+
 // Spec-defined seed — name and color per the product spec.
 const SPEC_DEFAULT_STAGES = [
   { name: "New Lead", color: "#3b82f6", position: 0 }, // blue
@@ -131,9 +146,16 @@ export default function PipelinesPage() {
       if (cancelled) return;
       setPipelines(list);
       if (list.length > 0) {
-        setSelectedPipelineId((prev) =>
-          prev && list.some((p) => p.id === prev) ? prev : list[0].id,
-        );
+        setSelectedPipelineId((prev) => {
+          if (prev && list.some((p) => p.id === prev)) return prev;
+          let stored: string | null = null;
+          try {
+            stored = localStorage.getItem(SELECTED_PIPELINE_STORAGE_KEY);
+          } catch {
+            // Persistence is best-effort; ignore storage failures.
+          }
+          return stored && list.some((p) => p.id === stored) ? stored : list[0].id;
+        });
       } else {
         setSelectedPipelineId("");
       }
@@ -171,13 +193,18 @@ export default function PipelinesPage() {
     };
   }, [selectedPipelineId, loadStages, loadDeals]);
 
+  const handleSelectPipeline = useCallback((pipelineId: string) => {
+    setSelectedPipelineId(pipelineId);
+    persistSelectedPipeline(pipelineId);
+  }, []);
+
   const refreshPipelines = useCallback(async () => {
     const list = await loadPipelines();
     setPipelines(list);
     if (list.length === 0) setSelectedPipelineId("");
     else if (!list.some((p) => p.id === selectedPipelineId))
-      setSelectedPipelineId(list[0].id);
-  }, [loadPipelines, selectedPipelineId]);
+      handleSelectPipeline(list[0].id);
+  }, [loadPipelines, selectedPipelineId, handleSelectPipeline]);
 
   const refreshStages = useCallback(async () => {
     if (!selectedPipelineId) return;
@@ -276,7 +303,7 @@ export default function PipelinesPage() {
 
     setNewPipelineName("");
     setNewPipelineOpen(false);
-    setSelectedPipelineId(pipeline.id);
+    handleSelectPipeline(pipeline.id);
     await refreshPipelines();
     setCreating(false);
     toast.success(t("toastPipelineCreated"));
@@ -308,7 +335,7 @@ export default function PipelinesPage() {
           <PipelineSelector
             pipelines={pipelines}
             selectedId={selectedPipelineId}
-            onSelect={setSelectedPipelineId}
+            onSelect={handleSelectPipeline}
             onManage={() => setSettingsOpen(true)}
             placeholderLabel={t("selectPipeline")}
             emptyLabel={t("noPipelinesYet")}
