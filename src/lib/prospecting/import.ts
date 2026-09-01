@@ -57,11 +57,45 @@ interface CandidateForImport {
   email: string | null;
   website: string | null;
   instagram: string | null;
+  instagram_followers: number | null;
   google_rating: number | null;
+  google_review_count: number | null;
+  icp_score: number | null;
   icp_grade: "A" | "B" | "C" | null;
+  score_reason: string | null;
   source_data: Record<string, unknown> | null;
   imported_deal_id: string | null;
   imported_contact_id: string | null;
+}
+
+/**
+ * Everything the research turned up, as one comment on the new deal —
+ * so it survives even if the `prospecting_candidates` row is later
+ * deleted from the review list (the deal keeps no other copy of this
+ * once that FK goes to NULL). Only ever includes fields that were
+ * actually found; never a placeholder line for missing data.
+ */
+function buildImportSummaryComment(candidate: CandidateForImport): string {
+  const lines: string[] = ["Resumo da pesquisa de prospecção:"];
+
+  if (candidate.google_rating !== null) {
+    const reviews = candidate.google_review_count;
+    lines.push(`Google: ${candidate.google_rating.toFixed(1).replace(".", ",")}${reviews !== null ? ` (${reviews} avaliações)` : ""}`);
+  }
+  if (candidate.instagram) {
+    const followers = candidate.instagram_followers;
+    lines.push(`Instagram: @${candidate.instagram}${followers !== null ? ` (${followers.toLocaleString("pt-BR")} seguidores)` : ""}`);
+  }
+  if (candidate.website) lines.push(`Site: ${candidate.website}`);
+  if (candidate.icp_score !== null) {
+    lines.push(`Score ICP: ${candidate.score_reason ?? `${candidate.icp_score} pontos`}`);
+  }
+  const notes = candidate.source_data?.external_notes;
+  if (typeof notes === "string" && notes.trim()) {
+    lines.push("", "Observações:", notes.trim());
+  }
+
+  return lines.join("\n");
 }
 
 export interface ImportOneResult {
@@ -201,6 +235,13 @@ async function importOne(
     await db
       .from("deal_tags")
       .insert(tags.map((t) => ({ deal_id: deal.id, account_id: run.account_id, label: t.label, color: t.color })));
+
+    const summary = buildImportSummaryComment(candidate);
+    if (summary.split("\n").length > 1) {
+      // Best-effort — a comment failing to save shouldn't fail the import
+      // itself; the candidate row (until deleted) still has the raw data.
+      await db.from("deal_comments").insert({ deal_id: deal.id, account_id: run.account_id, user_id: userId, body: summary });
+    }
 
     // Idempotency marker — a single UPDATE, checked at the top of this
     // function before any of the above runs again for this candidate.

@@ -108,6 +108,15 @@ describe("normalizeExternalRow", () => {
     const result = normalizeExternalRow({ company_name: "Acme", google_review_count: "290 avaliações" });
     expect(result?.google_review_count).toBe(290);
   });
+
+  it("pulls the leading integer out of an instagram-followers cell even with extra text", () => {
+    const result = normalizeExternalRow({ company_name: "Acme", instagram_followers: "2.4 mil seguidores" });
+    expect(result?.instagram_followers).toBe(2);
+  });
+
+  it("leaves instagram_followers null when the cell is absent", () => {
+    expect(normalizeExternalRow({ company_name: "Acme" })?.instagram_followers).toBeNull();
+  });
 });
 
 function fakeDbs() {
@@ -211,6 +220,16 @@ describe("createExternalRun", () => {
     const row = candidateInsertCalls[0][0] as { google_rating: number | null; google_review_count: number | null };
     expect(row.google_rating).toBe(4.7);
     expect(row.google_review_count).toBe(373);
+  });
+
+  it("carries a parsed Instagram follower count into the candidate insert", async () => {
+    const { admin, candidateInsertCalls } = fakeDbs();
+    await createExternalRun({} as never, admin as never, {
+      ...baseArgs,
+      parsedRows: [{ company_name: "Acme", instagram_followers: "512" }],
+    });
+    const row = candidateInsertCalls[0][0] as { instagram_followers: number | null };
+    expect(row.instagram_followers).toBe(512);
   });
 
   it("stores the notes column in source_data.external_notes", async () => {

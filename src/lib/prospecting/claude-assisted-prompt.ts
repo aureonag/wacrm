@@ -46,7 +46,7 @@ const LEADGEN_CHECKLIST = `Para cada empresa, investigue e registre o que encont
 - OFERTA — Fica claro o que a empresa vende e por que alguém a escolheria?
 - CONVERSÃO — É fácil pedir orçamento, agendar ou falar com alguém?
 
-A nota e o número de avaliações do Google vão em colunas próprias ("Nota do Google (0-5)" e "Avaliações do Google") — nunca só dentro do texto. Depois de investigar, registre na coluna "Observações / sinais encontrados" os outros sinais que encontrou (positivos e negativos) — por exemplo: "Instagram ativo mas sem oferta clara, site não é responsivo, fácil pedir orçamento pelo WhatsApp".
+A nota e o número de avaliações do Google vão em colunas próprias ("Nota do Google (0-5)" e "Avaliações do Google"), e o número de seguidores do Instagram vai na coluna própria "Seguidores do Instagram" — nunca só dentro do texto. Depois de investigar, registre na coluna "Observações / sinais encontrados" os outros sinais que encontrou (positivos e negativos) — por exemplo: "Instagram ativo mas sem oferta clara, site não é responsivo, fácil pedir orçamento pelo WhatsApp".
 
 Sinais de bom prospect (quanto mais destes, melhor a oportunidade): demanda real pelo serviço, ticket médio que sustenta investimento em aquisição, capacidade de atender mais clientes, alguma oportunidade clara de melhoria na presença digital atual (site fraco ou ausente é uma OPORTUNIDADE, não um motivo para descartar).
 Sinais de que talvez não valha a pena continuar: agenda já lotada sem intenção de crescer, ausência total de qualquer canal de contato, ou um problema estrutural do negócio que marketing não resolve.`;
@@ -60,7 +60,7 @@ const AVR_CHECKLIST = `Para cada loja virtual, investigue e registre o que encon
 - SINAIS DE MÍDIA PAGA — A loja aparenta anunciar (posts patrocinados, remarketing perceptível)?
 - OPORTUNIDADE NO CICLO ATRAIA/VENDA/RETENHA — Existe algum sinal visível de que a loja não recupera carrinho, não tem e-mail/WhatsApp de recompra, ou não tem programa de fidelização? Isso é uma oportunidade comercial, não um defeito a ocultar.
 
-A nota e o número de avaliações do Google (se a loja tiver Google Meu Negócio) vão em colunas próprias ("Nota do Google (0-5)" e "Avaliações do Google") — nunca só dentro do texto. Depois de investigar, registre na coluna "Observações / sinais encontrados" os outros sinais que encontrou (positivos e negativos) — por exemplo: "Loja ativa com +50 produtos e avaliações reais, Instagram só posta produto sem oferta, nenhum sinal de recuperação de carrinho".
+A nota e o número de avaliações do Google (se a loja tiver Google Meu Negócio) vão em colunas próprias ("Nota do Google (0-5)" e "Avaliações do Google"), e o número de seguidores do Instagram vai na coluna própria "Seguidores do Instagram" — nunca só dentro do texto. Depois de investigar, registre na coluna "Observações / sinais encontrados" os outros sinais que encontrou (positivos e negativos) — por exemplo: "Loja ativa com +50 produtos e avaliações reais, Instagram só posta produto sem oferta, nenhum sinal de recuperação de carrinho".
 
 Sinais de bom prospect (quanto mais destes, melhor a oportunidade): produto validado (já vende de verdade), operação com histórico real, margem aparente para investir em crescimento, e alguma lacuna clara no ciclo Atraia/Venda/Retenha que a Aureon possa resolver.
 Sinais de que talvez não valha a pena continuar: loja claramente inativa/abandonada (sem posts ou produtos recentes), ou nenhuma evidência de vendas reais acontecendo.`;

@@ -42,6 +42,18 @@ export const PROSPECTING_TEMPLATE_COLUMNS: TemplateColumn[] = [
   { key: "email", header: "E-mail", required: false, aliases: ["e-mail", "email"] },
   { key: "website", header: "Site", required: false, aliases: ["site", "website", "url"] },
   { key: "instagram", header: "Instagram", required: false, aliases: ["instagram"] },
+  {
+    key: "instagram_followers",
+    header: "Seguidores do Instagram",
+    required: false,
+    aliases: [
+      "seguidores do instagram",
+      "seguidores instagram",
+      "numero de seguidores",
+      "número de seguidores",
+      "instagram followers",
+    ],
+  },
   { key: "city", header: "Cidade", required: false, aliases: ["cidade", "city"] },
   { key: "state", header: "Estado", required: false, aliases: ["estado", "uf", "state"] },
   { key: "address", header: "Endereço", required: false, aliases: ["endereço", "endereco", "address"] },
@@ -256,6 +268,7 @@ export interface NormalizedExternalCandidate {
   email: string | null;
   website: string | null;
   instagram: string | null;
+  instagram_followers: number | null;
   city: string | null;
   state: string | null;
   address: string | null;
@@ -300,6 +313,7 @@ export function normalizeExternalRow(raw: Record<string, string>): NormalizedExt
     email: pick(raw, "email"),
     website: pick(raw, "website"),
     instagram: pick(raw, "instagram"),
+    instagram_followers: pickInt(raw, "instagram_followers"),
     city: pick(raw, "city"),
     state: pick(raw, "state"),
     address: pick(raw, "address"),
@@ -396,6 +410,7 @@ export async function createExternalRun(
     email: c.email,
     website: c.website,
     instagram: c.instagram,
+    instagram_followers: c.instagram_followers,
     google_rating: c.google_rating,
     google_review_count: c.google_review_count,
     source_data: {

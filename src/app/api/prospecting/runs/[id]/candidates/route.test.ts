@@ -68,7 +68,6 @@ function fakeAdmin(result: { data: unknown; error: unknown }) {
   deleteBuilder.delete = vi.fn(() => deleteBuilder);
   deleteBuilder.in = vi.fn(() => deleteBuilder);
   deleteBuilder.eq = vi.fn(() => deleteBuilder);
-  deleteBuilder.is = vi.fn(() => deleteBuilder);
   deleteBuilder.select = vi.fn().mockResolvedValue(result);
   deleteBuilder.insert = vi.fn().mockResolvedValue({ data: null, error: null }); // logProspectingAudit isn't mocked at this depth
   return { from: vi.fn(() => deleteBuilder), _builder: deleteBuilder };
@@ -139,7 +138,7 @@ describe("DELETE /api/prospecting/runs/[id]/candidates", () => {
     expect(mocks.supabaseAdmin).not.toHaveBeenCalled();
   });
 
-  it("deletes only non-imported candidates scoped to this run/account", async () => {
+  it("deletes candidates scoped to this run/account, imported or not", async () => {
     mocks.requireRole.mockResolvedValue({
       supabase: fakeDb({ run: { id: "run-1" } }),
       accountId: "acct-1",
@@ -154,7 +153,8 @@ describe("DELETE /api/prospecting/runs/[id]/candidates", () => {
     expect(response.status).toBe(200);
     expect(json.deleted).toBe(2);
     expect(admin._builder.in).toHaveBeenCalledWith("id", ["c1", "c2"]);
-    expect(admin._builder.is).toHaveBeenCalledWith("imported_deal_id", null);
+    expect(admin._builder.eq).toHaveBeenCalledWith("run_id", "run-1");
+    expect(admin._builder.eq).toHaveBeenCalledWith("account_id", "acct-1");
   });
 
   it("surfaces a 500 when the delete itself errors", async () => {

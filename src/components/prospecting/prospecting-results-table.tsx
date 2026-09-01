@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -36,13 +36,16 @@ export interface ProspectingCandidate {
   phone: string | null;
   website: string | null;
   instagram: string | null;
+  instagram_followers: number | null;
   google_rating: number | null;
   google_review_count: number | null;
   icp_score: number | null;
   icp_grade: "A" | "B" | "C" | null;
+  score_reason: string | null;
   duplicate_status: "new" | "possible_duplicate" | "existing";
   selected: boolean;
   imported_deal_id: string | null;
+  source_data: { external_notes?: string } | null;
 }
 
 interface ProspectingResultsTableProps {
@@ -126,8 +129,13 @@ export function ProspectingResultsTable({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const selectableCandidates = useMemo(() => candidates.filter((c) => !c.imported_deal_id), [candidates]);
-  const selectedIds = candidates.filter((c) => c.selected && !c.imported_deal_id).map((c) => c.id);
+  // Every candidate is selectable, imported or not — imported ones can still
+  // be picked for bulk deletion (the deal itself is untouched, see the
+  // DELETE route's doc comment), and re-selecting one for "Importar
+  // selecionados" is a harmless no-op (import.ts short-circuits on
+  // imported_deal_id).
+  const selectableCandidates = candidates;
+  const selectedIds = candidates.filter((c) => c.selected).map((c) => c.id);
   const allSelected = selectableCandidates.length > 0 && selectedIds.length === selectableCandidates.length;
 
   async function patchSelected(candidateId: string, selected: boolean): Promise<boolean> {
@@ -158,9 +166,7 @@ export function ProspectingResultsTable({
     const nextSelected = !allSelected;
     setSelectingAll(true);
     const previous = candidates;
-    onCandidatesChange(
-      candidates.map((c) => (c.imported_deal_id ? c : { ...c, selected: nextSelected })),
-    );
+    onCandidatesChange(candidates.map((c) => ({ ...c, selected: nextSelected })));
     const results = await Promise.all(
       selectableCandidates.map((c) => patchSelected(c.id, nextSelected)),
     );
@@ -291,7 +297,7 @@ export function ProspectingResultsTable({
                 <Checkbox
                   className="mt-0.5 shrink-0"
                   checked={c.selected}
-                  disabled={!canImport || !!c.imported_deal_id || savingId === c.id}
+                  disabled={!canImport || savingId === c.id}
                   onCheckedChange={(checked) => toggleSelected(c, checked === true)}
                   aria-label={t("selectRowLabel", { company: c.company_name })}
                 />
@@ -307,7 +313,7 @@ export function ProspectingResultsTable({
                   </div>
 
                   {/* Line 2 — what we found about them */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60 pt-2 sm:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60 pt-2 sm:grid-cols-6">
                     <Field label={t("colWebsite")}>
                       {c.website ? (
                         <a
@@ -337,16 +343,30 @@ export function ProspectingResultsTable({
                         "—"
                       )}
                     </Field>
+                    <Field label={t("colFollowers")}>
+                      {c.instagram_followers !== null ? c.instagram_followers.toLocaleString("pt-BR") : "—"}
+                    </Field>
                     <Field label={t("colRating")}>
                       <RatingStars value={c.google_rating} max={5} tone="amber" />
                     </Field>
                     <Field label={t("colScore")}>
-                      <RatingStars value={c.icp_score} max={100} tone="primary" />
+                      <span title={c.score_reason ?? undefined}>
+                        <RatingStars value={c.icp_score} max={100} tone="primary" />
+                      </span>
                     </Field>
                     <Field label={t("colDuplicate")}>
                       <StatusPill candidate={c} t={t} />
                     </Field>
                   </div>
+
+                  {c.source_data?.external_notes && (
+                    <div className="space-y-0.5 border-t border-border/60 pt-2">
+                      <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                        {t("colAnalysis")}
+                      </p>
+                      <p className="text-sm whitespace-pre-wrap text-foreground">{c.source_data.external_notes}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

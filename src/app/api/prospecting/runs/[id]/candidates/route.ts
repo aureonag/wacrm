@@ -87,8 +87,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
  * review list (e.g. "Excluir selecionados"). `prospecting_candidates`
  * has no client-writable DELETE policy (migration 047), so this uses
  * the service-role client after re-verifying ownership through the
- * caller's own RLS-scoped client. Already-imported candidates are
- * never deleted — they're real deals now, not review-stage rows.
+ * caller's own RLS-scoped client.
+ *
+ * Already-imported candidates CAN be deleted here — the real deal
+ * isn't touched (`deals.prospecting_candidate_id` is ON DELETE SET
+ * NULL, never CASCADE); it just loses the FK back to this review row.
+ * The research data that mattered was already written onto the deal
+ * as a comment at import time (see `buildImportSummaryComment` in
+ * `import.ts`), so nothing is actually lost.
  */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -118,7 +124,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       .in("id", candidateIds)
       .eq("run_id", runId)
       .eq("account_id", accountId)
-      .is("imported_deal_id", null)
       .select("id");
 
     if (error) {

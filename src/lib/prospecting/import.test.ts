@@ -39,9 +39,16 @@ function candidateRow(overrides: Record<string, unknown> = {}) {
     email: "contato@clinicaexemplo.com.br",
     website: "https://clinicaexemplo.com.br",
     instagram: "clinicaexemplo",
+    instagram_followers: 512,
     google_rating: 4.8,
+    google_review_count: 120,
+    icp_score: 82,
     icp_grade: "A",
-    source_data: { website_signals: { finalUrl: "https://clinicaexemplo.com.br" } },
+    score_reason: "ICP A · 82 pontos.",
+    source_data: {
+      website_signals: { finalUrl: "https://clinicaexemplo.com.br" },
+      external_notes: "Site desatualizado, Instagram pouco ativo.",
+    },
     imported_deal_id: null,
     imported_contact_id: null,
     ...overrides,
@@ -49,9 +56,9 @@ function candidateRow(overrides: Record<string, unknown> = {}) {
 }
 
 /** In-memory fake covering exactly what import.ts touches: prospecting_runs,
- * accounts, prospecting_candidates, contacts, deals, deal_tags. */
+ * accounts, prospecting_candidates, contacts, deals, deal_tags, deal_comments. */
 function fakeDb(seed: { run?: unknown; account?: unknown; candidate?: unknown }) {
-  const inserted: Record<string, unknown[]> = { contacts: [], deals: [], deal_tags: [] };
+  const inserted: Record<string, unknown[]> = { contacts: [], deals: [], deal_tags: [], deal_comments: [] };
   const candidateUpdates: Record<string, unknown>[] = [];
   let nextDealId = 1;
   let nextContactId = 1;
@@ -97,6 +104,11 @@ function fakeDb(seed: { run?: unknown; account?: unknown; candidate?: unknown })
     } else if (table === "deal_tags") {
       builder.insert = vi.fn((rows: unknown[]) => {
         inserted.deal_tags.push(...rows);
+        return Promise.resolve({ data: null, error: null });
+      });
+    } else if (table === "deal_comments") {
+      builder.insert = vi.fn((row: Record<string, unknown>) => {
+        inserted.deal_comments.push(row);
         return Promise.resolve({ data: null, error: null });
       });
     }
@@ -200,6 +212,40 @@ describe("importCandidates", () => {
     expect(tagLabels).toEqual(
       expect.arrayContaining(["Prospecção IA", "ICP A", "Google", "Site analisado", "Instagram encontrado"]),
     );
+
+    expect(db.inserted.deal_comments).toHaveLength(1);
+    const comment = db.inserted.deal_comments[0] as { deal_id: string; body: string };
+    expect(comment.deal_id).toBe("deal-1");
+    expect(comment.body).toContain("Google: 4,8 (120 avaliações)");
+    expect(comment.body).toContain("Instagram: @clinicaexemplo (512 seguidores)");
+    expect(comment.body).toContain("Score ICP: ICP A · 82 pontos.");
+    expect(comment.body).toContain("Site desatualizado, Instagram pouco ativo.");
+  });
+
+  it("skips the summary comment when nothing was actually found for the candidate", async () => {
+    const db = fakeDb({
+      run: RUN_ROW,
+      account: { default_currency: "BRL" },
+      candidate: candidateRow({
+        website: null,
+        instagram: null,
+        instagram_followers: null,
+        google_rating: null,
+        google_review_count: null,
+        icp_score: null,
+        score_reason: null,
+        source_data: {},
+      }),
+    });
+
+    await importCandidates(db as never, {
+      runId: "run-1",
+      candidateIds: ["cand-1"],
+      accountId: "acct-1",
+      userId: "user-1",
+    });
+
+    expect(db.inserted.deal_comments).toHaveLength(0);
   });
 
   it("reuses an existing contact instead of creating a duplicate when the phone already matches one", async () => {
