@@ -153,15 +153,18 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
         </div>
         {pipelines.length > 0 && (
-          <PipelineSelector
-            pipelines={pipelines}
-            selectedId={selectedPipelineId}
-            onSelect={handleSelectPipeline}
-            onManage={handleManage}
-            placeholderLabel={tPipelines('selectPipeline')}
-            emptyLabel={tPipelines('noPipelinesYet')}
-            manageLabel={tPipelines('managePipelines')}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <PipelineSelector
+              pipelines={pipelines}
+              selectedId={selectedPipelineId}
+              onSelect={handleSelectPipeline}
+              onManage={handleManage}
+              placeholderLabel={tPipelines('selectPipeline')}
+              emptyLabel={tPipelines('noPipelinesYet')}
+              manageLabel={tPipelines('managePipelines')}
+            />
+            <UserFilter deals={deals} selectedUserId={userId} onChange={setUserId} />
+          </div>
         )}
       </div>
 
@@ -193,7 +196,6 @@ export default function DashboardPage() {
                 setCustomRange(custom ?? null)
               }}
             />
-            <UserFilter deals={deals} selectedUserId={userId} onChange={setUserId} />
           </div>
 
           <PipelineAnalytics

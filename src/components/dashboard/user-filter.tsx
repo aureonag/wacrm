@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { User } from "lucide-react";
 import type { Deal } from "@/types";
 import {
   Select,
@@ -37,7 +38,8 @@ export function UserFilter({ deals, selectedUserId, onChange }: UserFilterProps)
       value={selectedUserId ?? "all"}
       onValueChange={(v) => onChange(v === "all" ? null : v)}
     >
-      <SelectTrigger className="w-48 border-border bg-card text-foreground">
+      <SelectTrigger className="w-48 gap-2 border-border bg-card text-foreground">
+        <User className="h-4 w-4 text-primary" />
         <SelectValue>{currentLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent className="border-border bg-popover text-popover-foreground">

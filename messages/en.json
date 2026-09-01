@@ -173,7 +173,7 @@
     },
     "userFilter": {
       "label": "User",
-      "all": "All"
+      "all": "All users"
     },
     "closedDeals": {
       "title": "Contracts closed by month",
