@@ -348,7 +348,17 @@ describe("advanceRun — importing (resuming an interrupted import)", () => {
 
     expect(mocks.importCandidates).toHaveBeenCalledWith(
       admin,
-      expect.objectContaining({ runId: "run-1", accountId: "acct-1", userId: "user-1", candidateIds: ["c1"] }),
+      expect.objectContaining({
+        runId: "run-1",
+        accountId: "acct-1",
+        userId: "user-1",
+        candidateIds: ["c1"],
+        // The cron sweep already holds this run's claimed_until lease by the
+        // time advanceRun gets here — importCandidates must not try to
+        // re-claim it (that would always fail and turn every cron-driven
+        // resume into a no-op).
+        alreadyClaimed: true,
+      }),
     );
   });
 

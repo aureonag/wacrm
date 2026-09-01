@@ -372,6 +372,9 @@ async function stepImporting(admin: SupabaseClient, run: ProspectingRunRow): Pro
     candidateIds: pending.map((c) => c.id as string),
     accountId: run.account_id,
     userId: run.user_id,
+    // The cron sweep already claimed this run's lease before calling
+    // advanceRun → stepImporting — see the comment on `alreadyClaimed`.
+    alreadyClaimed: true,
   });
 }
 
