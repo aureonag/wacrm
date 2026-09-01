@@ -2,7 +2,7 @@
 // no React — just Date in, {start, end} out, so both the top filter and
 // the "closed deals by month" card's filter can share it.
 
-export type PeriodKind = "today" | "yesterday" | "week" | "month" | "custom";
+export type PeriodKind = "all" | "today" | "yesterday" | "week" | "month" | "custom";
 
 export interface DateRange {
   start: Date;
@@ -30,6 +30,12 @@ export function getPeriodRange(kind: PeriodKind, custom?: DateRange): DateRange 
   const now = new Date();
 
   switch (kind) {
+    // Everything currently in the pipeline, no matter when it was
+    // created — the dashboard's default view. Modeled as a (very) wide
+    // date range rather than a special case so every existing
+    // `isWithinRange` call site keeps working unchanged.
+    case "all":
+      return { start: new Date(0), end: new Date(9999, 11, 31) };
     case "today":
       return { start: startOfDay(now), end: endOfDay(now) };
     case "yesterday": {

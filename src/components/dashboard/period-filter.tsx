@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/popover";
 import type { DateRange, PeriodKind } from "@/lib/dashboard/period";
 
-const KINDS: PeriodKind[] = ["today", "yesterday", "week", "month", "custom"];
+const KINDS: PeriodKind[] = ["all", "today", "yesterday", "week", "month", "custom"];
 
 interface PeriodFilterProps {
   kind: PeriodKind;

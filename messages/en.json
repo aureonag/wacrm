@@ -161,6 +161,7 @@
       "ariaLabel": "Pipeline value by stage"
     },
     "periodFilter": {
+      "all": "Now",
       "today": "Today",
       "yesterday": "Yesterday",
       "week": "Week",

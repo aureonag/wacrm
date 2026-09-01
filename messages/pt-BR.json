@@ -161,6 +161,7 @@
       "ariaLabel": "Valor do pipeline por etapa"
     },
     "periodFilter": {
+      "all": "Agora",
       "today": "Hoje",
       "yesterday": "Ontem",
       "week": "Semana",

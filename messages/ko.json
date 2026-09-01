@@ -161,6 +161,7 @@
       "ariaLabel": "단계별 파이프라인 금액"
     },
     "periodFilter": {
+      "all": "지금",
       "today": "오늘",
       "yesterday": "어제",
       "week": "이번 주",

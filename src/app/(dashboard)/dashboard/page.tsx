@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [periodKind, setPeriodKind] = useState<PeriodKind>('month')
+  const [periodKind, setPeriodKind] = useState<PeriodKind>('all')
   const [customRange, setCustomRange] = useState<DateRange | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -92,7 +92,7 @@ export default function DashboardPage() {
   // team, different volume).
   const handleSelectPipeline = useCallback((id: string) => {
     setSelectedPipelineId(id)
-    setPeriodKind('month')
+    setPeriodKind('all')
     setCustomRange(null)
     setUserId(null)
   }, [])
