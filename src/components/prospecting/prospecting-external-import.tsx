@@ -160,11 +160,16 @@ export function ProspectingExternalImport({ selections, onRunStarted }: Prospect
                     value={pastedText}
                     onChange={(e) => setPastedText(e.target.value)}
                     placeholder={t("pastePlaceholder")}
-                    // A pesquisa real pode devolver um CSV de várias linhas
-                    // bem longas — sem um teto de altura, `field-sizing:
-                    // content` (padrão do Textarea) deixa a caixa (e o
-                    // diálogo inteiro) crescer sem limite até estourar a tela.
-                    className="min-h-[180px] max-h-[340px] resize-none overflow-y-auto rounded-none border-0 font-mono text-xs"
+                    // The shared Textarea defaults to `field-sizing: content`,
+                    // which sizes the box to fit ALL its content — combined
+                    // with a `max-h`, browsers still let the content spill
+                    // past that cap instead of scrolling (the two properties
+                    // don't compose reliably yet). `field-sizing-fixed`
+                    // reverts to the classic model, where height is exactly
+                    // what min/max-h say and overflow always scrolls inside
+                    // it — the only combination guaranteed to keep pasted
+                    // text inside the box.
+                    className="field-sizing-fixed h-[260px] resize-none overflow-y-auto rounded-none border-0 font-mono text-xs"
                   />
                 </div>
                 <Button type="button" size="sm" onClick={handleSubmitPaste} disabled={submitting || !pastedText.trim()}>
