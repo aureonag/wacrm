@@ -35,7 +35,7 @@ export function PipelineSelector({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors data-[popup-open]:bg-muted">
+      <DropdownMenuTrigger className="inline-flex h-8 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-foreground hover:bg-muted transition-colors data-[popup-open]:bg-muted">
         <GitBranch className="h-4 w-4 text-primary" />
         <span className="font-semibold">{selected?.name ?? placeholderLabel}</span>
         <ChevronDown className="h-4 w-4 text-muted-foreground" />
