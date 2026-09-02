@@ -871,7 +871,10 @@
       "toastFailedCancel": "Falha ao cancelar o contrato",
       "toastSent": "Contrato enviado",
       "toastCancelled": "Contrato cancelado",
-      "toastLinkCopied": "Link copiado"
+      "toastLinkCopied": "Link copiado",
+      "copyLinkRowButton": "Copiar link de assinatura",
+      "toastLinkRegenerated": "Novo link gerado, mas não consegui copiar automaticamente",
+      "toastFailedRegenerate": "Falha ao gerar um novo link"
     },
     "public": {
       "loading": "Verificando contrato...",

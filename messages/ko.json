@@ -871,7 +871,10 @@
       "toastFailedCancel": "계약서 취소에 실패했습니다",
       "toastSent": "계약서가 전송되었습니다",
       "toastCancelled": "계약서가 취소되었습니다",
-      "toastLinkCopied": "링크가 복사되었습니다"
+      "toastLinkCopied": "링크가 복사되었습니다",
+      "copyLinkRowButton": "서명 링크 복사",
+      "toastLinkRegenerated": "새 링크가 생성되었지만 자동으로 복사하지 못했습니다",
+      "toastFailedRegenerate": "새 링크 생성에 실패했습니다"
     },
     "public": {
       "loading": "계약서를 확인하는 중...",

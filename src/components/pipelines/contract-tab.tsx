@@ -30,6 +30,7 @@ import {
   Plus,
   Loader2,
   Copy,
+  Link2,
   MessageCircle,
   Mail,
   X,
@@ -97,6 +98,7 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
   const [submitting, setSubmitting] = useState(false);
   const [resultLink, setResultLink] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -204,6 +206,27 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
     }
   }
 
+  async function handleCopyExistingLink(contract: DealContract) {
+    setCopyingId(contract.id);
+    try {
+      const res = await fetch(`/api/contracts/${contract.id}/regenerate-link`, { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(json?.error ?? t("toastFailedRegenerate"));
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(json.link);
+        toast.success(t("toastLinkCopied"));
+      } catch {
+        toast.success(t("toastLinkRegenerated"));
+      }
+      await load();
+    } finally {
+      setCopyingId(null);
+    }
+  }
+
   async function copyLink() {
     if (!resultLink) return;
     try {
@@ -272,6 +295,24 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                       <Icon className="h-3.5 w-3.5" />
                       {t(`status.${contract.status}`)}
                     </span>
+                    {canEdit &&
+                      contract.signing_method === "virtual" &&
+                      ["sent", "viewed", "expired"].includes(contract.status) && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          disabled={copyingId === contract.id}
+                          onClick={() => handleCopyExistingLink(contract)}
+                          title={t("copyLinkRowButton")}
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          {copyingId === contract.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Link2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      )}
                     {canEdit && (contract.status === "draft" || contract.status === "sent" || contract.status === "viewed") && (
                       <Button
                         variant="ghost"
