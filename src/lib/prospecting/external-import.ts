@@ -133,9 +133,24 @@ function rowsFromRecords(records: string[][]): ParsedRowResult {
   return { rows, warnings };
 }
 
+/**
+ * Strips a wrapping Markdown code fence (```csv ... ``` or plain ``` ... ```)
+ * if the pasted text has one. Very easy mistake to make when copying a CSV
+ * block straight out of an AI chat reply — the fence lines have no
+ * delimiter in them, so left in, the first fence line gets treated as the
+ * header row and every column mapping breaks (every row ends up with no
+ * "Nome da empresa", which is indistinguishable from an actually-empty
+ * paste without this pass).
+ */
+function stripMarkdownCodeFence(text: string): string {
+  return text
+    .replace(/^\s*```[^\r\n]*\r?\n/, "")
+    .replace(/\r?\n\s*```\s*$/, "");
+}
+
 /** Parses pasted text (from the config UI's "colar resultados" box) — CSV, TSV, or semicolon-delimited. */
 export function parseDelimitedText(text: string): ParsedRowResult {
-  const trimmed = text.replace(/^﻿/, "").trim();
+  const trimmed = stripMarkdownCodeFence(text.replace(/^﻿/, "").trim()).trim();
   if (!trimmed) return { rows: [], warnings: ["Nenhum conteúdo encontrado."] };
 
   const firstBreak = trimmed.search(/\r\n|\n|\r/);

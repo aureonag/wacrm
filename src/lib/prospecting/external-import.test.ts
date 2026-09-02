@@ -69,6 +69,19 @@ describe("parseDelimitedText", () => {
   it("returns no rows for empty input", () => {
     expect(parseDelimitedText("   ")).toEqual({ rows: [], warnings: ["Nenhum conteúdo encontrado."] });
   });
+
+  it("strips a wrapping markdown code fence copied along with the CSV", () => {
+    const text = '```csv\nNome da empresa,Site\nAcme,acme.com\n```';
+    const { rows, warnings } = parseDelimitedText(text);
+    expect(warnings).toEqual([]);
+    expect(rows).toEqual([{ company_name: "Acme", website: "acme.com" }]);
+  });
+
+  it("strips a plain (languageless) code fence too", () => {
+    const text = '```\nNome da empresa\nAcme\n```\n';
+    const { rows } = parseDelimitedText(text);
+    expect(rows).toEqual([{ company_name: "Acme" }]);
+  });
 });
 
 describe("normalizeExternalRow", () => {
