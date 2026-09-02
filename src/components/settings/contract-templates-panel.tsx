@@ -243,13 +243,22 @@ export function ContractTemplatesPanel() {
 
             <div className="space-y-1.5">
               <Label className="text-muted-foreground">{t("contentLabel")}</Label>
-              <Textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder={t("contentPlaceholder")}
-                rows={14}
-                className="bg-muted font-mono text-sm text-foreground"
-              />
+              {/* The shared Textarea defaults to `field-sizing: content`, which
+                  grows the box to fit ALL pasted text instead of scrolling —
+                  pasting a full contract would otherwise blow the dialog past
+                  the viewport. `field-sizing-fixed` + a capped height keeps the
+                  box a fixed size with the text scrolling inside it (same fix
+                  as the prospecting paste box). Clipping the scrollbar at this
+                  wrapper keeps the rounded corners looking right. */}
+              <div className="overflow-hidden rounded-lg border border-input">
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder={t("contentPlaceholder")}
+                  rows={14}
+                  className="field-sizing-fixed h-64 resize-none overflow-y-auto rounded-none border-0 bg-muted font-mono text-sm text-foreground"
+                />
+              </div>
             </div>
           </div>
 
