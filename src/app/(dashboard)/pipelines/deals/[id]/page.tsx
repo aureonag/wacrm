@@ -55,9 +55,11 @@ import {
   CalendarClock,
   Radar,
   ExternalLink,
+  PartyPopper,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
+import { fireWonConfetti } from "@/lib/celebrate-won";
 import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 import { formatStepDueDate } from "@/lib/deals/next-step-date";
 import { ContractTab } from "@/components/pipelines/contract-tab";
@@ -239,10 +241,16 @@ export default function DealDetailPage() {
       return;
     }
     setDeal({ ...deal, ...patch });
-    toast.success(
-      status === "won" ? t("toastMarkedWon") : status === "lost" ? t("toastMarkedLost") : t("toastReopened"),
-    );
+    if (status === "won") {
+      fireWonConfetti();
+      setWonCelebrationOpen(true);
+    } else {
+      toast.success(status === "lost" ? t("toastMarkedLost") : t("toastReopened"));
+    }
   }
+
+  // ---- Won celebration (confetti + congrats dialog) ----
+  const [wonCelebrationOpen, setWonCelebrationOpen] = useState(false);
 
   // ---- Delete deal (mistaken creation, test data, etc.) ----
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -482,27 +490,36 @@ export default function DealDetailPage() {
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleStatusChange("won")}
-              disabled={!!statusAction || deal.status === "won"}
-              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:text-emerald-200"
-            >
-              {statusAction === "won" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsWon")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openLostReasonDialog}
-              disabled={!!statusAction || deal.status === "lost"}
-              className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
-            >
-              {statusAction === "lost" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsLost")}
-            </Button>
-            {deal.status && deal.status !== "open" && (
-              <Button variant="ghost" size="sm" onClick={() => handleStatusChange("open")}>
-                {t("reopenDeal")}
+            {deal.status === "open" ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange("won")}
+                  disabled={!!statusAction}
+                  className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:text-emerald-200"
+                >
+                  {statusAction === "won" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsWon")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openLostReasonDialog}
+                  disabled={!!statusAction}
+                  className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
+                >
+                  {statusAction === "lost" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsLost")}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleStatusChange("open")}
+                disabled={!!statusAction}
+                className="border-border text-muted-foreground hover:bg-muted"
+              >
+                {statusAction === "open" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("reopenDeal")}
               </Button>
             )}
             <Button
@@ -1132,6 +1149,28 @@ export default function DealDetailPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={wonCelebrationOpen} onOpenChange={setWonCelebrationOpen}>
+        <DialogContent className="sm:max-w-sm border-border bg-popover text-popover-foreground">
+          <DialogHeader className="items-center text-center">
+            <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15">
+              <PartyPopper className="h-7 w-7 text-emerald-400" />
+            </div>
+            <DialogTitle className="text-lg text-popover-foreground">{t("wonCelebrationTitle")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-center text-sm text-muted-foreground">
+            {t("wonCelebrationBody", { title: deal.title })}
+          </p>
+          <DialogFooter className="border-border bg-popover/50 sm:justify-center">
+            <Button
+              onClick={() => setWonCelebrationOpen(false)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {t("wonCelebrationClose")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={lostReasonDialogOpen} onOpenChange={setLostReasonDialogOpen}>
         <DialogContent className="sm:max-w-sm bg-popover border-border text-popover-foreground">
