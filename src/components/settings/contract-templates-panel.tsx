@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { SettingsChip } from "./settings-chip";
-import { Shield, FileSignature, Loader2, Plus, Trash2 } from "lucide-react";
+import { Shield, FileSignature, Loader2, Plus, Trash2, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 /**
@@ -199,6 +199,17 @@ export function ContractTemplatesPanel() {
                       {template.is_active ? t("active") : t("inactive")}
                     </span>
                   </div>
+                  {canEditSettings && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => openEdit(template)}
+                      title={t("editTitle")}
+                      className="shrink-0 text-muted-foreground hover:text-primary"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                  )}
                   {canEditSettings && (
                     <Button
                       variant="ghost"
