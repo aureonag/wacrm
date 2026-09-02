@@ -24,8 +24,41 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { SettingsChip } from "./settings-chip";
-import { Shield, FileSignature, Loader2, Plus, Trash2, Pencil } from "lucide-react";
+import {
+  Shield,
+  FileSignature,
+  Loader2,
+  Plus,
+  Trash2,
+  Pencil,
+  Eye,
+  Building2,
+  IdCard,
+  MapPin,
+  User,
+  Mail,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ContractDocument } from "@/components/contracts/contract-document";
+import { renderTemplate } from "@/lib/contracts/templating";
+import { AUREON_PARTY } from "@/lib/contracts/aureon-party";
+
+/** Mirrors the public signing page's party card exactly — see src/app/contracts/[token]/page.tsx. */
+function PartyCard({ label, rows }: { label: string; rows: { icon: typeof Building2; text: string }[] }) {
+  return (
+    <div className="space-y-2 rounded-lg border border-neutral-200 bg-white p-4">
+      <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">{label}</p>
+      <div className="space-y-1.5">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-start gap-2 text-sm text-neutral-900">
+            <row.icon className="mt-0.5 size-3.5 shrink-0 text-neutral-400" />
+            <span className="break-words">{row.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Settings → "Contract templates" card (admin-only, RLS-enforced on
@@ -37,6 +70,7 @@ import { useTranslations } from "next-intl";
  */
 export function ContractTemplatesPanel() {
   const t = useTranslations("Contracts.templates");
+  const tPublic = useTranslations("Contracts.public");
   const supabase = createClient();
   const { user, accountId, canEditSettings } = useAuth();
 
@@ -48,6 +82,17 @@ export function ContractTemplatesPanel() {
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<ContractTemplate | null>(null);
+
+  const previewContent = previewTemplate
+    ? renderTemplate(previewTemplate.content, {
+        razao_social_cliente: "—",
+        cnpj_cliente: "—",
+        endereco_cliente: "—",
+        nome_representante_cliente: "—",
+        cpf_representante_cliente: "—",
+      })
+    : "";
 
   const fetchTemplates = useCallback(async () => {
     if (!accountId) return;
@@ -199,6 +244,15 @@ export function ContractTemplatesPanel() {
                       {template.is_active ? t("active") : t("inactive")}
                     </span>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setPreviewTemplate(template)}
+                    title={t("previewTitle")}
+                    className="shrink-0 text-muted-foreground hover:text-primary"
+                  >
+                    <Eye className="size-4" />
+                  </Button>
                   {canEditSettings && (
                     <Button
                       variant="ghost"
@@ -287,6 +341,48 @@ export function ContractTemplatesPanel() {
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {saving ? t("saving") : t("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={previewTemplate !== null} onOpenChange={(open) => !open && setPreviewTemplate(null)}>
+        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{previewTemplate?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("previewSubtitle")}</p>
+          <div className="max-h-[60vh] space-y-4 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <PartyCard
+                label={tPublic("labelContratada")}
+                rows={[
+                  { icon: Building2, text: AUREON_PARTY.name },
+                  { icon: IdCard, text: AUREON_PARTY.cnpj },
+                  { icon: User, text: AUREON_PARTY.representative },
+                  { icon: Mail, text: AUREON_PARTY.email },
+                ]}
+              />
+              <PartyCard
+                label={tPublic("labelContratante")}
+                rows={[
+                  { icon: Building2, text: "—" },
+                  { icon: IdCard, text: "—" },
+                  { icon: MapPin, text: "—" },
+                  { icon: User, text: "—" },
+                  { icon: Mail, text: "—" },
+                ]}
+              />
+            </div>
+            <ContractDocument content={previewContent} hideParties theme="paper" />
+          </div>
+          <DialogFooter className="border-border bg-popover/50">
+            <Button
+              variant="outline"
+              onClick={() => setPreviewTemplate(null)}
+              className="border-border bg-transparent text-muted-foreground hover:bg-muted"
+            >
+              {t("close")}
             </Button>
           </DialogFooter>
         </DialogContent>
