@@ -42,6 +42,13 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+function formatSignedAt(iso: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("pt-BR");
+  const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} às ${time}`;
+}
+
 const STATUS_META: Record<
   DealContract["status"],
   { icon: typeof Clock; className: string }
@@ -289,6 +296,11 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                       {contract.signing_method === "clicksign" ? "Clicksign" : t("methodVirtual")} ·{" "}
                       {new Date(contract.created_at).toLocaleDateString("pt-BR")}
                     </p>
+                    {contract.status === "signed" && contract.signed_at && (
+                      <p className="text-xs font-medium text-emerald-400">
+                        {t("signedAt", { date: formatSignedAt(contract.signed_at) })}
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className={cn("inline-flex items-center gap-1 text-xs font-medium", meta.className)}>

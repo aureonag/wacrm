@@ -848,6 +848,7 @@
         "expired": "만료됨",
         "cancelled": "취소됨"
       },
+      "signedAt": "{date}에 서명됨",
       "fieldRazaoSocial": "회사 법인명",
       "fieldCnpj": "CNPJ",
       "fieldEndereco": "전체 주소",

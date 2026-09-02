@@ -848,6 +848,7 @@
         "expired": "Expirado",
         "cancelled": "Cancelado"
       },
+      "signedAt": "Assinado em {date}",
       "fieldRazaoSocial": "Razão social",
       "fieldCnpj": "CNPJ",
       "fieldEndereco": "Endereço completo",
