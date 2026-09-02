@@ -436,7 +436,13 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                   }}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("templatePlaceholder")} />
+                    {/* Passing the label explicitly instead of relying on
+                        @base-ui's automatic value→label lookup — that lookup
+                        depends on its internal registered-items list staying
+                        in sync with the current value, and it doesn't always
+                        (same family as the onValueChange(null) quirk above),
+                        which showed the raw template UUID instead of its name. */}
+                    <SelectValue placeholder={t("templatePlaceholder")}>{selectedTemplate?.name}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {templates.length === 0 && (
