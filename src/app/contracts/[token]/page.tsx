@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/card";
 import { ContractDocument } from "@/components/contracts/contract-document";
 import { AUREON_PARTY } from "@/lib/contracts/aureon-party";
+import { fireWonConfetti } from "@/lib/celebrate-won";
 
 interface PeekOk {
   ok: true;
@@ -143,6 +144,7 @@ export default function ContractSignPage() {
         return;
       }
       setStep("signed");
+      fireWonConfetti();
       await loadPeek();
     } finally {
       setVerifying(false);
