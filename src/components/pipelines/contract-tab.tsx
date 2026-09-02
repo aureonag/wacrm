@@ -428,7 +428,12 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                 <Label className="text-muted-foreground">{t("templateLabel")}</Label>
                 <Select
                   value={form.templateId}
-                  onValueChange={(v) => setForm((f) => ({ ...f, templateId: v as string }))}
+                  onValueChange={(v) => {
+                    // Same null guard as the Header Select (per PR 148): @base-ui
+                    // Select fires onValueChange(null) on deselect.
+                    if (!v) return;
+                    setForm((f) => ({ ...f, templateId: v as string }));
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("templatePlaceholder")} />
