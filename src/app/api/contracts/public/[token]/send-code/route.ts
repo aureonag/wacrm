@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import { hashContractToken } from "@/lib/contracts/tokens";
 import { generateOtp } from "@/lib/contracts/otp";
 import { sendEmail, isEmailConfigured } from "@/lib/contracts/email";
+import { otpCodeEmailHtml } from "@/lib/contracts/email-templates";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
@@ -45,7 +46,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   const { data: contract } = await admin
     .from("deal_contracts")
-    .select("id, account_id, client_email, status, expires_at")
+    .select("id, account_id, client_email, razao_social, status, expires_at")
     .eq("token_hash", tokenHash)
     .maybeSingle();
 
@@ -66,7 +67,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       to: contract.client_email,
       subject: "Código de confirmação — Aureon",
       text: `Seu código de confirmação é: ${otp.code}\n\nEste código expira em 10 minutos.`,
-      html: `<p>Seu código de confirmação é:</p><p style="font-size:28px;font-weight:bold;letter-spacing:4px">${otp.code}</p><p>Este código expira em 10 minutos.</p>`,
+      html: otpCodeEmailHtml({ code: otp.code, contractTitle: contract.razao_social }),
     });
   } catch (err) {
     console.error("[contracts/send-code] email error:", err);
