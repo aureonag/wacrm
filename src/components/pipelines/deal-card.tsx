@@ -115,7 +115,7 @@ export function DealCard({
     onTagsChanged?.(deal.id, (deal.dealTags ?? []).filter((t) => t.id !== tagId));
   }
 
-  const cardClassName = `group relative w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
+  const cardClassName = `group relative block w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
     isOverlay
       ? "shadow-xl"
       : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
