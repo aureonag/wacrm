@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import type { Deal, DealTag, PipelineStage } from "@/types";
 import { Calendar, Check, Clock, Plus, X } from "lucide-react";
@@ -49,7 +49,6 @@ export function DealCard({
   onTagsChanged,
 }: DealCardProps) {
   const t = useTranslations("Pipelines.card");
-  const router = useRouter();
   const supabase = createClient();
   const { accountId } = useAuth();
   const canEdit = useCan("send-messages");
@@ -70,11 +69,6 @@ export function DealCard({
   const frenteLabel =
     frenteKey === "both" ? t("frenteBoth") : frenteKey === "avr" ? t("frenteAvr") : frenteKey === "leadgen" ? t("frenteLeadgen") : null;
   const stale = !isOverlay && isStaleDeal(deal);
-
-  function goToDetail() {
-    if (isOverlay) return;
-    router.push(`/pipelines/deals/${deal.id}`);
-  }
 
   function openTagEditor(e: React.MouseEvent) {
     e.stopPropagation();
@@ -121,24 +115,14 @@ export function DealCard({
     onTagsChanged?.(deal.id, (deal.dealTags ?? []).filter((t) => t.id !== tagId));
   }
 
-  return (
-    <div
-      role={isOverlay ? undefined : "button"}
-      tabIndex={isOverlay ? undefined : 0}
-      onClick={goToDetail}
-      onKeyDown={(e) => {
-        if (isOverlay) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          goToDetail();
-        }
-      }}
-      className={`group relative w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
-        isOverlay
-          ? "shadow-xl"
-          : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
-      }`}
-    >
+  const cardClassName = `group relative w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
+    isOverlay
+      ? "shadow-xl"
+      : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
+  }`;
+
+  const cardContent = (
+    <>
       {/* 4px left accent bar using stage color */}
       <span
         aria-hidden
@@ -332,6 +316,16 @@ export function DealCard({
           </span>
         </div>
       )}
-    </div>
+    </>
+  );
+
+  if (isOverlay) {
+    return <div className={cardClassName}>{cardContent}</div>;
+  }
+
+  return (
+    <Link href={`/pipelines/deals/${deal.id}`} className={cardClassName}>
+      {cardContent}
+    </Link>
   );
 }
