@@ -411,6 +411,23 @@ export interface DealTag {
   created_at: string;
 }
 
+/** One row from the `search_deals` RPC (migration 055) — backs the
+ *  Pipelines page's cross-pipeline deal search. */
+export interface DealSearchResult {
+  deal_id: string;
+  title: string;
+  pipeline_id: string;
+  pipeline_name: string;
+  stage_id: string;
+  stage_name: string;
+  contact_name: string | null;
+  contact_company: string | null;
+  assignee_name: string | null;
+  matched_snippet: string | null;
+  rank: number;
+  total_count: number;
+}
+
 // ---- Contrato (migration 052-054) --------------------------------------
 
 export interface ContractTemplate {

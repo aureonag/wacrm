@@ -605,6 +605,16 @@
       "dropDealHere": "Drop a deal here",
       "addDeal": "Add Deal"
     },
+    "search": {
+      "triggerLabel": "Search deals (Ctrl K)",
+      "placeholder": "Search deal, client, or company...",
+      "hint": "Start typing to search deals across every pipeline.",
+      "loading": "Searching...",
+      "emptyTitle": "No deal found for \"{term}\".",
+      "emptyHint": "Try searching by client name, company, or something from the deal.",
+      "assignee": "Owner: {name}",
+      "viewAll": "{count} results total — keep typing to narrow it down"
+    },
     "card": {
       "noContact": "No contact",
       "won": "Won",

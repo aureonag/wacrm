@@ -8,6 +8,7 @@ import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealCreateModal } from "@/components/pipelines/deal-create-modal";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { PipelineSelector } from "@/components/pipelines/pipeline-selector";
+import { PipelineSearch } from "@/components/pipelines/pipeline-search";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -370,6 +371,7 @@ export default function PipelinesPage() {
             emptyLabel={t("noPipelinesYet")}
             manageLabel={t("managePipelines")}
           />
+          <PipelineSearch />
         </div>
 
         <div className="flex items-center gap-2">

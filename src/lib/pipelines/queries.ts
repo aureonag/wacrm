@@ -5,6 +5,7 @@ import type {
   DealComment,
   DealLineItem,
   DealNextStep,
+  DealSearchResult,
   DealTag,
   Pipeline,
   PipelineStage,
@@ -15,6 +16,25 @@ import type {
 // both need the same three reads (pipelines, a pipeline's stages, a
 // pipeline's deals). Kept here so neither page re-implements the
 // Supabase calls independently.
+
+/** Cross-pipeline deal search (Pipelines page's Ctrl+K box) — see the
+ *  `search_deals` RPC (migration 055) for the actual join/ranking logic.
+ *  Runs SECURITY INVOKER, so RLS already scopes results to the caller's
+ *  account. */
+export async function searchDeals(
+  db: SupabaseClient,
+  term: string,
+  limit = 10,
+): Promise<DealSearchResult[]> {
+  const trimmed = term.trim();
+  if (!trimmed) return [];
+  const { data, error } = await db.rpc("search_deals", { p_search: trimmed, p_limit: limit });
+  if (error) {
+    console.error("Failed to search deals:", error.message);
+    return [];
+  }
+  return (data ?? []) as DealSearchResult[];
+}
 
 export async function loadPipelines(db: SupabaseClient): Promise<Pipeline[]> {
   const { data, error } = await db.from("pipelines").select("*").order("created_at");

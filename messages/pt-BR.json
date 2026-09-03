@@ -605,6 +605,16 @@
       "dropDealHere": "Solte um negócio aqui",
       "addDeal": "Adicionar negócio"
     },
+    "search": {
+      "triggerLabel": "Buscar negócios (Ctrl K)",
+      "placeholder": "Buscar negócio, cliente ou empresa...",
+      "hint": "Comece a digitar para buscar negócios em todos os pipelines.",
+      "loading": "Buscando...",
+      "emptyTitle": "Nenhum negócio encontrado para \"{term}\".",
+      "emptyHint": "Tente buscar pelo nome do cliente, empresa ou alguma informação do negócio.",
+      "assignee": "Responsável: {name}",
+      "viewAll": "{count} resultados no total — refine a busca para reduzir"
+    },
     "card": {
       "noContact": "Sem contato",
       "won": "Ganho",
