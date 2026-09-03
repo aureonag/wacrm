@@ -2222,6 +2222,8 @@
       "deals": "딜 & 통화",
       "contract-templates": "계약서 템플릿",
       "members": "팀원",
+      "roles": "역할 및 권한",
+      "sectors": "부서",
       "api": "API 키"
     },
     "groups": {

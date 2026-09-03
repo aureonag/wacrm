@@ -2222,6 +2222,8 @@
       "deals": "Deals & currency",
       "contract-templates": "Contract templates",
       "members": "Team members",
+      "roles": "Roles & permissions",
+      "sectors": "Sectors",
       "api": "API keys"
     },
     "groups": {
