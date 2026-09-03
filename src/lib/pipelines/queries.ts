@@ -3,9 +3,11 @@ import type {
   Deal,
   DealActivity,
   DealComment,
+  DealGoal,
   DealLineItem,
   DealNextStep,
   DealSearchResult,
+  DealStageHistoryRow,
   DealTag,
   Pipeline,
   PipelineStage,
@@ -184,6 +186,75 @@ export async function loadDealNextSteps(
 
 export interface MyNextStep extends DealNextStep {
   deal: { id: string; title: string; pipeline_id: string };
+}
+
+export interface PipelineNextStep extends DealNextStep {
+  deal: { id: string; title: string; pipeline_id: string };
+}
+
+/** Every next step across all deals of one pipeline — backs the
+ *  Dashboard's "Follow-ups" card. Same `!inner` embed trick as
+ *  `loadMyNextSteps`, filtered by pipeline instead of assignee. */
+export async function loadPipelineNextSteps(
+  db: SupabaseClient,
+  pipelineId: string,
+): Promise<PipelineNextStep[]> {
+  const { data } = await db
+    .from("deal_next_steps")
+    .select("*, deal:deals!inner(id, title, pipeline_id)")
+    .eq("deal.pipeline_id", pipelineId)
+    .order("due_date", { ascending: true, nullsFirst: false });
+  return (data ?? []) as PipelineNextStep[];
+}
+
+/** Every stage transition for one pipeline's deals (migration 057) —
+ *  backs the Dashboard's "Conversão por etapa" / "Tempo médio por etapa"
+ *  cards. */
+export async function loadStageHistory(
+  db: SupabaseClient,
+  pipelineId: string,
+): Promise<DealStageHistoryRow[]> {
+  const { data } = await db
+    .from("deal_stage_history")
+    .select("*, deal:deals!inner(pipeline_id)")
+    .eq("deal.pipeline_id", pipelineId)
+    .order("changed_at", { ascending: true });
+  return (data ?? []) as DealStageHistoryRow[];
+}
+
+/** The commercial goal for one account+month, or null if none was set yet. */
+export async function loadDealGoal(
+  db: SupabaseClient,
+  accountId: string,
+  periodMonth: string,
+): Promise<DealGoal | null> {
+  const { data } = await db
+    .from("deal_goals")
+    .select("*")
+    .eq("account_id", accountId)
+    .eq("period_month", periodMonth)
+    .maybeSingle();
+  return (data as DealGoal | null) ?? null;
+}
+
+/** Creates or updates the goal for one account+month (one row per pair,
+ *  enforced by a unique constraint — see migration 057). */
+export async function upsertDealGoal(
+  db: SupabaseClient,
+  accountId: string,
+  periodMonth: string,
+  amount: number,
+  createdBy: string,
+): Promise<DealGoal | null> {
+  const { data } = await db
+    .from("deal_goals")
+    .upsert(
+      { account_id: accountId, period_month: periodMonth, amount, created_by: createdBy },
+      { onConflict: "account_id,period_month" },
+    )
+    .select()
+    .single();
+  return (data as DealGoal | null) ?? null;
 }
 
 /** Every next step across all deals assigned to one profile — the

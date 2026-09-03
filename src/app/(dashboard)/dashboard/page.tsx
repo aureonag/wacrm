@@ -6,10 +6,17 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { GitBranch, Plus } from 'lucide-react'
-import type { Deal, Pipeline, PipelineStage } from '@/types'
+import type { Deal, DealStageHistoryRow, Pipeline, PipelineStage } from '@/types'
 
-import { loadPipelines, loadPipelineStages, loadPipelineDeals } from '@/lib/pipelines/queries'
-import { buildPipelineActivity, buildPipelineDonutFromDeals } from '@/lib/dashboard/queries'
+import {
+  loadPipelines,
+  loadPipelineStages,
+  loadPipelineDeals,
+  loadPipelineNextSteps,
+  loadStageHistory,
+  type PipelineNextStep,
+} from '@/lib/pipelines/queries'
+import { buildPipelineActivity, buildPipelineDonutFromDeals, buildStageFunnel } from '@/lib/dashboard/queries'
 import { getPeriodRange, isWithinRange, type DateRange, type PeriodKind } from '@/lib/dashboard/period'
 import type { ActivityItem, PipelineDonutData } from '@/lib/dashboard/types'
 
@@ -23,6 +30,13 @@ import { UserFilter } from '@/components/dashboard/user-filter'
 import { ClosedDealsCard } from '@/components/dashboard/closed-deals-card'
 import { DealSourceCard } from '@/components/dashboard/deal-source-card'
 import { LostReasonCard } from '@/components/dashboard/lost-reason-card'
+import { PerformanceSummaryCard } from '@/components/dashboard/performance-summary-card'
+import { NewMrrCard } from '@/components/dashboard/new-mrr-card'
+import { GoalVsActualCard } from '@/components/dashboard/goal-vs-actual-card'
+import { StageConversionCard } from '@/components/dashboard/stage-conversion-card'
+import { StageAvgTimeCard } from '@/components/dashboard/stage-avg-time-card'
+import { StalledDealsCard } from '@/components/dashboard/stalled-deals-card'
+import { FollowUpsCard } from '@/components/dashboard/follow-ups-card'
 
 import { useTranslations } from 'next-intl'
 
@@ -37,6 +51,8 @@ export default function DashboardPage() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>('')
   const [stages, setStages] = useState<PipelineStage[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
+  const [nextSteps, setNextSteps] = useState<PipelineNextStep[]>([])
+  const [stageHistory, setStageHistory] = useState<DealStageHistoryRow[]>([])
   const [loading, setLoading] = useState(true)
 
   const [periodKind, setPeriodKind] = useState<PeriodKind>('all')
@@ -69,20 +85,25 @@ export default function DashboardPage() {
     if (!selectedPipelineId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setStages([])
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDeals([])
+      setNextSteps([])
+      setStageHistory([])
       return
     }
     let cancelled = false
     const db = createClient()
     ;(async () => {
-      const [s, d] = await Promise.all([
+      const [s, d, ns, sh] = await Promise.all([
         loadPipelineStages(db, selectedPipelineId),
         loadPipelineDeals(db, selectedPipelineId),
+        loadPipelineNextSteps(db, selectedPipelineId),
+        loadStageHistory(db, selectedPipelineId),
       ])
       if (cancelled) return
       setStages(s)
       setDeals(d)
+      setNextSteps(ns)
+      setStageHistory(sh)
     })()
     return () => {
       cancelled = true
@@ -118,6 +139,8 @@ export default function DashboardPage() {
     () => dealsForUser.filter((d) => isWithinRange(d.created_at, periodRange)),
     [dealsForUser, periodRange],
   )
+
+  const funnel = useMemo(() => buildStageFunnel(stages, stageHistory), [stages, stageHistory])
 
   const donut: PipelineDonutData = buildPipelineDonutFromDeals(stages, dealsForPeriodAndUser)
   const activity: ActivityItem[] = buildPipelineActivity(
@@ -206,6 +229,15 @@ export default function DashboardPage() {
             periodRange={periodRange}
           />
 
+          {/* PERFORMANCE */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <PerformanceSummaryCard deals={dealsForPeriodAndUser} range={periodRange} />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <GoalVsActualCard deals={dealsForUser} />
+              <NewMrrCard deals={dealsForUser} />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
             <div className="h-full lg:col-span-3">
               <ActivityFeed items={activity} loading={false} viewAllHref={activityHref} />
@@ -215,11 +247,23 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* FUNIL */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <StageConversionCard funnel={funnel} />
+            <StageAvgTimeCard funnel={funnel} />
+          </div>
+
           <ClosedDealsCard deals={dealsForUser} />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <DealSourceCard deals={dealsForPeriodAndUser} />
             <LostReasonCard deals={dealsForPeriodAndUser} />
+          </div>
+
+          {/* ATENÇÃO / AÇÃO */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <StalledDealsCard deals={dealsForUser} />
+            <FollowUpsCard nextSteps={nextSteps} />
           </div>
         </>
       )}

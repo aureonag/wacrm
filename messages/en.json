@@ -226,6 +226,78 @@
     },
     "emptyState": {
       "title": "Not enough data yet"
+    },
+    "performance": {
+      "title": "Performance",
+      "conversionRate": "Conversion rate",
+      "conversionRateTooltip": "{won} won out of {total} deals created in this period",
+      "avgTimeToClose": "Avg. time to close",
+      "avgTimeToCloseTooltip": "Average days between creation and being marked won, in this period",
+      "winRate": "Win rate",
+      "winRateTooltip": "{count} won, of all deals decided in this period",
+      "lossRate": "Loss rate",
+      "lossRateTooltip": "{count} lost, of all deals decided in this period",
+      "days": "{count} {count, plural, =1 {day} other {days}}"
+    },
+    "newMrr": {
+      "title": "New recurring revenue",
+      "description": "Recurring (monthly) value from deals won this month",
+      "perMonthSuffix": "/mo",
+      "wonCount": "{count} {count, plural, =1 {deal} other {deals}} won this month"
+    },
+    "goal": {
+      "title": "Goal vs. actual",
+      "description": "This month's commercial goal",
+      "edit": "Edit goal",
+      "noGoal": "No goal set for this month yet.",
+      "ofGoal": "of {goal}",
+      "attainmentOver": "{percent}% of the goal — target exceeded",
+      "attainmentUnder": "{percent}% of the goal — {remaining} to go",
+      "editTitle": "Set this month's goal",
+      "amountLabel": "Goal amount",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "invalidAmount": "Enter a valid amount",
+      "saveError": "Couldn't save the goal"
+    },
+    "stalledDeals": {
+      "title": "Stalled deals",
+      "description": "Open deals with no relevant activity in a while",
+      "noneStalled": "No stalled deals right now",
+      "bucketLabel": "+{days}d"
+    },
+    "followUps": {
+      "title": "Follow-ups",
+      "description": "Next steps that need action",
+      "none": "No follow-ups due or overdue",
+      "today": "Due today",
+      "overdue": "Overdue"
+    },
+    "stageConversion": {
+      "title": "Conversion by stage",
+      "description": "How many deals advance from each stage to the next",
+      "collecting": "Still collecting data",
+      "collectingHint": "This fills in as deals move through stages from now on.",
+      "rateLabel": "Conversion",
+      "colStage": "Stage",
+      "colEntered": "Entered",
+      "colConversion": "Conversion",
+      "insufficientData": "Not enough data yet"
+    },
+    "stageAvgTime": {
+      "title": "Avg. time per stage",
+      "description": "How long deals sit in each stage before moving on",
+      "collecting": "Still collecting data",
+      "collectingHint": "This fills in as deals move through stages from now on.",
+      "daysLabel": "Days",
+      "days": "{count} {count, plural, =1 {day} other {days}}",
+      "colStage": "Stage",
+      "colAvgTime": "Avg. time",
+      "insufficientData": "Not enough data yet"
+    },
+    "dealList": {
+      "empty": "No deals to show"
     }
   },
   "Inbox": {

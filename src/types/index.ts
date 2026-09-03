@@ -411,6 +411,29 @@ export interface DealTag {
   created_at: string;
 }
 
+/** One stage transition for a deal (migration 057). `from_stage_id` is null
+ *  for the row seeded at pipeline entry (backfilled or on creation). */
+export interface DealStageHistoryRow {
+  id: string;
+  deal_id: string;
+  account_id: string;
+  from_stage_id: string | null;
+  to_stage_id: string;
+  changed_at: string;
+}
+
+/** A commercial goal for one calendar month (migration 057). `period_month`
+ *  is always the first day of the month. */
+export interface DealGoal {
+  id: string;
+  account_id: string;
+  period_month: string;
+  amount: number;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** One row from the `search_deals` RPC (migration 055) — backs the
  *  Pipelines page's cross-pipeline deal search. */
 export interface DealSearchResult {
@@ -583,6 +606,10 @@ export interface Deal {
   origin?: string | null;
   /** Set when this deal was created by importing a Prospecção candidate (migration 049). */
   prospecting_candidate_id?: string | null;
+  /** Last real commercial activity (stage change, activity log, comment, next
+   *  step created/completed) — distinct from `updated_at`, which bumps on
+   *  any edit (migration 057). */
+  last_activity_at: string;
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;

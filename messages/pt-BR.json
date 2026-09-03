@@ -226,6 +226,78 @@
     },
     "emptyState": {
       "title": "Ainda não há dados suficientes"
+    },
+    "performance": {
+      "title": "Desempenho",
+      "conversionRate": "Taxa de conversão",
+      "conversionRateTooltip": "{won} ganhos de {total} negócios criados neste período",
+      "avgTimeToClose": "Tempo médio de fechamento",
+      "avgTimeToCloseTooltip": "Média de dias entre a criação e a marcação como ganho, neste período",
+      "winRate": "Win rate",
+      "winRateTooltip": "{count} ganhos, de todos os negócios decididos neste período",
+      "lossRate": "Loss rate",
+      "lossRateTooltip": "{count} perdidos, de todos os negócios decididos neste período",
+      "days": "{count} {count, plural, =1 {dia} other {dias}}"
+    },
+    "newMrr": {
+      "title": "Nova receita recorrente",
+      "description": "Valor recorrente (mensal) de negócios ganhos neste mês",
+      "perMonthSuffix": "/mês",
+      "wonCount": "{count} {count, plural, =1 {negócio ganho} other {negócios ganhos}} neste mês"
+    },
+    "goal": {
+      "title": "Meta x realizado",
+      "description": "Meta comercial deste mês",
+      "edit": "Editar meta",
+      "noGoal": "Nenhuma meta definida para este mês ainda.",
+      "ofGoal": "de {goal}",
+      "attainmentOver": "{percent}% da meta — meta superada",
+      "attainmentUnder": "{percent}% da meta — faltam {remaining}",
+      "editTitle": "Definir a meta deste mês",
+      "amountLabel": "Valor da meta",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando…",
+      "invalidAmount": "Informe um valor válido",
+      "saveError": "Não foi possível salvar a meta"
+    },
+    "stalledDeals": {
+      "title": "Negócios parados",
+      "description": "Negócios abertos sem atividade relevante há um tempo",
+      "noneStalled": "Nenhum negócio parado no momento",
+      "bucketLabel": "+{days}d"
+    },
+    "followUps": {
+      "title": "Follow-ups",
+      "description": "Próximos passos que precisam de ação",
+      "none": "Nenhum follow-up para hoje ou vencido",
+      "today": "Para hoje",
+      "overdue": "Vencidos"
+    },
+    "stageConversion": {
+      "title": "Conversão por etapa",
+      "description": "Quantos negócios avançam de cada etapa para a próxima",
+      "collecting": "Ainda coletando dados",
+      "collectingHint": "Isso vai se preenchendo conforme os negócios avançam de etapa a partir de agora.",
+      "rateLabel": "Conversão",
+      "colStage": "Etapa",
+      "colEntered": "Entraram",
+      "colConversion": "Conversão",
+      "insufficientData": "Ainda sem dados suficientes"
+    },
+    "stageAvgTime": {
+      "title": "Tempo médio por etapa",
+      "description": "Quanto tempo os negócios ficam em cada etapa antes de avançar",
+      "collecting": "Ainda coletando dados",
+      "collectingHint": "Isso vai se preenchendo conforme os negócios avançam de etapa a partir de agora.",
+      "daysLabel": "Dias",
+      "days": "{count} {count, plural, =1 {dia} other {dias}}",
+      "colStage": "Etapa",
+      "colAvgTime": "Tempo médio",
+      "insufficientData": "Ainda sem dados suficientes"
+    },
+    "dealList": {
+      "empty": "Nenhum negócio para mostrar"
     }
   },
   "Inbox": {

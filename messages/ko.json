@@ -226,6 +226,78 @@
     },
     "emptyState": {
       "title": "아직 데이터가 충분하지 않습니다"
+    },
+    "performance": {
+      "title": "성과",
+      "conversionRate": "전환율",
+      "conversionRateTooltip": "이 기간에 생성된 {total}건 중 {won}건 성사",
+      "avgTimeToClose": "평균 성사 소요 기간",
+      "avgTimeToCloseTooltip": "이 기간에 생성부터 성사로 표시되기까지 걸린 평균 일수",
+      "winRate": "승률",
+      "winRateTooltip": "이 기간에 결정된 전체 거래 중 {count}건 성사",
+      "lossRate": "실패율",
+      "lossRateTooltip": "이 기간에 결정된 전체 거래 중 {count}건 실패",
+      "days": "{count}일"
+    },
+    "newMrr": {
+      "title": "신규 반복 매출",
+      "description": "이번 달 성사된 거래의 반복(월간) 금액",
+      "perMonthSuffix": "/월",
+      "wonCount": "이번 달 성사 {count}건"
+    },
+    "goal": {
+      "title": "목표 대비 실적",
+      "description": "이번 달 영업 목표",
+      "edit": "목표 수정",
+      "noGoal": "아직 이번 달 목표가 설정되지 않았습니다.",
+      "ofGoal": "목표 {goal} 중",
+      "attainmentOver": "목표의 {percent}% — 목표 초과 달성",
+      "attainmentUnder": "목표의 {percent}% — {remaining} 남음",
+      "editTitle": "이번 달 목표 설정",
+      "amountLabel": "목표 금액",
+      "cancel": "취소",
+      "save": "저장",
+      "saving": "저장 중…",
+      "invalidAmount": "올바른 금액을 입력하세요",
+      "saveError": "목표를 저장하지 못했습니다"
+    },
+    "stalledDeals": {
+      "title": "정체된 거래",
+      "description": "한동안 관련 활동이 없었던 진행 중 거래",
+      "noneStalled": "현재 정체된 거래가 없습니다",
+      "bucketLabel": "+{days}일"
+    },
+    "followUps": {
+      "title": "후속 조치",
+      "description": "조치가 필요한 다음 단계",
+      "none": "오늘 예정이거나 기한이 지난 후속 조치가 없습니다",
+      "today": "오늘 예정",
+      "overdue": "기한 초과"
+    },
+    "stageConversion": {
+      "title": "단계별 전환율",
+      "description": "각 단계에서 다음 단계로 넘어가는 거래 비율",
+      "collecting": "아직 데이터를 수집 중입니다",
+      "collectingHint": "지금부터 거래가 단계를 이동하면서 데이터가 채워집니다.",
+      "rateLabel": "전환율",
+      "colStage": "단계",
+      "colEntered": "진입",
+      "colConversion": "전환율",
+      "insufficientData": "아직 데이터가 충분하지 않습니다"
+    },
+    "stageAvgTime": {
+      "title": "단계별 평균 소요 시간",
+      "description": "각 단계에서 다음으로 넘어가기까지 걸리는 평균 시간",
+      "collecting": "아직 데이터를 수집 중입니다",
+      "collectingHint": "지금부터 거래가 단계를 이동하면서 데이터가 채워집니다.",
+      "daysLabel": "일수",
+      "days": "{count}일",
+      "colStage": "단계",
+      "colAvgTime": "평균 시간",
+      "insufficientData": "아직 데이터가 충분하지 않습니다"
+    },
+    "dealList": {
+      "empty": "표시할 거래가 없습니다"
     }
   },
   "Inbox": {
