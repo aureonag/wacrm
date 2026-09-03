@@ -18,6 +18,8 @@ import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel'
 import { DealsSettings } from '@/components/settings/deals-settings';
 import { ContractTemplatesPanel } from '@/components/settings/contract-templates-panel';
 import { MembersTab } from '@/components/settings/members-tab';
+import { RolesPanel } from '@/components/settings/roles-panel';
+import { SectorsPanel } from '@/components/settings/sectors-panel';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import {
   resolveSection,
@@ -82,6 +84,8 @@ function SettingsPageInner() {
     deals: <DealsSettings />,
     'contract-templates': <ContractTemplatesPanel />,
     members: <MembersTab />,
+    roles: <RolesPanel />,
+    sectors: <SectorsPanel />,
     api: <ApiKeysSettings />,
   };
 

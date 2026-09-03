@@ -93,7 +93,11 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Profile",
     "menuSettings": "Settings",
-    "menuSignOut": "Sign out"
+    "menuSignOut": "Sign out",
+    "environment": {
+      "comercial": "Comercial",
+      "operational": "Operational"
+    }
   },
   "Header": {
     "dashboard": "Dashboard",
@@ -298,6 +302,17 @@
     },
     "dealList": {
       "empty": "No deals to show"
+    }
+  },
+  "Operational": {
+    "sidebar": {
+      "dashboard": "Dashboard"
+    },
+    "dashboard": {
+      "title": "Operational Dashboard",
+      "description": "Task management and execution tracking for the Aureon team.",
+      "comingSoonTitle": "Gestão de Tarefas is coming in the next stage",
+      "comingSoonHint": "This environment's foundation (access, roles, permissions) is ready — boards, kanban, and timesheets ship in the next stage."
     }
   },
   "Inbox": {
@@ -1826,7 +1841,18 @@
       "cancel": "Cancel",
       "removing": "Removing...",
       "removeBtn": "Remove member",
-      "resetPasswordAction": "Reset password"
+      "resetPasswordAction": "Reset password",
+      "cargo": {
+        "none": "—",
+        "updateError": "Failed to update the role",
+        "updatedToast": "Updated {name}'s role",
+        "sectorsCount": "{count} {count, plural, =1 {sector} other {sectors}}",
+        "sectorsUpdateError": "Failed to update sectors",
+        "sectorsUpdatedToast": "Updated {name}'s sectors",
+        "sectorsDialogTitle": "Sectors — {name}",
+        "noSectorsYet": "No sectors yet. Create one in Settings → Sectors.",
+        "save": "Save"
+      }
     },
     "resetPassword": {
       "title": "Reset password",
@@ -2067,6 +2093,50 @@
       "viewerHint": "Read-only across the app",
       "owner": "Owner",
       "ownerHint": "Full control over account and billing"
+    },
+    "rolesPanel": {
+      "title": "Roles & permissions",
+      "description": "Custom cargos — what each one can access (Comercial/Operational) and do, module by module.",
+      "newRole": "New role",
+      "editTitle": "Edit role",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Designer, Traffic Manager",
+      "environmentsLabel": "Environments this role can enter",
+      "permissionsLabel": "Permissions",
+      "default": "Default",
+      "permissionCount": "{count} {count, plural, =1 {permission} other {permissions}}",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "nameRequired": "Enter a name",
+      "loadError": "Failed to load roles",
+      "saveError": "Failed to save the role",
+      "savedToast": "Saved {name}",
+      "deleteError": "Failed to delete the role",
+      "deletedToast": "Deleted {name}",
+      "deleteTitle": "Delete role",
+      "deleteDesc": "Delete \"{name}\"? Members with this role keep their base account role, but lose whatever this cargo granted them.",
+      "deleteBtn": "Delete"
+    },
+    "sectors": {
+      "title": "Sectors",
+      "description": "Departments used to distribute and report on work later on (Criação, Social Media, Mídia...) — independent of role.",
+      "newSector": "New sector",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Criação",
+      "empty": "No sectors yet.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "nameRequired": "Enter a name",
+      "loadError": "Failed to load sectors",
+      "saveError": "Failed to save the sector",
+      "savedToast": "Saved {name}",
+      "deleteError": "Failed to delete the sector",
+      "deletedToast": "Deleted {name}",
+      "deleteTitle": "Delete sector",
+      "deleteDesc": "Delete \"{name}\"? Members assigned to it will lose that assignment.",
+      "deleteBtn": "Delete"
     },
     "whatsapp": {
       "title": "WhatsApp connection",

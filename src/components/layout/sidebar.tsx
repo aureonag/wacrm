@@ -68,6 +68,7 @@ const ROLE_CHIP: Record<
       "border-border bg-card text-muted-foreground",
   },
 };
+import { EnvironmentSwitcher } from "@/components/layout/environment-switcher";
 import {
   Avatar,
   AvatarFallback,
@@ -220,6 +221,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        <div className="pt-3">
+          <EnvironmentSwitcher current="comercial" />
         </div>
 
         {/* Main navigation */}

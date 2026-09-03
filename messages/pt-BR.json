@@ -93,7 +93,11 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configurações",
-    "menuSignOut": "Sair"
+    "menuSignOut": "Sair",
+    "environment": {
+      "comercial": "Comercial",
+      "operational": "Operacional"
+    }
   },
   "Header": {
     "dashboard": "Dashboard",
@@ -298,6 +302,17 @@
     },
     "dealList": {
       "empty": "Nenhum negócio para mostrar"
+    }
+  },
+  "Operational": {
+    "sidebar": {
+      "dashboard": "Dashboard"
+    },
+    "dashboard": {
+      "title": "Dashboard Operacional",
+      "description": "Acompanhamento de tarefas e execução da equipe Aureon.",
+      "comingSoonTitle": "A Gestão de Tarefas chega na próxima etapa",
+      "comingSoonHint": "A fundação deste ambiente (acesso, cargos, permissões) já está pronta — quadros, kanban e timesheet chegam na próxima etapa."
     }
   },
   "Inbox": {
@@ -1826,7 +1841,18 @@
       "cancel": "Cancelar",
       "removing": "Removendo...",
       "removeBtn": "Remover membro",
-      "resetPasswordAction": "Redefinir senha"
+      "resetPasswordAction": "Redefinir senha",
+      "cargo": {
+        "none": "—",
+        "updateError": "Não foi possível atualizar o cargo",
+        "updatedToast": "Cargo de {name} atualizado",
+        "sectorsCount": "{count} {count, plural, =1 {setor} other {setores}}",
+        "sectorsUpdateError": "Não foi possível atualizar os setores",
+        "sectorsUpdatedToast": "Setores de {name} atualizados",
+        "sectorsDialogTitle": "Setores — {name}",
+        "noSectorsYet": "Nenhum setor ainda. Crie um em Configurações → Setores.",
+        "save": "Salvar"
+      }
     },
     "resetPassword": {
       "title": "Redefinir senha",
@@ -2067,6 +2093,50 @@
       "viewerHint": "Somente leitura em todo o app",
       "owner": "Proprietário",
       "ownerHint": "Controle total da conta e do faturamento"
+    },
+    "rolesPanel": {
+      "title": "Cargos e permissões",
+      "description": "Cargos personalizados — o que cada um pode acessar (Comercial/Operacional) e fazer, módulo por módulo.",
+      "newRole": "Novo cargo",
+      "editTitle": "Editar cargo",
+      "nameLabel": "Nome",
+      "namePlaceholder": "ex.: Designer, Gestor de Tráfego",
+      "environmentsLabel": "Ambientes que este cargo acessa",
+      "permissionsLabel": "Permissões",
+      "default": "Padrão",
+      "permissionCount": "{count} {count, plural, =1 {permissão} other {permissões}}",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando…",
+      "nameRequired": "Informe um nome",
+      "loadError": "Não foi possível carregar os cargos",
+      "saveError": "Não foi possível salvar o cargo",
+      "savedToast": "{name} salvo",
+      "deleteError": "Não foi possível excluir o cargo",
+      "deletedToast": "{name} excluído",
+      "deleteTitle": "Excluir cargo",
+      "deleteDesc": "Excluir \"{name}\"? Os membros com esse cargo mantêm o papel base da conta, mas perdem o que esse cargo concedia.",
+      "deleteBtn": "Excluir"
+    },
+    "sectors": {
+      "title": "Setores",
+      "description": "Departamentos usados futuramente para distribuição e relatórios de trabalho (Criação, Social Media, Mídia...) — independente do cargo.",
+      "newSector": "Novo setor",
+      "nameLabel": "Nome",
+      "namePlaceholder": "ex.: Criação",
+      "empty": "Nenhum setor ainda.",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando…",
+      "nameRequired": "Informe um nome",
+      "loadError": "Não foi possível carregar os setores",
+      "saveError": "Não foi possível salvar o setor",
+      "savedToast": "{name} salvo",
+      "deleteError": "Não foi possível excluir o setor",
+      "deletedToast": "{name} excluído",
+      "deleteTitle": "Excluir setor",
+      "deleteDesc": "Excluir \"{name}\"? Os membros vinculados a ele perdem esse vínculo.",
+      "deleteBtn": "Excluir"
     },
     "whatsapp": {
       "title": "Conexão com o WhatsApp",

@@ -35,6 +35,9 @@ interface Profile {
   beta_features: string[];
   account_id: string | null;
   account_role: AccountRole | null;
+  /** Custom cargo (migration 058) — null for a profile that predates it
+   *  or was never assigned one. Drives `environments`/`permissions` below. */
+  role_id: string | null;
 }
 
 interface AccountSummary {
@@ -130,6 +133,18 @@ interface AuthContextValue {
   canEditSettings: boolean;
   /** True if the caller can send messages and edit operational data (agent+). */
   canSendMessages: boolean;
+
+  // ----------------------------------------------------------
+  // Cargos + Permissões (migration 058, ETAPA 1) — additive layer on
+  // top of accountRole above. Owner is folded into both sets below so
+  // consumers never need to special-case it.
+  // ----------------------------------------------------------
+
+  /** Environments ("comercial"/"operational") this profile's cargo grants
+   *  entry to. Owner always has both, regardless of cargo. */
+  environments: Set<string>;
+  /** Effective granted permissions, keyed "environment:module:action". */
+  permissions: Set<string>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -152,6 +167,7 @@ interface ProfileRow {
   beta_features: string[] | null;
   account_id: string | null;
   account_role: string | null;
+  role_id: string | null;
 }
 
 /**
@@ -163,6 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [account, setAccount] = useState<AccountSummary | null>(null);
+  const [roleEnvironments, setRoleEnvironments] = useState<string[]>([]);
+  const [permissionRows, setPermissionRows] = useState<{ environment: string; module: string; action: string }[]>([]);
   const [loading, setLoading] = useState(true);
   // Why the account/role couldn't be established, when it couldn't.
   // Null on the happy path.
@@ -192,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await supabase
           .from("profiles")
           .select(
-            "id, full_name, email, avatar_url, role, beta_features, account_id, account_role",
+            "id, full_name, email, avatar_url, role, beta_features, account_id, account_role, role_id",
           )
           .eq("user_id", userId)
           .maybeSingle();
@@ -258,6 +276,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // Cargos + Permissões (migration 058) — same point-lookup
+        // philosophy as the account fetch above: two independent reads
+        // rather than an embed, so neither can blank the whole profile.
+        const [roleResult, permsResult] = await Promise.all([
+          data.role_id
+            ? supabase.from("roles").select("environments").eq("id", data.role_id).maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+          supabase.rpc("get_my_permissions"),
+        ]);
+        if (roleResult.error) {
+          console.error("[AuthProvider] fetchRole error:", roleResult.error.message);
+        }
+        if (permsResult.error) {
+          console.error("[AuthProvider] fetchPermissions error:", permsResult.error.message);
+        }
+        setRoleEnvironments((roleResult.data as { environments: string[] } | null)?.environments ?? []);
+        setPermissionRows(
+          (permsResult.data as { environment: string; module: string; action: string }[] | null) ?? [],
+        );
+
         // Narrow the DB enum into our AccountRole union. The DB
         // constraint should make this unconditional, but a future
         // migration that broadens the enum without updating TS would
@@ -280,6 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           beta_features: data.beta_features ?? [],
           account_id: data.account_id ?? null,
           account_role: accountRole,
+          role_id: data.role_id ?? null,
         });
         setAccount(accountRow);
         if (!data.account_id || !accountRole) {
@@ -295,11 +334,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         lastFetchedUserIdRef.current = null;
         setStatusDetail("no profiles row for the signed-in user");
+        setRoleEnvironments([]);
+        setPermissionRows([]);
       }
     } catch (err) {
       console.error("[AuthProvider] fetchProfile threw:", err);
       lastFetchedUserIdRef.current = null;
       setStatusDetail(err instanceof Error ? err.message : "profile fetch failed");
+      setRoleEnvironments([]);
+      setPermissionRows([]);
     } finally {
       setProfileLoading(false);
     }
@@ -367,6 +410,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastFetchedUserIdRef.current = null;
         setProfile(null);
         setAccount(null);
+        setRoleEnvironments([]);
+        setPermissionRows([]);
         setProfileLoading(false);
       }
 
@@ -386,6 +431,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setProfile(null);
     setAccount(null);
+    setRoleEnvironments([]);
+    setPermissionRows([]);
     window.location.href = "/login";
   }, []);
 
@@ -400,18 +447,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // dependencies downstream.
   const derived = useMemo(() => {
     const role = profile?.account_role ?? null;
+    const isOwner = role === "owner";
+    // Owner is folded in here so every consumer (environment switcher,
+    // route guards, useHasPermission) gets bypass for free instead of
+    // special-casing isOwner at every call site.
+    const environments = new Set<string>(
+      isOwner ? ["comercial", "operational"] : roleEnvironments,
+    );
+    const permissions = new Set<string>(
+      isOwner
+        ? [] // owner bypass is handled via `environments`/direct isOwner checks, not by enumerating every permission
+        : permissionRows.map((p) => `${p.environment}:${p.module}:${p.action}`),
+    );
     return {
       accountRole: role,
       accountId: profile?.account_id ?? null,
-      isOwner: role === "owner",
+      isOwner,
       isAdmin: role === "admin",
       isAgent: role === "agent",
       isViewer: role === "viewer",
       canManageMembers: role ? canManageMembersFor(role) : false,
       canEditSettings: role ? canEditSettingsFor(role) : false,
       canSendMessages: role ? canSendMessagesFor(role) : false,
+      environments,
+      permissions,
     };
-  }, [profile?.account_role, profile?.account_id]);
+  }, [profile?.account_role, profile?.account_id, roleEnvironments, permissionRows]);
 
   // Signed out is not a broken account — the shell redirects to /login
   // before anything reads this.
@@ -481,6 +542,8 @@ export function useAuth(): AuthContextValue {
       canManageMembers: false,
       canEditSettings: false,
       canSendMessages: false,
+      environments: new Set<string>(),
+      permissions: new Set<string>(),
     };
   }
   return ctx;

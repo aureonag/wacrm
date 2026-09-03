@@ -6,7 +6,9 @@ import {
   LayoutGrid,
   Palette,
   PlugZap,
+  Radar,
   Shield,
+  ShieldCheck,
   Tags,
   User,
   UsersRound,
@@ -34,6 +36,8 @@ export const SETTINGS_SECTIONS = [
   'deals',
   'contract-templates',
   'members',
+  'roles',
+  'sectors',
   'api',
 ] as const;
 
@@ -61,6 +65,8 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'workspace' },
   'contract-templates': { id: 'contract-templates', label: 'Contract templates', icon: FileSignature, group: 'workspace' },
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
+  roles: { id: 'roles', label: 'Roles & permissions', icon: ShieldCheck, group: 'workspace' },
+  sectors: { id: 'sectors', label: 'Sectors', icon: Radar, group: 'workspace' },
   api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
 };
 

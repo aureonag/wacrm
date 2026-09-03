@@ -75,6 +75,38 @@ export interface AccountMember {
   avatar_url: string | null;
   role: AccountRole;
   joined_at: string;
+  /** Custom cargo (migration 058) — null if never assigned one. */
+  role_id: string | null;
+  sector_ids: string[];
+}
+
+// ---- Cargos, Permissões, Setores (migration 058) --------------------------
+
+export type PlatformEnvironment = "comercial" | "operational";
+
+/** One row of the global permissions catalog. */
+export interface Permission {
+  id: string;
+  environment: PlatformEnvironment;
+  module: string;
+  action: string;
+  label: string;
+}
+
+/** A custom cargo, with the ids of the permissions it grants. */
+export interface Role {
+  id: string;
+  account_id: string;
+  name: string;
+  environments: PlatformEnvironment[];
+  is_system_default: boolean;
+  permission_ids: string[];
+}
+
+export interface Sector {
+  id: string;
+  account_id: string;
+  name: string;
 }
 
 /**

@@ -19,12 +19,14 @@ import { canManageMembers, isAccountRole } from "@/lib/auth/roles";
 import type { AccountMember } from "@/types";
 
 interface ProfileRow {
+  id: string;
   user_id: string;
   full_name: string | null;
   email: string | null;
   avatar_url: string | null;
   account_role: string;
   created_at: string;
+  role_id: string | null;
 }
 
 export async function GET() {
@@ -35,7 +37,7 @@ export async function GET() {
     // the caller's, so this query is naturally account-scoped.
     const { data, error } = await ctx.supabase
       .from("profiles")
-      .select("user_id, full_name, email, avatar_url, account_role, created_at")
+      .select("id, user_id, full_name, email, avatar_url, account_role, created_at, role_id")
       .eq("account_id", ctx.accountId)
       .order("created_at", { ascending: true });
 
@@ -48,8 +50,26 @@ export async function GET() {
     }
 
     const canSeeEmails = canManageMembers(ctx.role);
+    const rows = data as ProfileRow[];
 
-    const members: AccountMember[] = (data as ProfileRow[]).flatMap((row) => {
+    // Setores (migration 058) — batch-fetched by profile id, same
+    // "second query + map" shape used throughout the app for one-to-many
+    // child data (e.g. hydrateLineItemsAndTags in pipelines/queries.ts).
+    const profileIds = rows.map((r) => r.id);
+    const sectorsByProfile = new Map<string, string[]>();
+    if (profileIds.length > 0) {
+      const { data: userSectors } = await ctx.supabase
+        .from("user_sectors")
+        .select("profile_id, sector_id")
+        .in("profile_id", profileIds);
+      for (const row of (userSectors ?? []) as { profile_id: string; sector_id: string }[]) {
+        const bucket = sectorsByProfile.get(row.profile_id) ?? [];
+        bucket.push(row.sector_id);
+        sectorsByProfile.set(row.profile_id, bucket);
+      }
+    }
+
+    const members: AccountMember[] = rows.flatMap((row) => {
       // Defensive: the DB enum should never let an unknown role
       // through, but if a migration ever broadens the enum without
       // updating TS, skip the row rather than crash the page.
@@ -62,6 +82,8 @@ export async function GET() {
           avatar_url: row.avatar_url,
           role: row.account_role,
           joined_at: row.created_at,
+          role_id: row.role_id,
+          sector_ids: sectorsByProfile.get(row.id) ?? [],
         },
       ];
     });

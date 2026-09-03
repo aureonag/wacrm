@@ -73,10 +73,12 @@ import {
   PRESENCE_DOT_CLASS,
   PresenceDot,
 } from '@/components/presence/presence-dot';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InviteMemberDialog } from './invite-member-dialog';
 import { ResetPasswordDialog } from './reset-password-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
+import type { Role, Sector } from '@/types';
 
 interface Member {
   user_id: string;
@@ -85,6 +87,9 @@ interface Member {
   avatar_url: string | null;
   role: AccountRole;
   joined_at: string;
+  /** Cargo customizado (migration 058) — null se nunca atribuído. */
+  role_id: string | null;
+  sector_ids: string[];
 }
 
 interface Invitation {
@@ -129,27 +134,34 @@ function fmtExpiresIn(iso: string, t: (key: string, values?: Record<string, stri
 export function MembersTab() {
   const t = useTranslations('Settings.members');
   const tRoles = useTranslations('Settings.roles');
+  const tCargo = useTranslations('Settings.members.cargo');
   const { user, canManageMembers } = useAuth();
   const { getPresence, getRow, now } = usePresence();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
   const [resettingMember, setResettingMember] = useState<Member | null>(null);
+  const [editingSectorsFor, setEditingSectorsFor] = useState<Member | null>(null);
+  const [draftSectorIds, setDraftSectorIds] = useState<Set<string>>(new Set());
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
   );
 
   const loadEverything = useCallback(async () => {
     try {
-      const [mres, ires] = await Promise.all([
+      const [mres, ires, rres, sres] = await Promise.all([
         fetch('/api/account/members', { cache: 'no-store' }),
         canManageMembers
           ? fetch('/api/account/invitations', { cache: 'no-store' })
           : Promise.resolve(null),
+        fetch('/api/account/roles', { cache: 'no-store' }),
+        fetch('/api/account/sectors', { cache: 'no-store' }),
       ]);
 
       if (!mres.ok) {
@@ -159,6 +171,9 @@ export function MembersTab() {
       }
       const mdata = (await mres.json()) as { members: Member[] };
       setMembers(mdata.members);
+
+      if (rres.ok) setRoles(((await rres.json()) as { roles: Role[] }).roles);
+      if (sres.ok) setSectors(((await sres.json()) as { sectors: Sector[] }).sectors);
 
       if (ires) {
         if (!ires.ok) {
@@ -228,6 +243,60 @@ export function MembersTab() {
       toast.error('Could not reach the server');
     } finally {
       setPendingMemberAction(null);
+    }
+  }
+
+  async function handleCargoChange(member: Member, nextRoleId: string | null) {
+    if (member.role_id === nextRoleId) return;
+    const previous = member.role_id;
+    setMembers((prev) => prev.map((m) => (m.user_id === member.user_id ? { ...m, role_id: nextRoleId } : m)));
+    try {
+      const res = await fetch(`/api/account/members/${member.user_id}/cargo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_id: nextRoleId }),
+      });
+      if (!res.ok) {
+        setMembers((prev) => prev.map((m) => (m.user_id === member.user_id ? { ...m, role_id: previous } : m)));
+        const payload = await res.json().catch(() => ({}));
+        toast.error(payload.error || tCargo('updateError'));
+        return;
+      }
+      toast.success(tCargo('updatedToast', { name: member.full_name || t('unnamed') }));
+    } catch (err) {
+      setMembers((prev) => prev.map((m) => (m.user_id === member.user_id ? { ...m, role_id: previous } : m)));
+      console.error('[MembersTab] cargo change error:', err);
+      toast.error('Could not reach the server');
+    }
+  }
+
+  function openSectorsEditor(member: Member) {
+    setEditingSectorsFor(member);
+    setDraftSectorIds(new Set(member.sector_ids));
+  }
+
+  async function handleSaveSectors() {
+    if (!editingSectorsFor) return;
+    const sectorIds = [...draftSectorIds];
+    try {
+      const res = await fetch(`/api/account/members/${editingSectorsFor.user_id}/sectors`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sector_ids: sectorIds }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        toast.error(payload.error || tCargo('sectorsUpdateError'));
+        return;
+      }
+      setMembers((prev) =>
+        prev.map((m) => (m.user_id === editingSectorsFor.user_id ? { ...m, sector_ids: sectorIds } : m)),
+      );
+      toast.success(tCargo('sectorsUpdatedToast', { name: editingSectorsFor.full_name || t('unnamed') }));
+      setEditingSectorsFor(null);
+    } catch (err) {
+      console.error('[MembersTab] sectors save error:', err);
+      toast.error('Could not reach the server');
     }
   }
 
@@ -413,6 +482,47 @@ export function MembersTab() {
                       inline. Items align to the start on mobile so the
                       role dropdown lines up under the avatar. */}
                   <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Cargo (migration 058) — independent of the base
+                        Role select below; assignable to any member
+                        including the owner and self. */}
+                    {canManageMembers ? (
+                      <Select
+                        value={member.role_id ?? '__none'}
+                        onValueChange={(v) => handleCargoChange(member, v === '__none' ? null : (v as string))}
+                      >
+                        <SelectTrigger className="w-32 bg-muted border-border text-foreground">
+                          <SelectValue>
+                            {roles.find((r) => r.id === member.role_id)?.name ?? tCargo('none')}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">{tCargo('none')}</SelectItem>
+                          {roles.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {roles.find((r) => r.id === member.role_id)?.name ?? tCargo('none')}
+                      </span>
+                    )}
+
+                    {/* Setores (migration 058) — independent of Cargo. */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openSectorsEditor(member)}
+                      disabled={!canManageMembers}
+                      className="border-border text-muted-foreground hover:bg-muted"
+                    >
+                      {member.sector_ids.length > 0
+                        ? tCargo('sectorsCount', { count: member.sector_ids.length })
+                        : tCargo('none')}
+                    </Button>
+
                     {/* Role display / editor. Inline Select is admin+
                         only AND not allowed on the owner row (owner
                         changes go through transfer, which lands later). */}
@@ -636,6 +746,50 @@ export function MembersTab() {
               ) : (
                 t('removeBtn')
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingSectorsFor !== null} onOpenChange={(open) => !open && setEditingSectorsFor(null)}>
+        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {tCargo('sectorsDialogTitle', { name: editingSectorsFor?.full_name || t('unnamed') })}
+            </DialogTitle>
+          </DialogHeader>
+          {sectors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{tCargo('noSectorsYet')}</p>
+          ) : (
+            <div className="space-y-2">
+              {sectors.map((sector) => (
+                <label key={sector.id} className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground">
+                  <Checkbox
+                    checked={draftSectorIds.has(sector.id)}
+                    onCheckedChange={() =>
+                      setDraftSectorIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(sector.id)) next.delete(sector.id);
+                        else next.add(sector.id);
+                        return next;
+                      })
+                    }
+                  />
+                  {sector.name}
+                </label>
+              ))}
+            </div>
+          )}
+          <DialogFooter className="bg-popover border-border">
+            <Button
+              variant="outline"
+              onClick={() => setEditingSectorsFor(null)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleSaveSectors} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {tCargo('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
