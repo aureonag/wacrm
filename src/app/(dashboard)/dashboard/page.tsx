@@ -21,6 +21,8 @@ import { ActivityFeed } from '@/components/dashboard/activity-feed'
 import { PeriodFilter } from '@/components/dashboard/period-filter'
 import { UserFilter } from '@/components/dashboard/user-filter'
 import { ClosedDealsCard } from '@/components/dashboard/closed-deals-card'
+import { DealSourceCard } from '@/components/dashboard/deal-source-card'
+import { LostReasonCard } from '@/components/dashboard/lost-reason-card'
 
 import { useTranslations } from 'next-intl'
 
@@ -214,6 +216,11 @@ export default function DashboardPage() {
           </div>
 
           <ClosedDealsCard deals={dealsForUser} />
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <DealSourceCard deals={dealsForPeriodAndUser} />
+            <LostReasonCard deals={dealsForPeriodAndUser} />
+          </div>
         </>
       )}
     </div>

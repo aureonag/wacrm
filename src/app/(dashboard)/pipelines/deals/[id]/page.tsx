@@ -31,6 +31,8 @@ import type {
 import { formatCurrency } from "@/lib/currency";
 import { frenteLabelKey } from "@/lib/deals/frente";
 import { DEAL_TAG_COLORS } from "@/lib/deals/tag-colors";
+import { DEAL_ORIGIN_KEYS, isKnownDealOrigin } from "@/lib/deals/origin";
+import { LOST_REASON_KEYS } from "@/lib/deals/lost-reason";
 import { relativeTime } from "@/lib/dashboard/relative-time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,6 +123,7 @@ export default function DealDetailPage() {
   const tActivity = useTranslations("Pipelines.activity");
   const tCard = useTranslations("Pipelines.card");
   const tCreate = useTranslations("Pipelines.createModal");
+  const tOrigin = useTranslations("Pipelines.origin");
 
   const [deal, setDeal] = useState<Deal | null>(null);
   const [stages, setStages] = useState<PipelineStage[]>([]);
@@ -226,14 +229,20 @@ export default function DealDetailPage() {
     if (data) setActivities((prev) => [data as DealActivity, ...prev]);
   }
 
-  async function handleStatusChange(status: DealStatus, lostReason?: string | null) {
+  async function handleStatusChange(status: DealStatus, lostReason?: string | null, lostReasonNote?: string | null) {
     if (!deal) return;
     setStatusAction(status);
     const patch: Partial<Deal> = { status };
     // Reopening clears a stale reason; marking lost sets the one just
     // picked. Won doesn't touch the field either way.
-    if (status === "open") patch.lost_reason = null;
-    if (status === "lost") patch.lost_reason = lostReason ?? null;
+    if (status === "open") {
+      patch.lost_reason = null;
+      patch.lost_reason_note = null;
+    }
+    if (status === "lost") {
+      patch.lost_reason = lostReason ?? null;
+      patch.lost_reason_note = lostReasonNote ?? null;
+    }
     const { error } = await supabase.from("deals").update(patch).eq("id", deal.id);
     setStatusAction(null);
     if (error) {
@@ -279,21 +288,22 @@ export default function DealDetailPage() {
   }
 
   // ---- Lost reason (asked before actually marking a deal Lost) ----
-  const LOST_REASON_KEYS = ["price", "competitor", "budget", "noResponse", "other"] as const;
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
   const [selectedLostReason, setSelectedLostReason] = useState<(typeof LOST_REASON_KEYS)[number]>("price");
   const [lostReasonOtherText, setLostReasonOtherText] = useState("");
+  const [lostReasonNoteText, setLostReasonNoteText] = useState("");
 
   function openLostReasonDialog() {
     setSelectedLostReason("price");
     setLostReasonOtherText("");
+    setLostReasonNoteText("");
     setLostReasonDialogOpen(true);
   }
 
   async function confirmMarkLost() {
     const reason = selectedLostReason === "other" ? lostReasonOtherText.trim() : selectedLostReason;
     if (!reason) return;
-    await handleStatusChange("lost", reason);
+    await handleStatusChange("lost", reason, lostReasonNoteText.trim() || null);
     setLostReasonDialogOpen(false);
   }
 
@@ -304,6 +314,11 @@ export default function DealDetailPage() {
     return (LOST_REASON_KEYS as readonly string[]).includes(reason)
       ? t(`lostReason_${reason}` as Parameters<typeof t>[0])
       : reason;
+  }
+
+  // ---- Origin (structured, same "fixed key or free text" convention as lost_reason) ----
+  function formatOrigin(origin: string): string {
+    return isKnownDealOrigin(origin) ? tOrigin(origin as Parameters<typeof tOrigin>[0]) : origin;
   }
 
   // ---- Tags (mirrors the Kanban card's inline editor / same data) ----
@@ -459,6 +474,11 @@ export default function DealDetailPage() {
 
   const frenteKey = frenteLabelKey(deal.frente_leadgen, deal.frente_avr);
   const responsibleLabel = deal.assignee?.full_name || deal.assignee?.email || "";
+  // "Outro" origin stores its complement as free text in the same column
+  // (see src/lib/deals/origin.ts) — anything set but not a known key means
+  // that's the case, same overload the lost-reason field already uses.
+  const originIsCustom = !!deal.origin && !isKnownDealOrigin(deal.origin);
+  const originSelectValue = originIsCustom ? "other" : (deal.origin ?? "");
   const avgTicket =
     (deal.lineItems ?? []).length > 0
       ? (deal.lineItems ?? []).reduce((s, li) => s + Number(li.value || 0), 0) / (deal.lineItems ?? []).length
@@ -674,6 +694,34 @@ export default function DealDetailPage() {
                     className="border-border bg-muted text-foreground"
                   />
                 </div>
+                <div className="grid gap-1.5">
+                  <Label className="text-muted-foreground">{tOrigin("label")}</Label>
+                  <select
+                    value={originSelectValue}
+                    disabled={!canEdit}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      updateDealField({ origin: value === "other" ? "" : value || null });
+                    }}
+                    className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary"
+                  >
+                    <option value="">{tOrigin("placeholder")}</option>
+                    {DEAL_ORIGIN_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {tOrigin(key)}
+                      </option>
+                    ))}
+                  </select>
+                  {(originSelectValue === "other" || originIsCustom) && (
+                    <Input
+                      defaultValue={originIsCustom ? deal.origin ?? "" : ""}
+                      disabled={!canEdit}
+                      placeholder={tOrigin("otherPlaceholder")}
+                      onBlur={(e) => updateDealField({ origin: e.target.value.trim() || "other" })}
+                      className="border-border bg-muted text-foreground"
+                    />
+                  )}
+                </div>
               </div>
 
               <div className="grid gap-1.5">
@@ -690,10 +738,25 @@ export default function DealDetailPage() {
               </div>
 
               {deal.status === "lost" && deal.lost_reason && (
-                <p className="text-xs text-muted-foreground">
-                  {t("lostReasonLabel")}:{" "}
-                  <span className="font-medium text-foreground">{formatLostReason(deal.lost_reason)}</span>
-                </p>
+                <div className="space-y-0.5 text-xs text-muted-foreground">
+                  <p>
+                    {t("lostReasonLabel")}:{" "}
+                    <span className="font-medium text-foreground">{formatLostReason(deal.lost_reason)}</span>
+                  </p>
+                  {deal.closed_at && (
+                    <p>
+                      {t("lostReasonDateLabel")}:{" "}
+                      <span className="font-medium text-foreground">
+                        {new Date(deal.closed_at).toLocaleDateString(locale)}
+                      </span>
+                    </p>
+                  )}
+                  {deal.lost_reason_note && (
+                    <p>
+                      {t("lostReasonNoteLabel")}: <span className="text-foreground">{deal.lost_reason_note}</span>
+                    </p>
+                  )}
+                </div>
               )}
 
               <div className="grid gap-1.5">
@@ -1173,7 +1236,7 @@ export default function DealDetailPage() {
       </Dialog>
 
       <Dialog open={lostReasonDialogOpen} onOpenChange={setLostReasonDialogOpen}>
-        <DialogContent className="sm:max-w-sm bg-popover border-border text-popover-foreground">
+        <DialogContent className="sm:max-w-md bg-popover border-border text-popover-foreground">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">{t("lostReasonTitle")}</DialogTitle>
           </DialogHeader>
@@ -1194,6 +1257,16 @@ export default function DealDetailPage() {
                 className="border-border bg-muted text-foreground"
               />
             )}
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">{t("lostReasonNoteLabel")}</Label>
+              <Textarea
+                value={lostReasonNoteText}
+                onChange={(e) => setLostReasonNoteText(e.target.value)}
+                placeholder={t("lostReasonNotePlaceholder")}
+                rows={3}
+                className="border-border bg-muted text-foreground"
+              />
+            </div>
           </div>
           <DialogFooter className="bg-popover/50 border-border">
             <Button

@@ -32,3 +32,23 @@ export interface ActivityItem {
   /** Optional deep-link for the whole row (not all items have a target). */
   href?: string
 }
+
+/** One row of the "Origem dos negócios" breakdown. `origin === null` means
+ *  the deal has no recorded source (shown as "not informed"). */
+export interface DealSourceSlice {
+  origin: string | null
+  count: number
+  percent: number
+  totalValue: number
+  wonCount: number
+  wonValue: number
+}
+
+/** One row of the "Motivos de perda" breakdown, lost deals only.
+ *  `reason === null` means the deal was lost before this field existed. */
+export interface LostReasonSlice {
+  reason: string | null
+  count: number
+  percent: number
+  totalValue: number
+}

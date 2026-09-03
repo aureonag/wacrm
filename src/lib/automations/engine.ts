@@ -580,6 +580,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         value: cfg.value ?? 0,
         currency: acct?.default_currency ?? 'USD',
         status: 'open',
+        origin: 'automation',
       })
       return 'deal created'
     }

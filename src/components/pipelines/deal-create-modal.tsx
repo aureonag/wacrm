@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { findExistingContact, isUniqueViolation } from "@/lib/contacts/dedupe";
 import type { DealLineItemType, PipelineStage, Profile } from "@/types";
+import { DEAL_ORIGIN_KEYS } from "@/lib/deals/origin";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,7 @@ export function DealCreateModal({
   onSaved,
 }: DealCreateModalProps) {
   const t = useTranslations("Pipelines.createModal");
+  const tOrigin = useTranslations("Pipelines.origin");
   const supabase = createClient();
   const { user, profile, accountId, defaultCurrency } = useAuth();
 
@@ -71,6 +73,8 @@ export function DealCreateModal({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [segment, setSegment] = useState("");
   const [region, setRegion] = useState("");
+  const [origin, setOrigin] = useState("");
+  const [originOther, setOriginOther] = useState("");
   const [stageId, setStageId] = useState("");
   const [frenteLeadgen, setFrenteLeadgen] = useState(false);
   const [frenteAvr, setFrenteAvr] = useState(false);
@@ -91,6 +95,8 @@ export function DealCreateModal({
     setChangingResponsible(false);
     setSegment("");
     setRegion("");
+    setOrigin("");
+    setOriginOther("");
     setStageId(defaultStageId || stages[0]?.id || "");
     setFrenteLeadgen(false);
     setFrenteAvr(false);
@@ -190,6 +196,7 @@ export function DealCreateModal({
         region: region.trim() || null,
         frente_leadgen: frenteLeadgen,
         frente_avr: frenteAvr,
+        origin: origin === "other" ? originOther.trim() || "other" : origin || null,
         status: "open",
       })
       .select()
@@ -300,6 +307,30 @@ export function DealCreateModal({
                 className="border-border bg-muted text-foreground"
               />
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label className="text-muted-foreground">{tOrigin("label")}</Label>
+            <select
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value)}
+              className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary"
+            >
+              <option value="">{tOrigin("placeholder")}</option>
+              {DEAL_ORIGIN_KEYS.map((key) => (
+                <option key={key} value={key}>
+                  {tOrigin(key)}
+                </option>
+              ))}
+            </select>
+            {origin === "other" && (
+              <Input
+                value={originOther}
+                onChange={(e) => setOriginOther(e.target.value)}
+                placeholder={tOrigin("otherPlaceholder")}
+                className="border-border bg-muted text-foreground"
+              />
+            )}
           </div>
 
           <div className="grid gap-2">

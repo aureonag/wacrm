@@ -220,6 +220,7 @@ async function importOne(
         frente_leadgen: run.frente_leadgen,
         frente_avr: run.frente_avr,
         status: "open",
+        origin: "prospectingActive",
         prospecting_candidate_id: candidate.id,
       })
       .select()

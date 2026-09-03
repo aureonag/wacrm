@@ -577,6 +577,10 @@ export interface Deal {
   proposal_url?: string | null;
   /** Free-text/select reason captured when the deal is marked Lost (migration 043). */
   lost_reason?: string | null;
+  /** Optional observation attached to a loss, independent of `lost_reason` (migration 056). */
+  lost_reason_note?: string | null;
+  /** Structured acquisition-channel key, or free text when "Outro" was picked (migration 056). */
+  origin?: string | null;
   /** Set when this deal was created by importing a Prospecção candidate (migration 049). */
   prospecting_candidate_id?: string | null;
   contact?: Contact;

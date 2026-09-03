@@ -1,5 +1,5 @@
 import type { Deal, PipelineStage } from '@/types'
-import type { ActivityItem, PipelineDonutData, PipelineStageSlice } from './types'
+import type { ActivityItem, DealSourceSlice, LostReasonSlice, PipelineDonutData, PipelineStageSlice } from './types'
 import { monthBucketsInRange, monthKey, type DateRange } from './period'
 
 // ------------------------------------------------------------
@@ -120,4 +120,66 @@ export function buildClosedDealsByMonth(deals: Deal[], range: DateRange): Closed
   }
 
   return [...buckets.values()].sort((a, b) => a.month.getTime() - b.month.getTime())
+}
+
+// --- "Origem dos negócios" card -------------------------------------------
+
+const UNINFORMED = '__uninformed__'
+
+/** Breaks every deal down by `origin` — every deal counts once (including
+ *  ones with no origin recorded, bucketed as `UNINFORMED` so percentages
+ *  still sum to 100 and old data doesn't just disappear from the report),
+ *  sorted by deal count descending. */
+export function buildDealSourceBreakdown(deals: Deal[]): DealSourceSlice[] {
+  const byOrigin = new Map<string, { count: number; totalValue: number; wonCount: number; wonValue: number }>()
+  for (const d of deals) {
+    const key = d.origin?.trim() || UNINFORMED
+    const row = byOrigin.get(key) ?? { count: 0, totalValue: 0, wonCount: 0, wonValue: 0 }
+    row.count += 1
+    row.totalValue += d.value ?? 0
+    if (d.status === 'won') {
+      row.wonCount += 1
+      row.wonValue += d.value ?? 0
+    }
+    byOrigin.set(key, row)
+  }
+
+  const total = deals.length || 1
+  return [...byOrigin.entries()]
+    .map(([origin, row]) => ({
+      origin: origin === UNINFORMED ? null : origin,
+      count: row.count,
+      percent: (row.count / total) * 100,
+      totalValue: row.totalValue,
+      wonCount: row.wonCount,
+      wonValue: row.wonValue,
+    }))
+    .sort((a, b) => b.count - a.count)
+}
+
+// --- "Motivos de perda" card -----------------------------------------------
+
+/** Lost deals only, broken down by `lost_reason` (a deal with no reason
+ *  recorded is bucketed as `null` rather than dropped), sorted by count
+ *  descending. Percentages are of total LOST deals, not all deals. */
+export function buildLostReasonBreakdown(deals: Deal[]): LostReasonSlice[] {
+  const lost = deals.filter((d) => d.status === 'lost')
+  const byReason = new Map<string, { count: number; totalValue: number }>()
+  for (const d of lost) {
+    const key = d.lost_reason?.trim() || UNINFORMED
+    const row = byReason.get(key) ?? { count: 0, totalValue: 0 }
+    row.count += 1
+    row.totalValue += d.value ?? 0
+    byReason.set(key, row)
+  }
+
+  const total = lost.length || 1
+  return [...byReason.entries()]
+    .map(([reason, row]) => ({
+      reason: reason === UNINFORMED ? null : reason,
+      count: row.count,
+      percent: (row.count / total) * 100,
+      totalValue: row.totalValue,
+    }))
+    .sort((a, b) => b.count - a.count)
 }
