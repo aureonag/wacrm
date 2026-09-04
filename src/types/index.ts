@@ -230,10 +230,35 @@ export interface Conversation {
 }
 
 // ============================================================
-// Notifications (migration 027)
+// Notifications (migration 027, estendida em 054 e 067)
 // ============================================================
 
-export type NotificationType = 'conversation_assigned' | 'contract_signed';
+export type NotificationType =
+  | 'conversation_assigned'
+  | 'contract_signed'
+  | 'task_assigned'
+  | 'task_reassigned'
+  | 'task_participant_added'
+  | 'task_moved'
+  | 'task_transferred'
+  | 'task_completed'
+  | 'task_reopened'
+  | 'task_urgent'
+  | 'subtask_created'
+  | 'subtask_completed'
+  | 'due_date_set'
+  | 'due_date_changed'
+  | 'due_date_approaching'
+  | 'task_overdue'
+  | 'task_comment'
+  | 'task_mention'
+  | 'comment_reply'
+  | 'task_file_added'
+  | 'approval_requested'
+  | 'approval_approved'
+  | 'approval_rejected'
+  | 'deal_won'
+  | 'kickoff_task_created';
 
 export interface Notification {
   id: string;
@@ -246,12 +271,26 @@ export interface Notification {
   /** Set for `contract_signed` (migration 054). */
   deal_id?: string;
   contract_id?: string;
+  /** Set for task/board-related types (migration 067). */
+  task_id?: string;
+  board_id?: string;
   /** Who triggered it. Null when an automation/system assigned it. */
   actor_user_id?: string;
   title: string;
   body?: string;
   read_at?: string;
   created_at: string;
+}
+
+// ============================================================
+// Notification preferences (migration 067)
+// ============================================================
+
+export interface NotificationPreference {
+  user_id: string;
+  type: NotificationType;
+  enabled: boolean;
+  updated_at: string;
 }
 
 export type SenderType = 'customer' | 'agent' | 'bot';

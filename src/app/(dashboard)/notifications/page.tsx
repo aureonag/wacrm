@@ -5,16 +5,63 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Notification } from "@/types";
-import { Bell, CheckCheck, FileCheck, Loader2, UserPlus } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRightLeft,
+  AtSign,
+  Bell,
+  CalendarClock,
+  CheckCheck,
+  CheckCircle2,
+  Clock,
+  FileCheck,
+  ListPlus,
+  Loader2,
+  MessageSquare,
+  Paperclip,
+  Rocket,
+  RotateCcw,
+  ShieldCheck,
+  ShieldQuestion,
+  ShieldX,
+  Trophy,
+  UserPlus,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-// Icon per notification type.
+// Icon per notification type. Real i18n + task-aware routing for these
+// (beyond the icon) lands with the Etapa 3 notification triggers — this
+// keeps the type union and the UI in sync in the meantime.
 const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
   conversation_assigned: UserPlus,
   contract_signed: FileCheck,
+  task_assigned: UserPlus,
+  task_reassigned: UserPlus,
+  task_participant_added: UserPlus,
+  task_moved: ArrowRightLeft,
+  task_transferred: ArrowRightLeft,
+  task_completed: CheckCircle2,
+  task_reopened: RotateCcw,
+  task_urgent: AlertTriangle,
+  subtask_created: ListPlus,
+  subtask_completed: CheckCircle2,
+  due_date_set: CalendarClock,
+  due_date_changed: CalendarClock,
+  due_date_approaching: Clock,
+  task_overdue: AlertCircle,
+  task_comment: MessageSquare,
+  task_mention: AtSign,
+  comment_reply: MessageSquare,
+  task_file_added: Paperclip,
+  approval_requested: ShieldQuestion,
+  approval_approved: ShieldCheck,
+  approval_rejected: ShieldX,
+  deal_won: Trophy,
+  kickoff_task_created: Rocket,
 };
 
 export default function NotificationsPage() {
@@ -118,6 +165,8 @@ export default function NotificationsPage() {
         router.push(`/inbox?c=${n.conversation_id}`);
       } else if (n.deal_id) {
         router.push(`/pipelines/deals/${n.deal_id}`);
+      } else if (n.board_id && n.task_id) {
+        router.push(`/operational/boards/${n.board_id}?task=${n.task_id}`);
       }
     },
     [markRead, router],
