@@ -318,8 +318,45 @@
     "dashboard": {
       "title": "운영 대시보드",
       "description": "Aureon 팀의 업무 관리 및 실행 현황.",
-      "comingSoonTitle": "운영 지표는 다음 단계에서 제공됩니다",
-      "comingSoonHint": "보드, 칸반, 체크리스트, 하위 작업, 타임시트는 업무 관리에서 이미 사용할 수 있습니다 — 이 대시보드의 차트와 지표는 다음 단계에서 제공됩니다."
+      "noPermissionTitle": "운영 대시보드 접근 권한이 없습니다",
+      "noPermissionHint": "관리자에게 역할에 대시보드 권한(본인/부서/전체)을 부여해 달라고 요청하세요.",
+      "filterBoard": "모든 보드",
+      "filterSector": "모든 부서",
+      "filterPerson": "모든 사람",
+      "attention": {
+        "title": "운영 주의사항",
+        "description": "선택한 기간과 상관없이 현재 열려 있는 작업의 상태입니다.",
+        "overdue": "지연됨",
+        "urgent": "긴급",
+        "unassigned": "담당자 없음",
+        "stuck": "정체됨 (7일 이상)"
+      },
+      "volume": {
+        "title": "물량",
+        "totalOpen": "전체 진행 중",
+        "createdInPeriod": "기간 내 생성",
+        "completedInPeriod": "기간 내 완료",
+        "emptyByBoard": "열려 있는 작업이 없습니다."
+      },
+      "time": {
+        "title": "시간",
+        "avgCompletion": "평균 완료 시간",
+        "totalLogged": "기간 내 기록된 시간"
+      },
+      "deadlines": {
+        "title": "마감일",
+        "overdue": "지연됨",
+        "dueSoon": "3일 이내 마감",
+        "onTimeRate": "제시간 완료율"
+      },
+      "team": {
+        "title": "팀",
+        "empty": "아직 배정된 작업이 없습니다.",
+        "colPerson": "담당자",
+        "colAssignedOpen": "배정됨 (진행 중)",
+        "colCompleted": "기간 내 완료",
+        "colHours": "기간 내 시간"
+      }
     },
     "boards": {
       "title": "업무 관리",

@@ -318,8 +318,45 @@
     "dashboard": {
       "title": "Dashboard Operacional",
       "description": "Acompanhamento de tarefas e execução da equipe Aureon.",
-      "comingSoonTitle": "As métricas operacionais chegam na próxima etapa",
-      "comingSoonHint": "Quadros, kanban, checklist, subtarefas e timesheet já estão disponíveis em Gestão de Tarefas — os gráficos e indicadores deste Dashboard chegam na etapa seguinte."
+      "noPermissionTitle": "Sem acesso ao Dashboard Operacional",
+      "noPermissionHint": "Peça a um administrador para conceder uma permissão de Dashboard (própria, do setor ou de todos) no seu cargo.",
+      "filterBoard": "Todos os quadros",
+      "filterSector": "Todos os setores",
+      "filterPerson": "Todas as pessoas",
+      "attention": {
+        "title": "Atenção operacional",
+        "description": "Situação atual das tarefas abertas, independente do período selecionado.",
+        "overdue": "Atrasadas",
+        "urgent": "Urgentes",
+        "unassigned": "Sem responsável",
+        "stuck": "Paradas (7+ dias)"
+      },
+      "volume": {
+        "title": "Volume",
+        "totalOpen": "Total em aberto",
+        "createdInPeriod": "Criadas no período",
+        "completedInPeriod": "Concluídas no período",
+        "emptyByBoard": "Nenhuma tarefa em aberto."
+      },
+      "time": {
+        "title": "Tempo",
+        "avgCompletion": "Tempo médio de conclusão",
+        "totalLogged": "Horas registradas no período"
+      },
+      "deadlines": {
+        "title": "Prazos",
+        "overdue": "Atrasadas",
+        "dueSoon": "Vencem em 3 dias",
+        "onTimeRate": "Concluídas no prazo"
+      },
+      "team": {
+        "title": "Equipe",
+        "empty": "Nenhuma tarefa atribuída ainda.",
+        "colPerson": "Pessoa",
+        "colAssignedOpen": "Atribuídas (aberto)",
+        "colCompleted": "Concluídas no período",
+        "colHours": "Horas no período"
+      }
     },
     "boards": {
       "title": "Gestão de Tarefas",

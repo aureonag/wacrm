@@ -318,8 +318,45 @@
     "dashboard": {
       "title": "Operational Dashboard",
       "description": "Task management and execution tracking for the Aureon team.",
-      "comingSoonTitle": "Operational metrics are coming in the next stage",
-      "comingSoonHint": "Boards, kanban, checklists, subtasks, and timesheets are already available under Task Management — this Dashboard's charts and metrics ship in the next stage."
+      "noPermissionTitle": "No access to the Operational Dashboard",
+      "noPermissionHint": "Ask an administrator to grant a Dashboard permission (own, sector, or all) on your role.",
+      "filterBoard": "All boards",
+      "filterSector": "All sectors",
+      "filterPerson": "All people",
+      "attention": {
+        "title": "Operational attention",
+        "description": "Current state of open tasks, regardless of the selected period.",
+        "overdue": "Overdue",
+        "urgent": "Urgent",
+        "unassigned": "Unassigned",
+        "stuck": "Stuck (7+ days)"
+      },
+      "volume": {
+        "title": "Volume",
+        "totalOpen": "Total open",
+        "createdInPeriod": "Created in period",
+        "completedInPeriod": "Completed in period",
+        "emptyByBoard": "No open tasks."
+      },
+      "time": {
+        "title": "Time",
+        "avgCompletion": "Average completion time",
+        "totalLogged": "Hours logged in period"
+      },
+      "deadlines": {
+        "title": "Deadlines",
+        "overdue": "Overdue",
+        "dueSoon": "Due in 3 days",
+        "onTimeRate": "Completed on time"
+      },
+      "team": {
+        "title": "Team",
+        "empty": "No tasks assigned yet.",
+        "colPerson": "Person",
+        "colAssignedOpen": "Assigned (open)",
+        "colCompleted": "Completed in period",
+        "colHours": "Hours in period"
+      }
     },
     "boards": {
       "title": "Task Management",

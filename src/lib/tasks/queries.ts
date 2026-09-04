@@ -162,6 +162,51 @@ export async function loadTaskApprovals(db: SupabaseClient, taskId: string): Pro
   return approvals;
 }
 
+/** Account-wide reads for the Dashboard Operacional (Etapa 3, fase 5) —
+ *  one batch load each instead of per-board/per-task, since the
+ *  dashboard aggregates across every board the account has. */
+export async function loadAccountTasksForDashboard(db: SupabaseClient, accountId: string): Promise<Task[]> {
+  const { data, error } = await db
+    .from("tasks")
+    .select("*, assignee:profiles!tasks_assignee_id_fkey(*)")
+    .eq("account_id", accountId)
+    .is("parent_task_id", null);
+  if (error) {
+    console.error("Failed to load account tasks for dashboard:", error.message);
+    return [];
+  }
+  return (data ?? []) as Task[];
+}
+
+export async function loadAccountTimesheetEntries(db: SupabaseClient, accountId: string): Promise<TimesheetEntry[]> {
+  const { data, error } = await db.from("timesheet_entries").select("*").eq("account_id", accountId);
+  if (error) {
+    console.error("Failed to load account timesheet entries:", error.message);
+    return [];
+  }
+  return (data ?? []) as TimesheetEntry[];
+}
+
+export async function loadAccountTaskStageHistory(db: SupabaseClient, accountId: string): Promise<TaskStageHistory[]> {
+  const { data, error } = await db.from("task_stage_history").select("*").eq("account_id", accountId);
+  if (error) {
+    console.error("Failed to load account task stage history:", error.message);
+    return [];
+  }
+  return (data ?? []) as TaskStageHistory[];
+}
+
+/** Sector ids the given profile belongs to — resolves the "sector" level
+ *  of the Dashboard/Timesheet 3-level permission split (migration 067). */
+export async function loadMySectorIds(db: SupabaseClient, profileId: string): Promise<string[]> {
+  const { data, error } = await db.from("user_sectors").select("sector_id").eq("profile_id", profileId);
+  if (error) {
+    console.error("Failed to load user sectors:", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => r.sector_id as string);
+}
+
 export async function loadTaskActivity(db: SupabaseClient, taskId: string): Promise<TaskActivity[]> {
   const { data, error } = await db
     .from("task_activity")
