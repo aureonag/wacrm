@@ -154,7 +154,9 @@ export function HandoffSettingsPanel() {
             <Label className="text-muted-foreground">{t('board')}</Label>
             <Select value={boardId} onValueChange={handleBoardChange}>
               <SelectTrigger className="bg-muted text-foreground">
-                <SelectValue placeholder={t('selectPlaceholder')} />
+                <SelectValue>
+                  {boardId === NONE ? t('none') : (boards.find((b) => b.id === boardId)?.name ?? '')}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NONE}>{t('none')}</SelectItem>
@@ -169,7 +171,9 @@ export function HandoffSettingsPanel() {
             <Label className="text-muted-foreground">{t('initialStage')}</Label>
             <Select value={stageId} onValueChange={(v) => setStageId(v ?? NONE)} disabled={boardId === NONE}>
               <SelectTrigger className="bg-muted text-foreground">
-                <SelectValue placeholder={t('selectPlaceholder')} />
+                <SelectValue>
+                  {stages.find((s) => s.id === stageId)?.name ?? t('selectPlaceholder')}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {stages.map((s) => (
@@ -183,7 +187,9 @@ export function HandoffSettingsPanel() {
             <Label className="text-muted-foreground">{t('defaultSector')}</Label>
             <Select value={sectorId} onValueChange={(v) => setSectorId(v ?? NONE)}>
               <SelectTrigger className="bg-muted text-foreground">
-                <SelectValue placeholder={t('selectPlaceholder')} />
+                <SelectValue>
+                  {sectorId === NONE ? t('none') : (sectors.find((s) => s.id === sectorId)?.name ?? '')}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NONE}>{t('none')}</SelectItem>
@@ -198,7 +204,9 @@ export function HandoffSettingsPanel() {
             <Label className="text-muted-foreground">{t('defaultAssignee')}</Label>
             <Select value={assigneeId} onValueChange={(v) => setAssigneeId(v ?? NONE)}>
               <SelectTrigger className="bg-muted text-foreground">
-                <SelectValue placeholder={t('selectPlaceholder')} />
+                <SelectValue>
+                  {assigneeId === NONE ? t('none') : (profiles.find((p) => p.id === assigneeId)?.full_name ?? '')}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NONE}>{t('none')}</SelectItem>

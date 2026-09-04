@@ -1343,7 +1343,9 @@ export default function DealDetailPage() {
               <Label className="text-muted-foreground">{t("wonHandoffSectorLabel")}</Label>
               <Select value={wonHandoffSectorId} onValueChange={(v) => setWonHandoffSectorId(v ?? "__none")}>
                 <SelectTrigger className="bg-muted text-foreground">
-                  <SelectValue placeholder={t("wonHandoffSelectPlaceholder")} />
+                  <SelectValue>
+                    {sectors.find((s) => s.id === wonHandoffSectorId)?.name ?? t("wonHandoffSelectPlaceholder")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {sectors.map((s) => (
@@ -1356,7 +1358,11 @@ export default function DealDetailPage() {
               <Label className="text-muted-foreground">{t("wonHandoffAssigneeLabel")}</Label>
               <Select value={wonHandoffAssigneeId} onValueChange={(v) => setWonHandoffAssigneeId(v ?? "__none")}>
                 <SelectTrigger className="bg-muted text-foreground">
-                  <SelectValue placeholder={t("wonHandoffSelectPlaceholder")} />
+                  <SelectValue>
+                    {wonHandoffAssigneeId === "__none"
+                      ? t("wonHandoffNoAssignee")
+                      : (profiles.find((p) => p.id === wonHandoffAssigneeId)?.full_name ?? "")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">{t("wonHandoffNoAssignee")}</SelectItem>
