@@ -500,7 +500,10 @@
       "weekday3": "Quarta-feira",
       "weekday4": "Quinta-feira",
       "weekday5": "Sexta-feira",
-      "weekday6": "Sábado"
+      "weekday6": "Sábado",
+      "driveFolder": "Pasta do Drive",
+      "driveFolderPlaceholder": "Cole o link da pasta do Google Drive",
+      "driveFolderOpen": "Abrir pasta"
     },
     "timesheet": {
       "start": "Iniciar",

@@ -79,6 +79,7 @@ import {
   Users2,
   X,
   Clock,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -522,6 +523,30 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                 >
                   {recurrenceSummary()}
                 </button>
+              </div>
+              <div className="col-span-2 grid gap-1 sm:col-span-3">
+                <Label className="text-[11px] text-muted-foreground">{t("driveFolder")}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="url"
+                    disabled={!canEdit}
+                    defaultValue={task.drive_folder_url ?? ""}
+                    placeholder={t("driveFolderPlaceholder")}
+                    onBlur={(e) => patchTask({ drive_folder_url: e.target.value.trim() || null })}
+                    className="h-8 flex-1 border-border bg-muted text-xs text-foreground"
+                  />
+                  {task.drive_folder_url && (
+                    <a
+                      href={task.drive_folder_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-border px-2 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      {t("driveFolderOpen")}
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -103,6 +103,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (typeof body.parent_task_id === "string" || body.parent_task_id === null) {
       update.parent_task_id = body.parent_task_id;
     }
+    if (typeof body.drive_folder_url === "string" || body.drive_folder_url === null) {
+      const url = typeof body.drive_folder_url === "string" ? body.drive_folder_url.trim() : "";
+      if (!url) {
+        update.drive_folder_url = null;
+      } else {
+        try {
+          new URL(url);
+        } catch {
+          return NextResponse.json({ error: "'drive_folder_url' must be a valid URL" }, { status: 400 });
+        }
+        update.drive_folder_url = url;
+      }
+    }
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: "No recognized fields to update" }, { status: 400 });
     }

@@ -993,6 +993,9 @@ export interface Task {
   created_by?: string | null;
   completed_at?: string | null;
   recurrence_rule_id?: string | null;
+  /** Link to a shared Google Drive folder the team already has access to
+   *  (Etapa 2, Fase 6) -- just a URL, no Drive API integration. */
+  drive_folder_url?: string | null;
   created_at: string;
   updated_at: string;
   /** Hydrated client-side, not selected from `tasks` directly. */

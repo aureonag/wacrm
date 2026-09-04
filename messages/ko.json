@@ -500,7 +500,10 @@
       "weekday3": "수요일",
       "weekday4": "목요일",
       "weekday5": "금요일",
-      "weekday6": "토요일"
+      "weekday6": "토요일",
+      "driveFolder": "드라이브 폴더",
+      "driveFolderPlaceholder": "Google 드라이브 폴더 링크를 붙여넣으세요",
+      "driveFolderOpen": "폴더 열기"
     },
     "timesheet": {
       "start": "시작",
