@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +26,13 @@ export function useActiveTimer() {
   const userId = user?.id ?? null;
   const [entry, setEntry] = useState<TimesheetEntry | null>(null);
   const [loading, setLoading] = useState(true);
+  // The Header's persistent indicator and the drawer's Timesheet tab can
+  // both have this hook mounted at once. Supabase's client reuses a
+  // channel object for a topic already subscribed on it, so a shared
+  // `active-timer:${userId}` name would make the second mount's `.on()`
+  // throw ("... after subscribe()"). A per-instance id keeps each
+  // mount's channel distinct.
+  const instanceId = useId();
 
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -41,7 +48,7 @@ export function useActiveTimer() {
     const supabase = createClient();
 
     const channel: RealtimeChannel = supabase
-      .channel(`active-timer:${userId}`)
+      .channel(`active-timer:${userId}:${instanceId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "timesheet_entries", filter: `user_id=eq.${userId}` },
@@ -67,7 +74,7 @@ export function useActiveTimer() {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, instanceId]);
 
   return { activeTimer: entry, loading, refresh };
 }
