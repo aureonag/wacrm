@@ -681,6 +681,10 @@ export interface Deal {
    *  step created/completed) — distinct from `updated_at`, which bumps on
    *  any edit (migration 057). */
   last_activity_at: string;
+  /** Captured at the moment of manually marking the deal won (migration 070) —
+   *  feeds the automatically-created Operational kickoff task. */
+  handoff_sector_id?: string | null;
+  handoff_assignee_id?: string | null;
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;
@@ -1035,6 +1039,9 @@ export interface Task {
   /** Link to a shared Google Drive folder the team already has access to
    *  (Etapa 2, Fase 6) -- just a URL, no Drive API integration. */
   drive_folder_url?: string | null;
+  /** Set on a task auto-created by the Comercial handoff (migration 070) --
+   *  links a kickoff task back to the deal that spawned it. */
+  deal_id?: string | null;
   created_at: string;
   updated_at: string;
   /** Hydrated client-side, not selected from `tasks` directly. */
@@ -1060,6 +1067,21 @@ export interface TaskRecurrenceRule {
   active: boolean;
   created_by?: string | null;
   created_at: string;
+}
+
+// ============================================================
+// Handoff Comercial -> Operacional (migration 070)
+// ============================================================
+
+export interface OperationalHandoffDefaults {
+  account_id: string;
+  board_id: string | null;
+  initial_stage_id: string | null;
+  default_sector_id: string | null;
+  default_assignee_id: string | null;
+  title_template: string;
+  due_offset_days: number | null;
+  updated_at: string;
 }
 
 export interface TaskTag {

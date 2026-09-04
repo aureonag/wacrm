@@ -26,6 +26,7 @@ import type {
   DealTag,
   PipelineStage,
   Profile,
+  Sector,
   ServiceCatalogItem,
 } from "@/types";
 import { formatCurrency } from "@/lib/currency";
@@ -46,6 +47,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -128,6 +136,7 @@ export default function DealDetailPage() {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [sectors, setSectors] = useState<Sector[]>([]);
   const [activities, setActivities] = useState<DealActivity[]>([]);
   const [comments, setComments] = useState<DealComment[]>([]);
   const [nextSteps, setNextSteps] = useState<DealNextStep[]>([]);
@@ -147,10 +156,11 @@ export default function DealDetailPage() {
       if (cancelled) return;
       setDeal(d);
       if (d) {
-        const [stageRows, profileRows, activityRows, commentRows, stepRows, fieldRows, valueRows, catalogRows] =
+        const [stageRows, profileRows, sectorRows, activityRows, commentRows, stepRows, fieldRows, valueRows, catalogRows] =
           await Promise.all([
             supabase.from("pipeline_stages").select("*").eq("pipeline_id", d.pipeline_id).order("position"),
             supabase.from("profiles").select("*").order("full_name"),
+            supabase.from("sectors").select("*").order("name"),
             loadDealActivities(supabase, dealId),
             loadDealComments(supabase, dealId),
             loadDealNextSteps(supabase, dealId),
@@ -161,6 +171,7 @@ export default function DealDetailPage() {
         if (cancelled) return;
         setStages((stageRows.data ?? []) as PipelineStage[]);
         setProfiles((profileRows.data ?? []) as Profile[]);
+        setSectors((sectorRows.data ?? []) as Sector[]);
         setActivities(activityRows);
         setComments(commentRows);
         setNextSteps(stepRows);
@@ -229,7 +240,12 @@ export default function DealDetailPage() {
     if (data) setActivities((prev) => [data as DealActivity, ...prev]);
   }
 
-  async function handleStatusChange(status: DealStatus, lostReason?: string | null, lostReasonNote?: string | null) {
+  async function handleStatusChange(
+    status: DealStatus,
+    lostReason?: string | null,
+    lostReasonNote?: string | null,
+    wonHandoff?: { sectorId: string | null; assigneeId: string | null },
+  ) {
     if (!deal) return;
     setStatusAction(status);
     const patch: Partial<Deal> = { status };
@@ -242,6 +258,13 @@ export default function DealDetailPage() {
     if (status === "lost") {
       patch.lost_reason = lostReason ?? null;
       patch.lost_reason_note = lostReasonNote ?? null;
+    }
+    // Captured by the handoff dialog — feeds the automatic Operational
+    // kickoff task (handle_deal_won trigger, migration 070) alongside the
+    // account's configured defaults.
+    if (status === "won" && wonHandoff) {
+      patch.handoff_sector_id = wonHandoff.sectorId;
+      patch.handoff_assignee_id = wonHandoff.assigneeId;
     }
     const { error } = await supabase.from("deals").update(patch).eq("id", deal.id);
     setStatusAction(null);
@@ -260,6 +283,28 @@ export default function DealDetailPage() {
 
   // ---- Won celebration (confetti + congrats dialog) ----
   const [wonCelebrationOpen, setWonCelebrationOpen] = useState(false);
+
+  // ---- Won handoff dialog (Setor responsável + Responsável principal,
+  // captured right before marking the deal won — feeds the automatic
+  // Operational kickoff task, migration 070) ----
+  const [wonHandoffDialogOpen, setWonHandoffDialogOpen] = useState(false);
+  const [wonHandoffSectorId, setWonHandoffSectorId] = useState<string>("__none");
+  const [wonHandoffAssigneeId, setWonHandoffAssigneeId] = useState<string>("__none");
+
+  function openWonHandoffDialog() {
+    setWonHandoffSectorId("__none");
+    setWonHandoffAssigneeId(deal?.assigned_to ?? "__none");
+    setWonHandoffDialogOpen(true);
+  }
+
+  async function confirmMarkWon() {
+    if (wonHandoffSectorId === "__none") return;
+    await handleStatusChange("won", null, null, {
+      sectorId: wonHandoffSectorId,
+      assigneeId: wonHandoffAssigneeId === "__none" ? null : wonHandoffAssigneeId,
+    });
+    setWonHandoffDialogOpen(false);
+  }
 
   // ---- Delete deal (mistaken creation, test data, etc.) ----
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -515,7 +560,7 @@ export default function DealDetailPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleStatusChange("won")}
+                  onClick={openWonHandoffDialog}
                   disabled={!!statusAction}
                   className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:text-emerald-200"
                 >
@@ -1282,6 +1327,60 @@ export default function DealDetailPage() {
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {t("markAsLost")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={wonHandoffDialogOpen} onOpenChange={setWonHandoffDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-popover border-border text-popover-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{t("wonHandoffTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">{t("wonHandoffDesc")}</p>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">{t("wonHandoffSectorLabel")}</Label>
+              <Select value={wonHandoffSectorId} onValueChange={(v) => setWonHandoffSectorId(v ?? "__none")}>
+                <SelectTrigger className="bg-muted text-foreground">
+                  <SelectValue placeholder={t("wonHandoffSelectPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectors.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">{t("wonHandoffAssigneeLabel")}</Label>
+              <Select value={wonHandoffAssigneeId} onValueChange={(v) => setWonHandoffAssigneeId(v ?? "__none")}>
+                <SelectTrigger className="bg-muted text-foreground">
+                  <SelectValue placeholder={t("wonHandoffSelectPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">{t("wonHandoffNoAssignee")}</SelectItem>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="bg-popover/50 border-border">
+            <Button
+              variant="outline"
+              onClick={() => setWonHandoffDialogOpen(false)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={confirmMarkWon}
+              disabled={wonHandoffSectorId === "__none" || !!statusAction}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {statusAction === "won" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsWon")}
             </Button>
           </DialogFooter>
         </DialogContent>

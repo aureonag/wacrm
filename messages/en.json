@@ -1067,6 +1067,12 @@
       "toastReopened": "Deal reopened",
       "wonCelebrationTitle": "Deal won! 🎉",
       "wonCelebrationBody": "\"{title}\" was marked as won. Nice work!",
+      "wonHandoffTitle": "Handoff to Operational",
+      "wonHandoffDesc": "Set who takes over this client — this feeds the kickoff task created automatically.",
+      "wonHandoffSectorLabel": "Responsible sector",
+      "wonHandoffAssigneeLabel": "Main assignee (optional)",
+      "wonHandoffSelectPlaceholder": "Select",
+      "wonHandoffNoAssignee": "None",
       "wonCelebrationClose": "Nice!",
       "lostReasonTitle": "Why was this deal lost?",
       "lostReasonLabel": "Lost reason",
@@ -2354,6 +2360,24 @@
       "deleteDesc": "Delete \"{name}\"? Members assigned to it will lose that assignment.",
       "deleteBtn": "Delete"
     },
+    "handoff": {
+      "title": "Operational Handoff",
+      "description": "When a deal is marked won, a kickoff task is created here automatically — set the board, initial stage, and defaults used on that task.",
+      "board": "Board",
+      "initialStage": "Initial stage",
+      "defaultSector": "Default sector",
+      "defaultAssignee": "Default assignee",
+      "titleTemplate": "Title template",
+      "dueOffsetDays": "Due date (days after closing)",
+      "dueOffsetPlaceholder": "e.g. 3",
+      "none": "None",
+      "selectPlaceholder": "Select",
+      "boardAndStageRequired": "Select the board and initial stage",
+      "save": "Save",
+      "savedToast": "Handoff settings saved",
+      "loadError": "Failed to load handoff settings",
+      "saveError": "Failed to save handoff settings"
+    },
     "whatsapp": {
       "title": "WhatsApp connection",
       "description": "Connect your Meta WhatsApp Business API. Credentials, webhook, and setup steps all live here.",
@@ -2440,6 +2464,7 @@
       "members": "Team members",
       "roles": "Roles & permissions",
       "sectors": "Sectors",
+      "handoff": "Handoff",
       "api": "API keys"
     },
     "groups": {

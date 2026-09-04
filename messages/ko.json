@@ -1067,6 +1067,12 @@
       "toastReopened": "딜이 재개되었습니다",
       "wonCelebrationTitle": "딜 성사! 🎉",
       "wonCelebrationBody": "\"{title}\" 딜이 성사로 표시되었습니다. 축하합니다!",
+      "wonHandoffTitle": "운영팀으로 핸드오프",
+      "wonHandoffDesc": "이 고객을 담당할 사람을 지정하세요 — 자동으로 생성되는 킥오프 작업에 이 정보가 반영됩니다.",
+      "wonHandoffSectorLabel": "담당 부서",
+      "wonHandoffAssigneeLabel": "주 담당자 (선택 사항)",
+      "wonHandoffSelectPlaceholder": "선택",
+      "wonHandoffNoAssignee": "없음",
       "wonCelebrationClose": "좋아요!",
       "lostReasonTitle": "이 딜은 왜 실패했나요?",
       "lostReasonLabel": "실패 사유",
@@ -2354,6 +2360,24 @@
       "deleteDesc": "\"{name}\"을(를) 삭제하시겠습니까? 배정된 구성원은 이 배정을 잃습니다.",
       "deleteBtn": "삭제"
     },
+    "handoff": {
+      "title": "운영 핸드오프",
+      "description": "거래가 성사됨으로 표시되면 여기서 킥오프 작업이 자동으로 생성됩니다 — 해당 작업에 사용할 보드, 초기 단계, 기본값을 설정하세요.",
+      "board": "보드",
+      "initialStage": "초기 단계",
+      "defaultSector": "기본 부서",
+      "defaultAssignee": "기본 담당자",
+      "titleTemplate": "제목 템플릿",
+      "dueOffsetDays": "마감일(성사 후 일수)",
+      "dueOffsetPlaceholder": "예: 3",
+      "none": "없음",
+      "selectPlaceholder": "선택",
+      "boardAndStageRequired": "보드와 초기 단계를 선택하세요",
+      "save": "저장",
+      "savedToast": "핸드오프 설정이 저장되었습니다",
+      "loadError": "핸드오프 설정을 불러오지 못했습니다",
+      "saveError": "핸드오프 설정을 저장하지 못했습니다"
+    },
     "whatsapp": {
       "title": "WhatsApp 연결",
       "description": "Meta WhatsApp 비즈니스 API를 연결하세요. 자격 증명, 웹훅, 설정 단계가 모두 여기 있습니다.",
@@ -2440,6 +2464,7 @@
       "members": "팀원",
       "roles": "역할 및 권한",
       "sectors": "부서",
+      "handoff": "핸드오프",
       "api": "API 키"
     },
     "groups": {

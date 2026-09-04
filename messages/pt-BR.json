@@ -1067,6 +1067,12 @@
       "toastReopened": "Negócio reaberto",
       "wonCelebrationTitle": "Negócio ganho! 🎉",
       "wonCelebrationBody": "\"{title}\" foi marcado como ganho. Parabéns pelo fechamento!",
+      "wonHandoffTitle": "Handoff para o Operacional",
+      "wonHandoffDesc": "Defina quem assume esse cliente — essas informações alimentam a tarefa de kickoff criada automaticamente.",
+      "wonHandoffSectorLabel": "Setor responsável",
+      "wonHandoffAssigneeLabel": "Responsável principal (opcional)",
+      "wonHandoffSelectPlaceholder": "Selecione",
+      "wonHandoffNoAssignee": "Nenhum",
       "wonCelebrationClose": "Show!",
       "lostReasonTitle": "Por que este negócio foi perdido?",
       "lostReasonLabel": "Motivo da perda",
@@ -2354,6 +2360,24 @@
       "deleteDesc": "Excluir \"{name}\"? Os membros vinculados a ele perdem esse vínculo.",
       "deleteBtn": "Excluir"
     },
+    "handoff": {
+      "title": "Handoff Operacional",
+      "description": "Quando um negócio é marcado como ganho, uma tarefa de kickoff é criada automaticamente aqui — defina o quadro, a etapa inicial e os padrões usados nessa tarefa.",
+      "board": "Quadro",
+      "initialStage": "Etapa inicial",
+      "defaultSector": "Setor padrão",
+      "defaultAssignee": "Responsável padrão",
+      "titleTemplate": "Modelo do título",
+      "dueOffsetDays": "Prazo (dias após o fechamento)",
+      "dueOffsetPlaceholder": "ex.: 3",
+      "none": "Nenhum",
+      "selectPlaceholder": "Selecione",
+      "boardAndStageRequired": "Selecione o quadro e a etapa inicial",
+      "save": "Salvar",
+      "savedToast": "Configuração de handoff salva",
+      "loadError": "Não foi possível carregar a configuração de handoff",
+      "saveError": "Não foi possível salvar a configuração de handoff"
+    },
     "whatsapp": {
       "title": "Conexão com o WhatsApp",
       "description": "Conecte sua API do WhatsApp Business da Meta. Credenciais, webhook e passos de configuração ficam todos aqui.",
@@ -2440,6 +2464,7 @@
       "members": "Membros da equipe",
       "roles": "Cargos e permissões",
       "sectors": "Setores",
+      "handoff": "Handoff",
       "api": "Chaves de API"
     },
     "groups": {

@@ -20,6 +20,7 @@ import { ContractTemplatesPanel } from '@/components/settings/contract-templates
 import { MembersTab } from '@/components/settings/members-tab';
 import { RolesPanel } from '@/components/settings/roles-panel';
 import { SectorsPanel } from '@/components/settings/sectors-panel';
+import { HandoffSettingsPanel } from '@/components/settings/handoff-settings-panel';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import {
   resolveSection,
@@ -86,6 +87,7 @@ function SettingsPageInner() {
     members: <MembersTab />,
     roles: <RolesPanel />,
     sectors: <SectorsPanel />,
+    handoff: <HandoffSettingsPanel />,
     api: <ApiKeysSettings />,
   };
 

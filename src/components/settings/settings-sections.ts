@@ -7,6 +7,7 @@ import {
   Palette,
   PlugZap,
   Radar,
+  Rocket,
   Shield,
   ShieldCheck,
   Tags,
@@ -38,6 +39,7 @@ export const SETTINGS_SECTIONS = [
   'members',
   'roles',
   'sectors',
+  'handoff',
   'api',
 ] as const;
 
@@ -67,6 +69,7 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
   roles: { id: 'roles', label: 'Roles & permissions', icon: ShieldCheck, group: 'workspace' },
   sectors: { id: 'sectors', label: 'Sectors', icon: Radar, group: 'workspace' },
+  handoff: { id: 'handoff', label: 'Handoff', icon: Rocket, group: 'workspace' },
   api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
 };
 
