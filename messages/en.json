@@ -306,13 +306,91 @@
   },
   "Operational": {
     "sidebar": {
-      "dashboard": "Dashboard"
+      "dashboard": "Dashboard",
+      "boards": "Task Management"
     },
     "dashboard": {
       "title": "Operational Dashboard",
       "description": "Task management and execution tracking for the Aureon team.",
-      "comingSoonTitle": "Gestão de Tarefas is coming in the next stage",
-      "comingSoonHint": "This environment's foundation (access, roles, permissions) is ready — boards, kanban, and timesheets ship in the next stage."
+      "comingSoonTitle": "Operational metrics are coming in the next stage",
+      "comingSoonHint": "Boards, kanban, checklists, subtasks, and timesheets are already available under Task Management — this Dashboard's charts and metrics ship in the next stage."
+    },
+    "boards": {
+      "title": "Task Management",
+      "description": "Work boards — each with its own kanban of stages and tasks.",
+      "newBoard": "New board",
+      "boardName": "Board name",
+      "cancel": "Cancel",
+      "create": "Create",
+      "saving": "Saving...",
+      "toastFailedCreate": "Could not create the board",
+      "toastCreated": "Board created",
+      "emptyTitle": "No boards yet",
+      "emptyHint": "Create a board to start organizing your team's tasks.",
+      "notFound": "Board not found",
+      "backToBoards": "Back to boards",
+      "newTask": "New task",
+      "manageBoard": "Manage board",
+      "noStages": "This board has no stages yet.",
+      "toastFailedMove": "Could not move the task"
+    },
+    "boardSettings": {
+      "manageBoard": "Manage board",
+      "boardName": "Board name",
+      "stages": "Stages",
+      "newStageNamePlaceholder": "New stage name",
+      "add": "Add",
+      "dragToReorder": "Drag to reorder",
+      "changeColor": "Change color",
+      "deleteBoard": "Delete board",
+      "deleteBoardDesc": "All tasks and stages on this board will be permanently deleted.",
+      "deleteBoardBtn": "Delete board",
+      "deleting": "Deleting...",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes",
+      "saving": "Saving...",
+      "toastFailedSave": "Could not save changes",
+      "toastSaved": "Changes saved",
+      "toastFailedAddStage": "Could not add the stage",
+      "toastFailedDeleteStage": "Move or delete the tasks in this stage before deleting it",
+      "toastFailedDeleteBoard": "Could not delete the board",
+      "toastDeleted": "Board deleted"
+    },
+    "createTaskDialog": {
+      "title": "New task",
+      "editTitle": "Edit task",
+      "taskTitle": "Title",
+      "taskTitlePlaceholder": "What needs to be done?",
+      "stage": "Stage",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "sector": "Sector",
+      "none": "—",
+      "dueDate": "Due date",
+      "urgent": "Urgent",
+      "cancel": "Cancel",
+      "create": "Create",
+      "save": "Save",
+      "saving": "Saving...",
+      "deleteBtn": "Delete",
+      "deleting": "Deleting...",
+      "deleteConfirm": "Delete this task? This action cannot be undone.",
+      "toastTitleRequired": "Enter a title for the task",
+      "toastFailed": "Could not save the task",
+      "toastCreated": "Task created"
+    },
+    "tasks": {
+      "board": {
+        "dropTaskHere": "Drop a task here",
+        "addTask": "Add task"
+      },
+      "card": {
+        "priority": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      }
     }
   },
   "Inbox": {

@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useHasPermission } from "@/hooks/use-permissions";
 import { EnvironmentSwitcher } from "@/components/layout/environment-switcher";
-import { LayoutDashboard, LogOut, Settings, User, X } from "lucide-react";
+import { LayoutDashboard, LayoutGrid, LogOut, Settings, User, X } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -25,8 +26,9 @@ import { useTranslations } from "next-intl";
 // footer) — deliberately a separate component rather than a shared one
 // parameterized by environment, since the two nav lists/behaviours will
 // keep diverging (unread badges, beta chips, etc. are Comercial-only
-// concepts). Etapa 1 gives Operacional exactly one real destination —
-// "Gestão de Tarefas" isn't added here until it exists (Etapa 2).
+// concepts). "Gestão de Tarefas" (Etapa 2) is gated by view_boards —
+// a cargo with Operational access but no tasks permission still only
+// sees Dashboard, same principle as the environment switcher itself.
 
 interface OperationalSidebarProps {
   open?: boolean;
@@ -38,6 +40,7 @@ export function OperationalSidebar({ open = false, onClose }: OperationalSidebar
   const tOp = useTranslations("Operational.sidebar");
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
+  const canViewBoards = useHasPermission("operational", "tasks", "view_boards");
 
   useEffect(() => {
     onClose?.();
@@ -59,6 +62,7 @@ export function OperationalSidebar({ open = false, onClose }: OperationalSidebar
   }, [open, onClose]);
 
   const isDashboardActive = pathname === "/operational/dashboard";
+  const isBoardsActive = pathname.startsWith("/operational/boards");
 
   return (
     <>
@@ -124,6 +128,22 @@ export function OperationalSidebar({ open = false, onClose }: OperationalSidebar
                 <span className="flex-1">{tOp("dashboard")}</span>
               </Link>
             </li>
+            {canViewBoards && (
+              <li>
+                <Link
+                  href="/operational/boards"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                    isBoardsActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="flex-1">{tOp("boards")}</span>
+                </Link>
+              </li>
+            )}
           </ul>
 
           <div className="my-4 border-t border-border" />

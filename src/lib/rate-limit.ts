@@ -186,6 +186,12 @@ export const RATE_LIMITS = {
    *  to 'signed'. The RPC's own `otp_attempts` cap (5) is the primary
    *  brute-force defense; this is belt-and-braces at the IP layer. */
   contractVerifyCode: { limit: 10, windowMs: 60_000 },
+  /** Gestão de Tarefas (Etapa 2) — task/board CRUD and kanban drag
+   *  moves, per user. Board/stage structure changes reuse `adminAction`
+   *  instead (same sensitivity as other account-structure edits). 120/min
+   *  covers a busy kanban session (rapid drags, comments, checklist
+   *  ticks) while still bounding a runaway script. */
+  taskWrite: { limit: 120, windowMs: 60_000 },
 } as const;
 
 /** Test-only helper. Clears the in-memory state so unit tests don't

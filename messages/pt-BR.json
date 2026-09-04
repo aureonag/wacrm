@@ -306,13 +306,91 @@
   },
   "Operational": {
     "sidebar": {
-      "dashboard": "Dashboard"
+      "dashboard": "Dashboard",
+      "boards": "Gestão de Tarefas"
     },
     "dashboard": {
       "title": "Dashboard Operacional",
       "description": "Acompanhamento de tarefas e execução da equipe Aureon.",
-      "comingSoonTitle": "A Gestão de Tarefas chega na próxima etapa",
-      "comingSoonHint": "A fundação deste ambiente (acesso, cargos, permissões) já está pronta — quadros, kanban e timesheet chegam na próxima etapa."
+      "comingSoonTitle": "As métricas operacionais chegam na próxima etapa",
+      "comingSoonHint": "Quadros, kanban, checklist, subtarefas e timesheet já estão disponíveis em Gestão de Tarefas — os gráficos e indicadores deste Dashboard chegam na etapa seguinte."
+    },
+    "boards": {
+      "title": "Gestão de Tarefas",
+      "description": "Quadros de trabalho — cada um com seu próprio kanban de etapas e tarefas.",
+      "newBoard": "Novo quadro",
+      "boardName": "Nome do quadro",
+      "cancel": "Cancelar",
+      "create": "Criar",
+      "saving": "Salvando...",
+      "toastFailedCreate": "Não foi possível criar o quadro",
+      "toastCreated": "Quadro criado",
+      "emptyTitle": "Nenhum quadro ainda",
+      "emptyHint": "Crie um quadro para começar a organizar as tarefas da equipe.",
+      "notFound": "Quadro não encontrado",
+      "backToBoards": "Voltar para quadros",
+      "newTask": "Nova tarefa",
+      "manageBoard": "Gerenciar quadro",
+      "noStages": "Este quadro ainda não tem etapas.",
+      "toastFailedMove": "Não foi possível mover a tarefa"
+    },
+    "boardSettings": {
+      "manageBoard": "Gerenciar quadro",
+      "boardName": "Nome do quadro",
+      "stages": "Etapas",
+      "newStageNamePlaceholder": "Nome da nova etapa",
+      "add": "Adicionar",
+      "dragToReorder": "Arraste para reordenar",
+      "changeColor": "Mudar cor",
+      "deleteBoard": "Excluir quadro",
+      "deleteBoardDesc": "Todas as tarefas e etapas deste quadro serão excluídas permanentemente.",
+      "deleteBoardBtn": "Excluir quadro",
+      "deleting": "Excluindo...",
+      "cancel": "Cancelar",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando...",
+      "toastFailedSave": "Não foi possível salvar as alterações",
+      "toastSaved": "Alterações salvas",
+      "toastFailedAddStage": "Não foi possível adicionar a etapa",
+      "toastFailedDeleteStage": "Mova ou exclua as tarefas desta etapa antes de excluí-la",
+      "toastFailedDeleteBoard": "Não foi possível excluir o quadro",
+      "toastDeleted": "Quadro excluído"
+    },
+    "createTaskDialog": {
+      "title": "Nova tarefa",
+      "editTitle": "Editar tarefa",
+      "taskTitle": "Título",
+      "taskTitlePlaceholder": "O que precisa ser feito?",
+      "stage": "Etapa",
+      "priority": "Prioridade",
+      "assignee": "Responsável",
+      "sector": "Setor",
+      "none": "—",
+      "dueDate": "Prazo",
+      "urgent": "Urgente",
+      "cancel": "Cancelar",
+      "create": "Criar",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "deleteBtn": "Excluir",
+      "deleting": "Excluindo...",
+      "deleteConfirm": "Excluir esta tarefa? Essa ação não pode ser desfeita.",
+      "toastTitleRequired": "Informe um título para a tarefa",
+      "toastFailed": "Não foi possível salvar a tarefa",
+      "toastCreated": "Tarefa criada"
+    },
+    "tasks": {
+      "board": {
+        "dropTaskHere": "Solte uma tarefa aqui",
+        "addTask": "Adicionar tarefa"
+      },
+      "card": {
+        "priority": {
+          "low": "Baixa",
+          "medium": "Média",
+          "high": "Alta"
+        }
+      }
     }
   },
   "Inbox": {

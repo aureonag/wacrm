@@ -942,3 +942,113 @@ export interface QuickReply {
   created_at: string;
   updated_at: string;
 }
+
+// ============================================================
+// Gestão de Tarefas — Quadros/Kanban/Tarefas (Etapa 2, migration 060)
+// Mirrors Pipeline/PipelineStage/Deal's shape 1:1 (Board≈Pipeline,
+// BoardStage≈PipelineStage, Task≈Deal).
+// ============================================================
+
+export interface Board {
+  id: string;
+  account_id: string;
+  name: string;
+  description?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardStage {
+  id: string;
+  board_id: string;
+  name: string;
+  position: number;
+  color?: string | null;
+  created_at: string;
+}
+
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'open' | 'done';
+
+export interface Task {
+  id: string;
+  account_id: string;
+  board_id: string;
+  stage_id: string;
+  parent_task_id?: string | null;
+  title: string;
+  contact_id?: string | null;
+  sector_id?: string | null;
+  assignee_id?: string | null;
+  priority: TaskPriority;
+  is_urgent: boolean;
+  /** Tiptap JSON document — see src/lib/tasks/briefing.ts. */
+  briefing?: Record<string, unknown> | null;
+  position: number;
+  status: TaskStatus;
+  start_date?: string | null;
+  due_date?: string | null;
+  estimated_minutes?: number | null;
+  created_by?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Hydrated client-side, not selected from `tasks` directly. */
+  assignee?: Profile | null;
+  contact?: Contact | null;
+  sector?: Sector | null;
+  tags?: TaskTag[];
+  subtask_count?: number;
+}
+
+export interface TaskTag {
+  id: string;
+  task_id: string;
+  account_id: string;
+  label: string;
+  color: string;
+  created_at: string;
+}
+
+export interface TaskChecklistItem {
+  id: string;
+  task_id: string;
+  account_id: string;
+  label: string;
+  done: boolean;
+  position: number;
+  created_at: string;
+}
+
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  account_id: string;
+  user_id?: string | null;
+  body: string;
+  parent_comment_id?: string | null;
+  created_at: string;
+  author?: Profile;
+}
+
+export interface TaskStageHistory {
+  id: string;
+  task_id: string;
+  account_id: string;
+  from_stage_id?: string | null;
+  to_stage_id: string;
+  changed_at: string;
+}
+
+export interface TaskActivity {
+  id: string;
+  task_id: string;
+  account_id: string;
+  user_id?: string | null;
+  type: string;
+  title: string;
+  detail?: string | null;
+  created_at: string;
+  author?: Profile;
+}
