@@ -7,6 +7,7 @@ import type {
   TaskActivity,
   TaskChecklistItem,
   TaskComment,
+  TaskRecurrenceRule,
   TaskStageHistory,
   TaskTag,
   TimesheetEntry,
@@ -191,6 +192,19 @@ export async function loadActiveTimer(db: SupabaseClient, userId: string): Promi
     return null;
   }
   return (data as TimesheetEntry | null) ?? null;
+}
+
+export async function loadTaskRecurrenceRule(db: SupabaseClient, taskId: string): Promise<TaskRecurrenceRule | null> {
+  const { data, error } = await db
+    .from("task_recurrence_rules")
+    .select("*")
+    .eq("template_task_id", taskId)
+    .maybeSingle();
+  if (error) {
+    console.error("Failed to load task recurrence rule:", error.message);
+    return null;
+  }
+  return (data as TaskRecurrenceRule | null) ?? null;
 }
 
 export async function loadTaskStageHistory(db: SupabaseClient, taskId: string): Promise<TaskStageHistory[]> {

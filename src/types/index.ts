@@ -992,6 +992,7 @@ export interface Task {
   estimated_minutes?: number | null;
   created_by?: string | null;
   completed_at?: string | null;
+  recurrence_rule_id?: string | null;
   created_at: string;
   updated_at: string;
   /** Hydrated client-side, not selected from `tasks` directly. */
@@ -1000,6 +1001,23 @@ export interface Task {
   sector?: Sector | null;
   tags?: TaskTag[];
   subtask_count?: number;
+}
+
+export type TaskRecurrenceRuleType = 'weekly' | 'monthly_day' | 'monthly_first_business_day';
+
+export interface TaskRecurrenceRule {
+  id: string;
+  account_id: string;
+  template_task_id: string;
+  rule_type: TaskRecurrenceRuleType;
+  /** 0 = Sunday .. 6 = Saturday. Only set (and meaningful) for "weekly". */
+  weekday?: number | null;
+  /** 1..31. Only set (and meaningful) for "monthly_day". */
+  day_of_month?: number | null;
+  next_run_at: string;
+  active: boolean;
+  created_by?: string | null;
+  created_at: string;
 }
 
 export interface TaskTag {

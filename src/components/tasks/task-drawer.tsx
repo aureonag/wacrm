@@ -12,10 +12,25 @@ import {
   loadTaskActivity,
   loadTaskChecklist,
   loadTaskComments,
+  loadTaskRecurrenceRule,
   loadTaskTimesheet,
 } from "@/lib/tasks/queries";
 import { DEAL_TAG_COLORS } from "@/lib/deals/tag-colors";
-import type { Board, BoardStage, Profile, Sector, Task, TaskActivity, TaskChecklistItem, TaskComment, TaskPriority, TaskTag, TimesheetEntry } from "@/types";
+import type {
+  Board,
+  BoardStage,
+  Profile,
+  Sector,
+  Task,
+  TaskActivity,
+  TaskChecklistItem,
+  TaskComment,
+  TaskPriority,
+  TaskRecurrenceRule,
+  TaskRecurrenceRuleType,
+  TaskTag,
+  TimesheetEntry,
+} from "@/types";
 import {
   Sheet,
   SheetContent,
@@ -107,11 +122,16 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [convertCandidates, setConvertCandidates] = useState<Task[]>([]);
   const [activity, setActivity] = useState<TaskActivity[]>([]);
   const [timesheet, setTimesheet] = useState<TimesheetEntry[]>([]);
+  const [recurrenceRule, setRecurrenceRule] = useState<TaskRecurrenceRule | null>(null);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [activeTab, setActiveTab] = useState("briefing");
   const [showMoveBoard, setShowMoveBoard] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRecurrence, setShowRecurrence] = useState(false);
+  const [recurrenceType, setRecurrenceType] = useState<"__none" | TaskRecurrenceRuleType>("__none");
+  const [recurrenceWeekday, setRecurrenceWeekday] = useState("1");
+  const [recurrenceDayOfMonth, setRecurrenceDayOfMonth] = useState("1");
   const [moveTargetBoard, setMoveTargetBoard] = useState("");
   const [moveTargetStage, setMoveTargetStage] = useState("");
   const [moveTargetStages, setMoveTargetStages] = useState<BoardStage[]>([]);
@@ -131,13 +151,14 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     const { data: tagRows } = await supabase.from("task_tags").select("*").eq("task_id", taskId);
     const loadedTask = { ...(taskRow as Task), tags: (tagRows ?? []) as TaskTag[] };
 
-    const [stageRows, comms, check, subs, act, ts] = await Promise.all([
+    const [stageRows, comms, check, subs, act, ts, recurrence] = await Promise.all([
       loadBoardStages(supabase, loadedTask.board_id),
       loadTaskComments(supabase, taskId),
       loadTaskChecklist(supabase, taskId),
       loadSubtasks(supabase, taskId),
       loadTaskActivity(supabase, taskId),
       loadTaskTimesheet(supabase, taskId),
+      loadTaskRecurrenceRule(supabase, taskId),
     ]);
 
     let candidates: Task[] = [];
@@ -160,6 +181,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     setConvertCandidates(candidates);
     setActivity(act);
     setTimesheet(ts);
+    setRecurrenceRule(recurrence);
     setLoading(false);
   }, [supabase, taskId]);
 
@@ -280,6 +302,53 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   async function handleRemoveTag(tagId: string) {
     await supabase.from("task_tags").delete().eq("id", tagId);
     await reloadAll();
+  }
+
+  async function handleSaveRecurrence() {
+    if (!task) return;
+    if (recurrenceType === "__none") {
+      await handleRemoveRecurrence();
+      return;
+    }
+    const res = await fetch(`/api/operational/tasks/${task.id}/recurrence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        recurrenceType === "weekly"
+          ? { rule_type: recurrenceType, weekday: Number(recurrenceWeekday) }
+          : recurrenceType === "monthly_day"
+            ? { rule_type: recurrenceType, day_of_month: Number(recurrenceDayOfMonth) }
+            : { rule_type: recurrenceType },
+      ),
+    });
+    if (!res.ok) {
+      toast.error(t("toastFailed"));
+      return;
+    }
+    setShowRecurrence(false);
+    await reloadAll();
+  }
+
+  async function handleRemoveRecurrence() {
+    if (!task) return;
+    const res = await fetch(`/api/operational/tasks/${task.id}/recurrence`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(t("toastFailed"));
+      return;
+    }
+    setShowRecurrence(false);
+    await reloadAll();
+  }
+
+  function recurrenceSummary(): string {
+    if (!recurrenceRule) return t("recurrenceNone");
+    if (recurrenceRule.rule_type === "weekly") {
+      return t("recurrenceWeeklySummary", { weekday: t(`weekday${recurrenceRule.weekday}`) });
+    }
+    if (recurrenceRule.rule_type === "monthly_day") {
+      return t("recurrenceMonthlyDaySummary", { day: recurrenceRule.day_of_month ?? 0 });
+    }
+    return t("recurrenceMonthlyFirstBusinessDaySummary");
   }
 
   return (
@@ -438,6 +507,22 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   className="h-8 border-border bg-muted text-xs text-foreground"
                 />
               </div>
+              <div className="grid gap-1">
+                <Label className="text-[11px] text-muted-foreground">{t("recurrence")}</Label>
+                <button
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => {
+                    setRecurrenceType(recurrenceRule?.rule_type ?? "__none");
+                    setRecurrenceWeekday(String(recurrenceRule?.weekday ?? 1));
+                    setRecurrenceDayOfMonth(String(recurrenceRule?.day_of_month ?? 1));
+                    setShowRecurrence(true);
+                  }}
+                  className="flex h-8 items-center rounded-md border border-border bg-muted px-2 text-left text-xs text-foreground disabled:opacity-50"
+                >
+                  {recurrenceSummary()}
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 px-4">
@@ -553,6 +638,61 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
             <Button onClick={handleMoveToBoard} disabled={!moveTargetBoard || !moveTargetStage}>
               {t("move")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRecurrence} onOpenChange={setShowRecurrence}>
+        <DialogContent className="sm:max-w-sm bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{t("recurrence")}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <FieldSelect
+              label={t("recurrenceType")}
+              value={recurrenceType}
+              onChange={(v) => setRecurrenceType(v as "__none" | TaskRecurrenceRuleType)}
+              disabled={false}
+              options={[
+                { value: "__none", label: t("recurrenceOptionNone") },
+                { value: "weekly", label: t("recurrenceOptionWeekly") },
+                { value: "monthly_day", label: t("recurrenceOptionMonthlyDay") },
+                { value: "monthly_first_business_day", label: t("recurrenceOptionMonthlyFirstBusinessDay") },
+              ]}
+            />
+            {recurrenceType === "weekly" && (
+              <FieldSelect
+                label={t("recurrenceWeekday")}
+                value={recurrenceWeekday}
+                onChange={setRecurrenceWeekday}
+                disabled={false}
+                options={["0", "1", "2", "3", "4", "5", "6"].map((n) => ({ value: n, label: t(`weekday${n}`) }))}
+              />
+            )}
+            {recurrenceType === "monthly_day" && (
+              <div className="grid gap-1">
+                <Label className="text-[11px] text-muted-foreground">{t("recurrenceDayOfMonth")}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={recurrenceDayOfMonth}
+                  onChange={(e) => setRecurrenceDayOfMonth(e.target.value)}
+                  className="h-8 border-border bg-muted text-xs text-foreground"
+                />
+              </div>
+            )}
+            {recurrenceRule && (
+              <p className="text-xs text-muted-foreground">
+                {t("recurrenceNextRun", { date: new Date(`${recurrenceRule.next_run_at}T00:00:00`).toLocaleDateString() })}
+              </p>
+            )}
+          </div>
+          <DialogFooter className="border-border bg-popover/50">
+            <Button variant="outline" onClick={() => setShowRecurrence(false)} className="border-border bg-transparent text-muted-foreground hover:bg-muted">
+              {t("cancel")}
+            </Button>
+            <Button onClick={handleSaveRecurrence}>{t("save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
