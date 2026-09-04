@@ -1272,6 +1272,17 @@
       "toastVerifyFailed": "코드 확인에 실패했습니다"
     }
   },
+  "Notifications": {
+    "title": "알림",
+    "subtitle": "나에게 할당된 작업, 거래, 대화의 업데이트가 여기에 표시됩니다.",
+    "markAllRead": "모두 읽음으로 표시",
+    "emptyTitle": "아직 알림이 없습니다",
+    "emptyHint": "중요한 일이 생기면 여기에 알림이 표시됩니다.",
+    "unread": "읽지 않음",
+    "retry": "다시 시도",
+    "toastMarkReadFailed": "알림을 읽음으로 표시하지 못했습니다",
+    "toastMarkAllReadFailed": "모두 읽음으로 표시하지 못했습니다"
+  },
   "Activities": {
     "title": "내 활동",
     "subtitle": "나에게 할당된 모든 딜의 다음 단계입니다.",

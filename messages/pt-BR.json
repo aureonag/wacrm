@@ -1272,6 +1272,17 @@
       "toastVerifyFailed": "Falha ao verificar o código"
     }
   },
+  "Notifications": {
+    "title": "Notificações",
+    "subtitle": "Atualizações de tarefas, negócios e conversas atribuídas a você aparecem aqui.",
+    "markAllRead": "Marcar todas como lidas",
+    "emptyTitle": "Nenhuma notificação por enquanto",
+    "emptyHint": "Você verá um alerta aqui quando algo relevante acontecer.",
+    "unread": "Não lida",
+    "retry": "Tentar novamente",
+    "toastMarkReadFailed": "Falha ao marcar notificação como lida",
+    "toastMarkAllReadFailed": "Falha ao marcar todas como lidas"
+  },
   "Activities": {
     "title": "Minhas atividades",
     "subtitle": "Próximos passos de todos os negócios atribuídos a você.",
