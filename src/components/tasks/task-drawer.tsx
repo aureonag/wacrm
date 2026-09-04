@@ -478,7 +478,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                     convertCandidates={convertCandidates}
                     canEdit={canEdit}
                     onOpenSubtask={onNavigate}
-                    onChanged={reloadAll}
+                    onChanged={async () => {
+                      await reloadAll();
+                      onChanged();
+                    }}
                   />
                 )}
               </TabsContent>
