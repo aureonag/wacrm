@@ -1008,6 +1008,11 @@ export interface BoardStage {
   name: string;
   position: number;
   color?: string | null;
+  /** Etapa 3 (fase 4) — requisitos que uma tarefa precisa cumprir para
+   *  entrar nesta etapa, verificados em PATCH /api/operational/tasks/[id]. */
+  requires_file: boolean;
+  requires_checklist_complete: boolean;
+  requires_approval: boolean;
   created_at: string;
 }
 
@@ -1050,6 +1055,23 @@ export interface Task {
   sector?: Sector | null;
   tags?: TaskTag[];
   subtask_count?: number;
+}
+
+export type TaskApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TaskApproval {
+  id: string;
+  task_id: string;
+  account_id: string;
+  requested_by?: string | null;
+  requested_to?: string | null;
+  status: TaskApprovalStatus;
+  comment?: string | null;
+  requested_at: string;
+  decided_at?: string | null;
+  decided_by?: string | null;
+  /** Hydrated client-side, not selected from `task_approvals` directly. */
+  requested_to_profile?: Profile | null;
 }
 
 export type TaskRecurrenceRuleType = 'weekly' | 'monthly_day' | 'monthly_first_business_day';

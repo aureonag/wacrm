@@ -360,7 +360,10 @@
       "toastFailedAddStage": "Could not add the stage",
       "toastFailedDeleteStage": "Move or delete the tasks in this stage before deleting it",
       "toastFailedDeleteBoard": "Could not delete the board",
-      "toastDeleted": "Board deleted"
+      "toastDeleted": "Board deleted",
+      "requireFile": "Require file",
+      "requireChecklist": "Require complete checklist",
+      "requireApproval": "Require approval"
     },
     "createTaskDialog": {
       "title": "New task",
@@ -466,6 +469,7 @@
       "tabBriefing": "Briefing",
       "tabComments": "Comments ({count})",
       "tabChecklist": "Checklist ({count})",
+      "tabApprovals": "Approvals ({count})",
       "tabSubtasks": "Subtasks ({count})",
       "tabHistory": "History",
       "isSubtask": "This task is already a subtask — it can't have its own subtasks.",
@@ -503,7 +507,26 @@
       "weekday6": "Saturday",
       "driveFolder": "Drive folder",
       "driveFolderPlaceholder": "Paste the Google Drive folder link",
-      "driveFolderOpen": "Open folder"
+      "driveFolderOpen": "Open folder",
+      "toastStageRequirements": "Can't move: missing {items}",
+      "stageRequirement_file": "file",
+      "stageRequirement_checklist": "complete checklist",
+      "stageRequirement_approval": "approval"
+    },
+    "approvals": {
+      "selectRecipient": "Select who should approve",
+      "commentPlaceholder": "Comment (optional)",
+      "request": "Request",
+      "requestedTo": "Requested to {name}",
+      "unknown": "someone",
+      "approve": "Approve",
+      "reject": "Reject",
+      "empty": "No approval requests yet.",
+      "toastFailed": "Could not complete the action",
+      "toastRequested": "Approval requested",
+      "status_pending": "Pending",
+      "status_approved": "Approved",
+      "status_rejected": "Rejected"
     },
     "timesheet": {
       "start": "Start",

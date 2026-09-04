@@ -5,6 +5,7 @@ import type {
   Profile,
   Task,
   TaskActivity,
+  TaskApproval,
   TaskChecklistItem,
   TaskComment,
   TaskRecurrenceRule,
@@ -135,6 +136,30 @@ export async function loadTaskChecklist(db: SupabaseClient, taskId: string): Pro
     return [];
   }
   return (data ?? []) as TaskChecklistItem[];
+}
+
+export async function loadTaskApprovals(db: SupabaseClient, taskId: string): Promise<TaskApproval[]> {
+  const { data, error } = await db
+    .from("task_approvals")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("requested_at", { ascending: false });
+  if (error) {
+    console.error("Failed to load task approvals:", error.message);
+    return [];
+  }
+  let approvals = (data ?? []) as TaskApproval[];
+
+  const profileIds = [...new Set(approvals.map((a) => a.requested_to).filter((v): v is string => !!v))];
+  if (profileIds.length > 0) {
+    const { data: profiles } = await db.from("profiles").select("*").in("id", profileIds);
+    const profileById = new Map(((profiles ?? []) as Profile[]).map((p) => [p.id, p]));
+    approvals = approvals.map((a) => ({
+      ...a,
+      requested_to_profile: a.requested_to ? profileById.get(a.requested_to) : undefined,
+    }));
+  }
+  return approvals;
 }
 
 export async function loadTaskActivity(db: SupabaseClient, taskId: string): Promise<TaskActivity[]> {

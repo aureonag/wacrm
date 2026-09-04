@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Plus, GripVertical, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -127,7 +128,17 @@ export function BoardSettings({
     }
     setLocalStages([
       ...localStages,
-      { id: body.id, board_id: board.id, name: trimmed, color: newStageColor, position: localStages.length, created_at: new Date().toISOString() },
+      {
+        id: body.id,
+        board_id: board.id,
+        name: trimmed,
+        color: newStageColor,
+        position: localStages.length,
+        requires_file: false,
+        requires_checklist_complete: false,
+        requires_approval: false,
+        created_at: new Date().toISOString(),
+      },
     ]);
     setNewStageName("");
     setNewStageColor(STAGE_COLORS[(localStages.length + 1) % STAGE_COLORS.length]);
@@ -143,7 +154,16 @@ export function BoardSettings({
     setLocalStages(localStages.filter((s) => s.id !== stageId));
   }
 
-  async function handleRenameOrRecolorStage(stageId: string, patch: { name?: string; color?: string }) {
+  async function handleRenameOrRecolorStage(
+    stageId: string,
+    patch: {
+      name?: string;
+      color?: string;
+      requires_file?: boolean;
+      requires_checklist_complete?: boolean;
+      requires_approval?: boolean;
+    },
+  ) {
     setLocalStages(localStages.map((s) => (s.id === stageId ? { ...s, ...patch } : s)));
     await fetch(`/api/operational/boards/${board.id}/stages/${stageId}`, {
       method: "PATCH",
@@ -213,6 +233,7 @@ export function BoardSettings({
                           stage={stage}
                           onNameChange={(v) => handleRenameOrRecolorStage(stage.id, { name: v })}
                           onColorChange={(v) => handleRenameOrRecolorStage(stage.id, { color: v })}
+                          onRequirementChange={(field, v) => handleRenameOrRecolorStage(stage.id, { [field]: v })}
                           onRemove={() => handleRemoveStage(stage.id)}
                           colors={STAGE_COLORS}
                           t={t}
@@ -280,6 +301,7 @@ function SortableStageRow({
   stage,
   onNameChange,
   onColorChange,
+  onRequirementChange,
   onRemove,
   colors,
   t,
@@ -287,6 +309,10 @@ function SortableStageRow({
   stage: BoardStage;
   onNameChange: (v: string) => void;
   onColorChange: (v: string) => void;
+  onRequirementChange: (
+    field: "requires_file" | "requires_checklist_complete" | "requires_approval",
+    value: boolean,
+  ) => void;
   onRemove: () => void;
   colors: string[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -296,15 +322,40 @@ function SortableStageRow({
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2 rounded-lg border border-border bg-muted p-2">
-      <button type="button" {...attributes} {...listeners} className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing" aria-label={t("dragToReorder")}>
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <ColorSwatch value={stage.color ?? colors[0]} onChange={onColorChange} colors={colors} t={t} />
-      <Input value={stage.name} onChange={(e) => onNameChange(e.target.value)} className="h-7 flex-1 border-transparent bg-transparent text-sm text-foreground focus:border-border" />
-      <Button variant="ghost" size="icon-xs" onClick={onRemove} className="text-muted-foreground hover:text-red-400">
-        <Trash2 className="h-3 w-3" />
-      </Button>
+    <div ref={setNodeRef} style={style} className="rounded-lg border border-border bg-muted p-2">
+      <div className="flex items-center gap-2">
+        <button type="button" {...attributes} {...listeners} className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing" aria-label={t("dragToReorder")}>
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <ColorSwatch value={stage.color ?? colors[0]} onChange={onColorChange} colors={colors} t={t} />
+        <Input value={stage.name} onChange={(e) => onNameChange(e.target.value)} className="h-7 flex-1 border-transparent bg-transparent text-sm text-foreground focus:border-border" />
+        <Button variant="ghost" size="icon-xs" onClick={onRemove} className="text-muted-foreground hover:text-red-400">
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 pl-6">
+        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Checkbox
+            checked={stage.requires_file}
+            onCheckedChange={(v) => onRequirementChange("requires_file", v === true)}
+          />
+          {t("requireFile")}
+        </label>
+        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Checkbox
+            checked={stage.requires_checklist_complete}
+            onCheckedChange={(v) => onRequirementChange("requires_checklist_complete", v === true)}
+          />
+          {t("requireChecklist")}
+        </label>
+        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Checkbox
+            checked={stage.requires_approval}
+            onCheckedChange={(v) => onRequirementChange("requires_approval", v === true)}
+          />
+          {t("requireApproval")}
+        </label>
+      </div>
     </div>
   );
 }

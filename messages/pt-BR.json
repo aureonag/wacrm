@@ -360,7 +360,10 @@
       "toastFailedAddStage": "Não foi possível adicionar a etapa",
       "toastFailedDeleteStage": "Mova ou exclua as tarefas desta etapa antes de excluí-la",
       "toastFailedDeleteBoard": "Não foi possível excluir o quadro",
-      "toastDeleted": "Quadro excluído"
+      "toastDeleted": "Quadro excluído",
+      "requireFile": "Exigir arquivo",
+      "requireChecklist": "Exigir checklist completo",
+      "requireApproval": "Exigir aprovação"
     },
     "createTaskDialog": {
       "title": "Nova tarefa",
@@ -466,6 +469,7 @@
       "tabBriefing": "Briefing",
       "tabComments": "Comentários ({count})",
       "tabChecklist": "Checklist ({count})",
+      "tabApprovals": "Aprovações ({count})",
       "tabSubtasks": "Subtarefas ({count})",
       "tabHistory": "Histórico",
       "isSubtask": "Esta tarefa já é uma subtarefa — não pode ter subtarefas próprias.",
@@ -503,7 +507,26 @@
       "weekday6": "Sábado",
       "driveFolder": "Pasta do Drive",
       "driveFolderPlaceholder": "Cole o link da pasta do Google Drive",
-      "driveFolderOpen": "Abrir pasta"
+      "driveFolderOpen": "Abrir pasta",
+      "toastStageRequirements": "Não é possível mover: falta {items}",
+      "stageRequirement_file": "arquivo",
+      "stageRequirement_checklist": "checklist completo",
+      "stageRequirement_approval": "aprovação"
+    },
+    "approvals": {
+      "selectRecipient": "Selecione quem vai aprovar",
+      "commentPlaceholder": "Comentário (opcional)",
+      "request": "Solicitar",
+      "requestedTo": "Solicitado a {name}",
+      "unknown": "alguém",
+      "approve": "Aprovar",
+      "reject": "Reprovar",
+      "empty": "Nenhuma solicitação de aprovação ainda.",
+      "toastFailed": "Não foi possível concluir a ação",
+      "toastRequested": "Aprovação solicitada",
+      "status_pending": "Pendente",
+      "status_approved": "Aprovada",
+      "status_rejected": "Reprovada"
     },
     "timesheet": {
       "start": "Iniciar",

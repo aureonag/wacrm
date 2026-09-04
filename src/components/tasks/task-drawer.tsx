@@ -10,6 +10,7 @@ import {
   loadBoardStages,
   loadSubtasks,
   loadTaskActivity,
+  loadTaskApprovals,
   loadTaskChecklist,
   loadTaskComments,
   loadTaskRecurrenceRule,
@@ -23,6 +24,7 @@ import type {
   Sector,
   Task,
   TaskActivity,
+  TaskApproval,
   TaskChecklistItem,
   TaskComment,
   TaskPriority,
@@ -65,6 +67,7 @@ import { Button } from "@/components/ui/button";
 import { BriefingEditor } from "./briefing-editor";
 import { CommentThread } from "./comment-thread";
 import { ChecklistPanel } from "./checklist-panel";
+import { ApprovalsPanel } from "./approvals-panel";
 import { SubtasksPanel } from "./subtasks-panel";
 import { HistoryPanel } from "./history-panel";
 import { TimesheetPanel } from "./timesheet-panel";
@@ -119,6 +122,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>([]);
+  const [approvals, setApprovals] = useState<TaskApproval[]>([]);
   const [subtasks, setSubtasks] = useState<Task[]>([]);
   const [convertCandidates, setConvertCandidates] = useState<Task[]>([]);
   const [activity, setActivity] = useState<TaskActivity[]>([]);
@@ -152,10 +156,11 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     const { data: tagRows } = await supabase.from("task_tags").select("*").eq("task_id", taskId);
     const loadedTask = { ...(taskRow as Task), tags: (tagRows ?? []) as TaskTag[] };
 
-    const [stageRows, comms, check, subs, act, ts, recurrence] = await Promise.all([
+    const [stageRows, comms, check, appr, subs, act, ts, recurrence] = await Promise.all([
       loadBoardStages(supabase, loadedTask.board_id),
       loadTaskComments(supabase, taskId),
       loadTaskChecklist(supabase, taskId),
+      loadTaskApprovals(supabase, taskId),
       loadSubtasks(supabase, taskId),
       loadTaskActivity(supabase, taskId),
       loadTaskTimesheet(supabase, taskId),
@@ -178,6 +183,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     setStages(stageRows);
     setComments(comms);
     setChecklist(check);
+    setApprovals(appr);
     setSubtasks(subs);
     setConvertCandidates(candidates);
     setActivity(act);
@@ -229,7 +235,12 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
       body: JSON.stringify(fields),
     });
     if (!res.ok) {
-      toast.error(t("toastFailed"));
+      const body = (await res.json().catch(() => null)) as { unmet?: string[] } | null;
+      if (body?.unmet && body.unmet.length > 0) {
+        toast.error(t("toastStageRequirements", { items: body.unmet.map((k) => t(`stageRequirement_${k}`)).join(", ") }));
+      } else {
+        toast.error(t("toastFailed"));
+      }
       return false;
     }
     await reloadAll();
@@ -424,8 +435,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                           {t("adjustHours")}
                         </DropdownMenuItem>
                       )}
-                      {canEdit && (
-                        <DropdownMenuItem disabled title={t("requestApprovalHint")}>
+                      {(canEdit || canComment) && (
+                        <DropdownMenuItem onClick={() => setActiveTab("approvals")}>
                           <Users2 className="size-4" />
                           {t("requestApproval")}
                         </DropdownMenuItem>
@@ -573,6 +584,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                 <TabsTrigger value="briefing">{t("tabBriefing")}</TabsTrigger>
                 <TabsTrigger value="comments">{t("tabComments", { count: comments.length })}</TabsTrigger>
                 <TabsTrigger value="checklist">{t("tabChecklist", { count: checklist.length })}</TabsTrigger>
+                <TabsTrigger value="approvals">{t("tabApprovals", { count: approvals.length })}</TabsTrigger>
                 <TabsTrigger value="subtasks">{t("tabSubtasks", { count: subtasks.length })}</TabsTrigger>
                 <TabsTrigger value="timesheet">{t("tabTimesheet")}</TabsTrigger>
                 <TabsTrigger value="history">{t("tabHistory")}</TabsTrigger>
@@ -595,6 +607,16 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
               </TabsContent>
               <TabsContent value="checklist" className="pt-3">
                 <ChecklistPanel taskId={task.id} items={checklist} canEdit={canEdit} onChanged={reloadAll} />
+              </TabsContent>
+              <TabsContent value="approvals" className="pt-3">
+                <ApprovalsPanel
+                  taskId={task.id}
+                  approvals={approvals}
+                  profiles={profiles}
+                  currentUserId={user?.id}
+                  canRequest={canEdit || canComment}
+                  onChanged={reloadAll}
+                />
               </TabsContent>
               <TabsContent value="subtasks" className="pt-3">
                 {task.parent_task_id ? (

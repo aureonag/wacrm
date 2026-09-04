@@ -41,9 +41,16 @@ export async function PATCH(
     }
 
     const body = (await request.json().catch(() => null)) as
-      | { name?: unknown; color?: unknown; position?: unknown }
+      | {
+          name?: unknown;
+          color?: unknown;
+          position?: unknown;
+          requires_file?: unknown;
+          requires_checklist_complete?: unknown;
+          requires_approval?: unknown;
+        }
       | null;
-    const update: Record<string, string | number> = {};
+    const update: Record<string, string | number | boolean> = {};
     if (typeof body?.name === "string") {
       const name = body.name.trim();
       if (!name) return NextResponse.json({ error: "'name' cannot be empty" }, { status: 400 });
@@ -51,6 +58,11 @@ export async function PATCH(
     }
     if (typeof body?.color === "string") update.color = body.color;
     if (typeof body?.position === "number") update.position = body.position;
+    if (typeof body?.requires_file === "boolean") update.requires_file = body.requires_file;
+    if (typeof body?.requires_checklist_complete === "boolean") {
+      update.requires_checklist_complete = body.requires_checklist_complete;
+    }
+    if (typeof body?.requires_approval === "boolean") update.requires_approval = body.requires_approval;
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }

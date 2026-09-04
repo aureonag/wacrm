@@ -43,7 +43,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     const { data: existing } = await ctx.supabase
       .from("tasks")
-      .select("id, board_id")
+      .select("id, board_id, stage_id, drive_folder_url")
       .eq("id", id)
       .eq("account_id", ctx.accountId)
       .maybeSingle();
@@ -72,11 +72,50 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (typeof body.stage_id === "string") {
       const { data: stage } = await ctx.supabase
         .from("board_stages")
-        .select("id")
+        .select("id, requires_file, requires_checklist_complete, requires_approval")
         .eq("id", body.stage_id)
         .eq("board_id", targetBoardId)
         .maybeSingle();
       if (!stage) return NextResponse.json({ error: "Stage not found on this board" }, { status: 400 });
+
+      if (stage.id !== existing.stage_id) {
+        const unmet: string[] = [];
+        const effectiveDriveFolderUrl =
+          typeof body.drive_folder_url === "string" || body.drive_folder_url === null
+            ? body.drive_folder_url
+            : existing.drive_folder_url;
+        if (stage.requires_file && !effectiveDriveFolderUrl) {
+          unmet.push("file");
+        }
+        if (stage.requires_checklist_complete) {
+          const { data: items } = await ctx.supabase
+            .from("task_checklist_items")
+            .select("done")
+            .eq("task_id", id);
+          if (!items || items.length === 0 || items.some((it) => !it.done)) {
+            unmet.push("checklist");
+          }
+        }
+        if (stage.requires_approval) {
+          const { data: latest } = await ctx.supabase
+            .from("task_approvals")
+            .select("status")
+            .eq("task_id", id)
+            .order("requested_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latest?.status !== "approved") {
+            unmet.push("approval");
+          }
+        }
+        if (unmet.length > 0) {
+          return NextResponse.json(
+            { error: "Stage requirements not met", unmet },
+            { status: 400 },
+          );
+        }
+      }
+
       update.stage_id = body.stage_id;
     } else if (typeof body.board_id === "string") {
       return NextResponse.json({ error: "'stage_id' is required when changing 'board_id'" }, { status: 400 });
