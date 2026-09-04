@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { loadBoardStages, loadBoardTasks } from "@/lib/tasks/queries";
 import { useHasPermission } from "@/hooks/use-permissions";
@@ -16,10 +17,22 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-export default function BoardKanbanPage({ params }: { params: Promise<{ id: string }> }) {
+export default function BoardKanbanPage(props: { params: Promise<{ id: string }> }) {
+  // useSearchParams (for the Header active-timer's `?task=` deep link)
+  // requires a Suspense boundary around any caller that could be
+  // prerendered — see node_modules/next/dist/docs's use-search-params.md.
+  return (
+    <Suspense fallback={null}>
+      <BoardKanbanPageInner {...props} />
+    </Suspense>
+  );
+}
+
+function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const { id: boardId } = use(params);
   const t = useTranslations("Operational.boards");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const canEditBoards = useHasPermission("operational", "tasks", "edit_boards");
@@ -35,7 +48,10 @@ export default function BoardKanbanPage({ params }: { params: Promise<{ id: stri
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  // Deep-link from the Header's active-timer indicator (`?task=<id>`) —
+  // read once as the initial value (not synced via an effect) so the
+  // drawer opens on arrival without an extra render/setState pass.
+  const [openTaskId, setOpenTaskId] = useState<string | null>(() => searchParams.get("task"));
 
   const reload = useCallback(async () => {
     const [{ data: boardRow }, stageRows, taskRows] = await Promise.all([

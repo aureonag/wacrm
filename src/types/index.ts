@@ -1032,6 +1032,22 @@ export interface TaskComment {
   author?: Profile;
 }
 
+export interface TimesheetEntry {
+  id: string;
+  account_id: string;
+  task_id: string;
+  user_id?: string | null;
+  started_at: string;
+  ended_at?: string | null;
+  is_manual: boolean;
+  description?: string | null;
+  created_at: string;
+  /** Hydrated client-side. */
+  author?: Profile;
+  /** Hydrated only for the account-wide "active timer" lookup (Header). */
+  task?: Pick<Task, "id" | "title" | "board_id">;
+}
+
 export interface TaskStageHistory {
   id: string;
   task_id: string;

@@ -115,7 +115,13 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configurações",
-    "menuSignOut": "Sair"
+    "menuSignOut": "Sair",
+    "activeTimer": {
+      "untitledTask": "tarefa sem título",
+      "goToTask": "Ir para a tarefa",
+      "stop": "Pausar cronômetro",
+      "toastFailed": "Não foi possível pausar o cronômetro"
+    }
   },
   "ModeToggle": {
     "switchMode": "Mudar para o modo {mode}"
@@ -471,7 +477,33 @@
       "toastMovedToTop": "Tarefa movida para o topo",
       "toastCloned": "Tarefa clonada",
       "toastDeleted": "Tarefa excluída",
-      "toastMovedBoard": "Tarefa movida de quadro"
+      "toastMovedBoard": "Tarefa movida de quadro",
+      "tabTimesheet": "Timesheet",
+      "adjustHours": "Ajustar horas"
+    },
+    "timesheet": {
+      "start": "Iniciar",
+      "stop": "Pausar",
+      "empty": "Você não tem permissão para cronometrar tempo.",
+      "runningElsewhere": "Você tem um cronômetro rodando em \"{title}\".",
+      "goThere": "Ir até lá",
+      "untitledTask": "tarefa sem título",
+      "totalWorked": "Trabalhado: {time}",
+      "estimated": "Estimado: {time}",
+      "byPerson": "Por pessoa",
+      "unknownPerson": "Usuário removido",
+      "manualBadge": "manual",
+      "runningBadge": "em andamento",
+      "edit": "Editar lançamento",
+      "delete": "Excluir lançamento",
+      "logManual": "Lançar tempo manualmente",
+      "startField": "Início",
+      "endField": "Fim",
+      "descriptionPlaceholder": "Descrição (opcional)",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "noEntries": "Nenhum tempo lançado ainda.",
+      "toastFailed": "Não foi possível salvar"
     }
   },
   "Inbox": {
@@ -730,9 +762,9 @@
         "custom": "Campos",
         "deals": "Negócios",
         "tags": "Tags",
-      "noTags": "Sem tags",
-      "noDeals": "Sem negócios",
-      "addNotePlaceholder": "Adicionar uma nota..."
+        "noTags": "Sem tags",
+        "noDeals": "Sem negócios",
+        "addNotePlaceholder": "Adicionar uma nota..."
       },
       "actions": {
         "edit": "Editar",
@@ -2156,13 +2188,11 @@
       "deleteLocallyAria": "Excluir modelo localmente",
       "deleteMetaLocallyTitle": "Excluir da Meta e localmente",
       "deleteLocallyTitle": "Excluir localmente",
-
       "dialogEditTitle": "Editar modelo de mensagem",
       "dialogNewTitle": "Novo modelo de mensagem",
       "dialogEditDesc": "Salve suas alterações para reenviar à Meta. O status voltará para PENDENTE durante a revisão.",
       "dialogNewDesc": "Monte um modelo e envie-o para aprovação da Meta. Depois de aprovado, você pode usá-lo em transmissões e na caixa de entrada.",
       "authWarning": "Modelos de AUTENTICAÇÃO têm um formato fixo de corpo + botão de código (OTP) que exige um construtor diferente. Crie-os no Gerenciador do WhatsApp da Meta por enquanto e use <bold>Sincronizar da Meta</bold> para trazê-los.",
-
       "templateName": "Nome do modelo",
       "namePlaceholder": "ex.: confirmacao_pedido",
       "nameFixed": "O nome fica fixo assim que o modelo existe na Meta — crie um novo modelo para alterá-lo.",
@@ -2171,7 +2201,6 @@
       "language": "Idioma",
       "langFixed": "O idioma fica fixo assim que o modelo existe na Meta.",
       "langHint": "Precisa corresponder exatamente ao código na Meta — <code>pt_BR</code> e <code>pt</code> são distintos.",
-
       "header": "Cabeçalho",
       "headerNone": "Nenhum",
       "headerText": "Texto",
@@ -2181,7 +2210,6 @@
       "headerTextPlaceholder": "Texto do cabeçalho (máx. 60 caracteres, {{1}} opcional)",
       "headerSampleAria": "Valor de exemplo para a variável do cabeçalho",
       "headerSamplePlaceholder": "Valor de exemplo para {{1}} (obrigatório para revisão da Meta)",
-
       "uploadImage": "Enviar imagem",
       "uploadHint": "JPEG ou PNG, ≤5 MB",
       "mediaUrlPlaceholder": "https://… (ou cole um link público de {format})",
@@ -2189,17 +2217,14 @@
       "mediaHint": "Precisa ser um link HTTPS publicamente acessível. A Meta o busca uma vez durante a revisão, então precisa ficar disponível por ~24h.",
       "videoHint": " Recomendado: MP4 / 3GPP, ≤16 MB, ≤60 segundos.",
       "documentHint": " Recomendado: PDF, ≤100 MB.",
-
       "bodyText": "Texto do corpo",
       "bodyPlaceholder": "Olá {{1}}, seu pedido {{2}} está confirmado.",
       "bodyHint": "Use {{1}}, {{2}} para variáveis (devem ser contínuas a partir de {{1}}).",
       "sampleValues": "Valores de exemplo (a Meta usa isso para revisar seu modelo)",
       "sampleAria": "Valor de exemplo para a variável do corpo {var}",
       "samplePlaceholder": "Exemplo para {var}",
-
       "footer": "Rodapé (opcional)",
       "footerPlaceholder": "Texto de rodapé opcional (máx. 60 caracteres)",
-
       "buttons": "Botões (opcional)",
       "addButton": "Adicionar botão",
       "buttonsLimit": "Até {max} botões. Botões de RESPOSTA RÁPIDA devem vir antes dos botões de URL / telefone / código.",
@@ -2212,19 +2237,16 @@
       "urlSamplePlaceholder": "Valor de exemplo para {{1}} (obrigatório quando a URL tem uma variável)",
       "phonePlaceholder": "+5511999999999",
       "codePlaceholder": "Código de exemplo (ex.: VERAO20)",
-
       "cancel": "Cancelar",
       "saving": "Salvando…",
       "submitting": "Enviando…",
       "saveResubmit": "Salvar e reenviar",
       "submitApproval": "Enviar para aprovação",
-
       "deleteDialogTitle": "Excluir modelo?",
       "deleteMetaDesc": "\"{name}\" será excluído da Meta e do wacrm. Transmissões ativas que usam este modelo começarão a falhar no próximo envio. Isso não pode ser desfeito.",
       "deleteLocalDesc": "\"{name}\" será excluído do wacrm. Ele nunca foi enviado à Meta, então nenhuma limpeza remota é necessária.",
       "deleting": "Excluindo…",
       "delete": "Excluir",
-
       "toastLoadFailed": "Falha ao carregar modelos",
       "toastSubmitFailed": "Falha ao enviar",
       "toastSubmitEditSuccess": "Edição enviada — a Meta costuma revisar em até 24 horas.",
@@ -2417,7 +2439,6 @@
       "profileSaved": "Perfil salvo",
       "emailChangeFailed": "Falha ao alterar e-mail: {message}",
       "profileSavedEmailCheck": "Perfil salvo — verifique seu e-mail para confirmar a alteração do endereço",
-
       "passwordTitle": "Senha",
       "passwordDesc": "Use pelo menos {min} caracteres. Você continuará conectado neste dispositivo depois de alterá-la.",
       "currentPassword": "Senha atual",
@@ -2431,7 +2452,6 @@
       "currentPasswordIncorrect": "A senha atual está incorreta",
       "passwordUpdateFailed": "Falha ao atualizar a senha: {message}",
       "passwordUpdated": "Senha atualizada",
-
       "sessionsTitle": "Sessões ativas",
       "sessionsDesc": "Desconecte-se de todos os dispositivos em que você está logado — incluindo este. Útil se você perdeu um notebook ou compartilhou sua senha.",
       "signOutAll": "Sair de todos os dispositivos",

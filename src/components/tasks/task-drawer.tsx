@@ -12,9 +12,10 @@ import {
   loadTaskActivity,
   loadTaskChecklist,
   loadTaskComments,
+  loadTaskTimesheet,
 } from "@/lib/tasks/queries";
 import { DEAL_TAG_COLORS } from "@/lib/deals/tag-colors";
-import type { Board, BoardStage, Profile, Sector, Task, TaskActivity, TaskChecklistItem, TaskComment, TaskPriority, TaskTag } from "@/types";
+import type { Board, BoardStage, Profile, Sector, Task, TaskActivity, TaskChecklistItem, TaskComment, TaskPriority, TaskTag, TimesheetEntry } from "@/types";
 import {
   Sheet,
   SheetContent,
@@ -51,6 +52,7 @@ import { CommentThread } from "./comment-thread";
 import { ChecklistPanel } from "./checklist-panel";
 import { SubtasksPanel } from "./subtasks-panel";
 import { HistoryPanel } from "./history-panel";
+import { TimesheetPanel } from "./timesheet-panel";
 import {
   MoreVertical,
   Flag,
@@ -61,6 +63,7 @@ import {
   CornerDownRight,
   Users2,
   X,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -89,6 +92,9 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const canComment = useHasPermission("operational", "tasks", "comment");
   const canDelete = useHasPermission("operational", "tasks", "delete_tasks");
   const canCreateTasks = useHasPermission("operational", "tasks", "create_tasks");
+  const canTrackTime = useHasPermission("operational", "timesheet", "track");
+  const canLogManualTime = useHasPermission("operational", "timesheet", "log_manual");
+  const canEditTimesheet = useHasPermission("operational", "timesheet", "edit_entries");
 
   const [task, setTask] = useState<Task | null>(null);
   const [stages, setStages] = useState<BoardStage[]>([]);
@@ -100,8 +106,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [subtasks, setSubtasks] = useState<Task[]>([]);
   const [convertCandidates, setConvertCandidates] = useState<Task[]>([]);
   const [activity, setActivity] = useState<TaskActivity[]>([]);
+  const [timesheet, setTimesheet] = useState<TimesheetEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
+  const [activeTab, setActiveTab] = useState("briefing");
   const [showMoveBoard, setShowMoveBoard] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [moveTargetBoard, setMoveTargetBoard] = useState("");
@@ -123,12 +131,13 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     const { data: tagRows } = await supabase.from("task_tags").select("*").eq("task_id", taskId);
     const loadedTask = { ...(taskRow as Task), tags: (tagRows ?? []) as TaskTag[] };
 
-    const [stageRows, comms, check, subs, act] = await Promise.all([
+    const [stageRows, comms, check, subs, act, ts] = await Promise.all([
       loadBoardStages(supabase, loadedTask.board_id),
       loadTaskComments(supabase, taskId),
       loadTaskChecklist(supabase, taskId),
       loadSubtasks(supabase, taskId),
       loadTaskActivity(supabase, taskId),
+      loadTaskTimesheet(supabase, taskId),
     ]);
 
     let candidates: Task[] = [];
@@ -150,6 +159,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     setSubtasks(subs);
     setConvertCandidates(candidates);
     setActivity(act);
+    setTimesheet(ts);
     setLoading(false);
   }, [supabase, taskId]);
 
@@ -157,6 +167,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   useEffect(() => {
     if (!open || !taskId) return;
     setLoading(true);
+    setActiveTab("briefing");
     let cancelled = false;
     (async () => {
       await reloadAll();
@@ -337,6 +348,12 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                           {t("clone")}
                         </DropdownMenuItem>
                       )}
+                      {canEditTimesheet && (
+                        <DropdownMenuItem onClick={() => setActiveTab("timesheet")}>
+                          <Clock className="size-4" />
+                          {t("adjustHours")}
+                        </DropdownMenuItem>
+                      )}
                       {canEdit && (
                         <DropdownMenuItem disabled title={t("requestApprovalHint")}>
                           <Users2 className="size-4" />
@@ -441,12 +458,13 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
               {canEdit && <TagAdder onAdd={handleAddTag} />}
             </div>
 
-            <Tabs defaultValue="briefing" className="flex-1 px-4">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="flex-1 px-4">
               <TabsList variant="line">
                 <TabsTrigger value="briefing">{t("tabBriefing")}</TabsTrigger>
                 <TabsTrigger value="comments">{t("tabComments", { count: comments.length })}</TabsTrigger>
                 <TabsTrigger value="checklist">{t("tabChecklist", { count: checklist.length })}</TabsTrigger>
                 <TabsTrigger value="subtasks">{t("tabSubtasks", { count: subtasks.length })}</TabsTrigger>
+                <TabsTrigger value="timesheet">{t("tabTimesheet")}</TabsTrigger>
                 <TabsTrigger value="history">{t("tabHistory")}</TabsTrigger>
               </TabsList>
               <TabsContent value="briefing" className="pt-3">
@@ -484,6 +502,18 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                     }}
                   />
                 )}
+              </TabsContent>
+              <TabsContent value="timesheet" className="pt-3">
+                <TimesheetPanel
+                  taskId={task.id}
+                  entries={timesheet}
+                  estimatedMinutes={task.estimated_minutes ?? null}
+                  currentUserId={user?.id}
+                  canTrack={canTrackTime}
+                  canLogManual={canLogManualTime}
+                  canEditEntries={canEditTimesheet}
+                  onChanged={reloadAll}
+                />
               </TabsContent>
               <TabsContent value="history" className="pt-3">
                 <HistoryPanel activity={activity} />

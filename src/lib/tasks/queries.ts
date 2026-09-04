@@ -9,6 +9,7 @@ import type {
   TaskComment,
   TaskStageHistory,
   TaskTag,
+  TimesheetEntry,
 } from "@/types";
 
 // Shared reads for the Gestão de Tarefas module — same role as
@@ -153,6 +154,43 @@ export async function loadTaskActivity(db: SupabaseClient, taskId: string): Prom
     rows = rows.map((r) => ({ ...r, author: r.user_id ? authorByUserId.get(r.user_id) : undefined }));
   }
   return rows;
+}
+
+export async function loadTaskTimesheet(db: SupabaseClient, taskId: string): Promise<TimesheetEntry[]> {
+  const { data, error } = await db
+    .from("timesheet_entries")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("started_at", { ascending: false });
+  if (error) {
+    console.error("Failed to load task timesheet:", error.message);
+    return [];
+  }
+  let rows = (data ?? []) as TimesheetEntry[];
+  const userIds = [...new Set(rows.map((r) => r.user_id).filter((v): v is string => !!v))];
+  if (userIds.length > 0) {
+    const { data: authors } = await db.from("profiles").select("*").in("user_id", userIds);
+    const authorByUserId = new Map(((authors ?? []) as Profile[]).map((p) => [p.user_id, p]));
+    rows = rows.map((r) => ({ ...r, author: r.user_id ? authorByUserId.get(r.user_id) : undefined }));
+  }
+  return rows;
+}
+
+/** The caller's single account-wide active timer (if any), with the
+ *  parent task's title/board hydrated so the Header indicator can show
+ *  and link to it without a second round trip. */
+export async function loadActiveTimer(db: SupabaseClient, userId: string): Promise<TimesheetEntry | null> {
+  const { data, error } = await db
+    .from("timesheet_entries")
+    .select("*, task:tasks(id, title, board_id)")
+    .eq("user_id", userId)
+    .is("ended_at", null)
+    .maybeSingle();
+  if (error) {
+    console.error("Failed to load active timer:", error.message);
+    return null;
+  }
+  return (data as TimesheetEntry | null) ?? null;
 }
 
 export async function loadTaskStageHistory(db: SupabaseClient, taskId: string): Promise<TaskStageHistory[]> {
