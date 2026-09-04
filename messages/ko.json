@@ -391,6 +391,87 @@
           "high": "높음"
         }
       }
+    },
+    "briefing": {
+      "bold": "굵게",
+      "italic": "기울임꼴",
+      "heading": "제목",
+      "bulletList": "글머리 기호 목록",
+      "orderedList": "번호 매기기 목록",
+      "link": "링크",
+      "image": "이미지",
+      "linkPrompt": "링크 URL",
+      "imagePrompt": "이미지 URL"
+    },
+    "comments": {
+      "toastFailed": "댓글을 저장할 수 없습니다",
+      "unknownAuthor": "누군가",
+      "reply": "답글",
+      "delete": "댓글 삭제",
+      "replyingTo": "댓글에 답글 작성 중",
+      "cancelReply": "취소",
+      "placeholder": "댓글을 작성하세요...",
+      "saving": "전송 중...",
+      "submit": "댓글 작성",
+      "empty": "아직 댓글이 없습니다."
+    },
+    "checklist": {
+      "toastFailed": "체크리스트를 업데이트할 수 없습니다",
+      "delete": "항목 삭제",
+      "empty": "아직 체크리스트 항목이 없습니다.",
+      "placeholder": "새 항목...",
+      "progress": "{total}개 중 {done}개 완료"
+    },
+    "subtasks": {
+      "empty": "아직 하위 작업이 없습니다.",
+      "placeholder": "새 하위 작업...",
+      "toastFailed": "저장할 수 없습니다",
+      "convertPlaceholder": "기존 작업을 변환...",
+      "convert": "변환"
+    },
+    "history": {
+      "empty": "아직 기록된 이벤트가 없습니다.",
+      "system": "시스템"
+    },
+    "taskDrawer": {
+      "toastFailed": "변경사항을 저장할 수 없습니다",
+      "loading": "불러오는 중...",
+      "notFound": "작업을 찾을 수 없습니다",
+      "backToParent": "상위 작업으로 돌아가기",
+      "toggleUrgent": "긴급 표시 전환",
+      "moveToTop": "단계 맨 위로 이동",
+      "moveToBoard": "다른 보드로 이동",
+      "clone": "작업 복제",
+      "requestApproval": "승인 요청",
+      "requestApprovalHint": "3단계에서 제공됩니다",
+      "delete": "작업 삭제",
+      "stage": "단계",
+      "priority": "우선순위",
+      "assignee": "담당자",
+      "sector": "부서",
+      "none": "—",
+      "startDate": "시작일",
+      "dueDate": "마감일",
+      "estimatedMinutes": "예상 시간(분)",
+      "addTag": "태그",
+      "tagPlaceholder": "태그 이름",
+      "add": "추가",
+      "removeTag": "태그 제거",
+      "tabBriefing": "브리핑",
+      "tabComments": "댓글 ({count})",
+      "tabChecklist": "체크리스트 ({count})",
+      "tabSubtasks": "하위 작업 ({count})",
+      "tabHistory": "기록",
+      "isSubtask": "이 작업은 이미 하위 작업입니다 — 자체 하위 작업을 가질 수 없습니다.",
+      "board": "보드",
+      "cancel": "취소",
+      "move": "이동",
+      "deleteConfirm": "이 작업을 삭제하시겠습니까? 연결된 하위 작업은 상위 작업을 잃게 됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "deleteBtn": "삭제",
+      "toastMovedToTop": "작업이 맨 위로 이동되었습니다",
+      "toastCloned": "작업이 복제되었습니다",
+      "toastDeleted": "작업이 삭제되었습니다",
+      "toastMovedBoard": "작업이 다른 보드로 이동되었습니다"
     }
   },
   "Inbox": {

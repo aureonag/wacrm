@@ -9,7 +9,7 @@ import type { Board, BoardStage, Task } from "@/types";
 import { TaskBoard } from "@/components/tasks/task-board";
 import { BoardSettings } from "@/components/tasks/board-settings";
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog";
-import { EditTaskDialog } from "@/components/tasks/edit-task-dialog";
+import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ export default function BoardKanbanPage({ params }: { params: Promise<{ id: stri
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const [{ data: boardRow }, stageRows, taskRows] = await Promise.all([
@@ -91,8 +91,7 @@ export default function BoardKanbanPage({ params }: { params: Promise<{ id: stri
   }
 
   function handleOpenTask(taskId: string) {
-    const task = tasks.find((t) => t.id === taskId);
-    if (task) setEditingTask(task);
+    setOpenTaskId(taskId);
   }
 
   if (loading) return null;
@@ -152,16 +151,13 @@ export default function BoardKanbanPage({ params }: { params: Promise<{ id: stri
         onCreated={reload}
       />
 
-      {editingTask && (
-        <EditTaskDialog
-          open={!!editingTask}
-          onOpenChange={(open) => !open && setEditingTask(null)}
-          task={editingTask}
-          stages={stages}
-          onSaved={reload}
-          onDeleted={reload}
-        />
-      )}
+      <TaskDrawer
+        taskId={openTaskId}
+        open={!!openTaskId}
+        onOpenChange={(open) => !open && setOpenTaskId(null)}
+        onChanged={reload}
+        onNavigate={setOpenTaskId}
+      />
 
       {board && (
         <BoardSettings

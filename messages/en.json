@@ -391,6 +391,87 @@
           "high": "High"
         }
       }
+    },
+    "briefing": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "heading": "Heading",
+      "bulletList": "Bullet list",
+      "orderedList": "Numbered list",
+      "link": "Link",
+      "image": "Image",
+      "linkPrompt": "Link URL",
+      "imagePrompt": "Image URL"
+    },
+    "comments": {
+      "toastFailed": "Could not save the comment",
+      "unknownAuthor": "Someone",
+      "reply": "Reply",
+      "delete": "Delete comment",
+      "replyingTo": "Replying to a comment",
+      "cancelReply": "Cancel",
+      "placeholder": "Write a comment...",
+      "saving": "Sending...",
+      "submit": "Comment",
+      "empty": "No comments yet."
+    },
+    "checklist": {
+      "toastFailed": "Could not update the checklist",
+      "delete": "Delete item",
+      "empty": "No checklist items yet.",
+      "placeholder": "New item...",
+      "progress": "{done} of {total} done"
+    },
+    "subtasks": {
+      "empty": "No subtasks yet.",
+      "placeholder": "New subtask...",
+      "toastFailed": "Could not save",
+      "convertPlaceholder": "Convert an existing task...",
+      "convert": "Convert"
+    },
+    "history": {
+      "empty": "No events recorded yet.",
+      "system": "System"
+    },
+    "taskDrawer": {
+      "toastFailed": "Could not save the change",
+      "loading": "Loading...",
+      "notFound": "Task not found",
+      "backToParent": "Back to parent task",
+      "toggleUrgent": "Toggle urgent",
+      "moveToTop": "Move to top of stage",
+      "moveToBoard": "Move to another board",
+      "clone": "Clone task",
+      "requestApproval": "Request approval",
+      "requestApprovalHint": "Coming in Etapa 3",
+      "delete": "Delete task",
+      "stage": "Stage",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "sector": "Sector",
+      "none": "—",
+      "startDate": "Start",
+      "dueDate": "Due date",
+      "estimatedMinutes": "Estimated time (min)",
+      "addTag": "Tag",
+      "tagPlaceholder": "Tag name",
+      "add": "Add",
+      "removeTag": "Remove tag",
+      "tabBriefing": "Briefing",
+      "tabComments": "Comments ({count})",
+      "tabChecklist": "Checklist ({count})",
+      "tabSubtasks": "Subtasks ({count})",
+      "tabHistory": "History",
+      "isSubtask": "This task is already a subtask — it can't have its own subtasks.",
+      "board": "Board",
+      "cancel": "Cancel",
+      "move": "Move",
+      "deleteConfirm": "Delete this task? Any subtasks linked to it lose their parent task. This action cannot be undone.",
+      "deleteBtn": "Delete",
+      "toastMovedToTop": "Task moved to top",
+      "toastCloned": "Task cloned",
+      "toastDeleted": "Task deleted",
+      "toastMovedBoard": "Task moved to another board"
     }
   },
   "Inbox": {

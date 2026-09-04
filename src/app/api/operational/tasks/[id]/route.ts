@@ -55,15 +55,34 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (!title) return NextResponse.json({ error: "'title' cannot be empty" }, { status: 400 });
       update.title = title;
     }
+    // Moving to another board (the 3-dot menu's "Mover para outro quadro")
+    // sends board_id + stage_id together — stage_id alone (drag-and-drop
+    // within the same board) validates against the task's current board.
+    const targetBoardId = typeof body.board_id === "string" ? body.board_id : existing.board_id;
+    if (typeof body.board_id === "string") {
+      const { data: board } = await ctx.supabase
+        .from("boards")
+        .select("id")
+        .eq("id", body.board_id)
+        .eq("account_id", ctx.accountId)
+        .maybeSingle();
+      if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
+      update.board_id = body.board_id;
+    }
     if (typeof body.stage_id === "string") {
       const { data: stage } = await ctx.supabase
         .from("board_stages")
         .select("id")
         .eq("id", body.stage_id)
-        .eq("board_id", existing.board_id)
+        .eq("board_id", targetBoardId)
         .maybeSingle();
       if (!stage) return NextResponse.json({ error: "Stage not found on this board" }, { status: 400 });
       update.stage_id = body.stage_id;
+    } else if (typeof body.board_id === "string") {
+      return NextResponse.json({ error: "'stage_id' is required when changing 'board_id'" }, { status: 400 });
+    }
+    if (typeof body.briefing === "object") {
+      update.briefing = body.briefing;
     }
     if (typeof body.position === "number") update.position = body.position;
     if (typeof body.contact_id === "string" || body.contact_id === null) update.contact_id = body.contact_id;

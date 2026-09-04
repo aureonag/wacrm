@@ -391,6 +391,87 @@
           "high": "Alta"
         }
       }
+    },
+    "briefing": {
+      "bold": "Negrito",
+      "italic": "Itálico",
+      "heading": "Título",
+      "bulletList": "Lista com marcadores",
+      "orderedList": "Lista numerada",
+      "link": "Link",
+      "image": "Imagem",
+      "linkPrompt": "URL do link",
+      "imagePrompt": "URL da imagem"
+    },
+    "comments": {
+      "toastFailed": "Não foi possível salvar o comentário",
+      "unknownAuthor": "Alguém",
+      "reply": "Responder",
+      "delete": "Excluir comentário",
+      "replyingTo": "Respondendo a um comentário",
+      "cancelReply": "Cancelar",
+      "placeholder": "Escreva um comentário...",
+      "saving": "Enviando...",
+      "submit": "Comentar",
+      "empty": "Nenhum comentário ainda."
+    },
+    "checklist": {
+      "toastFailed": "Não foi possível atualizar o checklist",
+      "delete": "Excluir item",
+      "empty": "Nenhum item no checklist ainda.",
+      "placeholder": "Novo item...",
+      "progress": "{done} de {total} concluídos"
+    },
+    "subtasks": {
+      "empty": "Nenhuma subtarefa ainda.",
+      "placeholder": "Nova subtarefa...",
+      "toastFailed": "Não foi possível salvar",
+      "convertPlaceholder": "Converter uma tarefa existente...",
+      "convert": "Converter"
+    },
+    "history": {
+      "empty": "Nenhum evento registrado ainda.",
+      "system": "Sistema"
+    },
+    "taskDrawer": {
+      "toastFailed": "Não foi possível salvar a alteração",
+      "loading": "Carregando...",
+      "notFound": "Tarefa não encontrada",
+      "backToParent": "Voltar para a tarefa principal",
+      "toggleUrgent": "Marcar/desmarcar urgente",
+      "moveToTop": "Mover para o topo da etapa",
+      "moveToBoard": "Mover para outro quadro",
+      "clone": "Clonar tarefa",
+      "requestApproval": "Solicitar aprovação",
+      "requestApprovalHint": "Chega na Etapa 3",
+      "delete": "Excluir tarefa",
+      "stage": "Etapa",
+      "priority": "Prioridade",
+      "assignee": "Responsável",
+      "sector": "Setor",
+      "none": "—",
+      "startDate": "Início",
+      "dueDate": "Prazo",
+      "estimatedMinutes": "Tempo estimado (min)",
+      "addTag": "Tag",
+      "tagPlaceholder": "Nome da tag",
+      "add": "Adicionar",
+      "removeTag": "Remover tag",
+      "tabBriefing": "Briefing",
+      "tabComments": "Comentários ({count})",
+      "tabChecklist": "Checklist ({count})",
+      "tabSubtasks": "Subtarefas ({count})",
+      "tabHistory": "Histórico",
+      "isSubtask": "Esta tarefa já é uma subtarefa — não pode ter subtarefas próprias.",
+      "board": "Quadro",
+      "cancel": "Cancelar",
+      "move": "Mover",
+      "deleteConfirm": "Excluir esta tarefa? Subtarefas vinculadas a ela deixam de ter tarefa principal. Essa ação não pode ser desfeita.",
+      "deleteBtn": "Excluir",
+      "toastMovedToTop": "Tarefa movida para o topo",
+      "toastCloned": "Tarefa clonada",
+      "toastDeleted": "Tarefa excluída",
+      "toastMovedBoard": "Tarefa movida de quadro"
     }
   },
   "Inbox": {

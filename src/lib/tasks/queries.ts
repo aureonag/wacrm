@@ -1,5 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Board, BoardStage, Profile, Task, TaskTag } from "@/types";
+import type {
+  Board,
+  BoardStage,
+  Profile,
+  Task,
+  TaskActivity,
+  TaskChecklistItem,
+  TaskComment,
+  TaskStageHistory,
+  TaskTag,
+} from "@/types";
 
 // Shared reads for the Gestão de Tarefas module — same role as
 // src/lib/pipelines/queries.ts for Comercial. Reads go straight to
@@ -87,4 +97,73 @@ export async function loadAccountProfiles(db: SupabaseClient, accountId: string)
     return [];
   }
   return (data ?? []) as Profile[];
+}
+
+export async function loadTaskComments(db: SupabaseClient, taskId: string): Promise<TaskComment[]> {
+  const { data, error } = await db
+    .from("task_comments")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("created_at");
+  if (error) {
+    console.error("Failed to load task comments:", error.message);
+    return [];
+  }
+  let comments = (data ?? []) as TaskComment[];
+
+  // task_comments.user_id references auth.users (not profiles) — same
+  // "second query + map" hydration as loadDealComments.
+  const userIds = [...new Set(comments.map((c) => c.user_id).filter((v): v is string => !!v))];
+  if (userIds.length > 0) {
+    const { data: authors } = await db.from("profiles").select("*").in("user_id", userIds);
+    const authorByUserId = new Map(((authors ?? []) as Profile[]).map((p) => [p.user_id, p]));
+    comments = comments.map((c) => ({ ...c, author: c.user_id ? authorByUserId.get(c.user_id) : undefined }));
+  }
+  return comments;
+}
+
+export async function loadTaskChecklist(db: SupabaseClient, taskId: string): Promise<TaskChecklistItem[]> {
+  const { data, error } = await db
+    .from("task_checklist_items")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("position");
+  if (error) {
+    console.error("Failed to load task checklist:", error.message);
+    return [];
+  }
+  return (data ?? []) as TaskChecklistItem[];
+}
+
+export async function loadTaskActivity(db: SupabaseClient, taskId: string): Promise<TaskActivity[]> {
+  const { data, error } = await db
+    .from("task_activity")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("Failed to load task activity:", error.message);
+    return [];
+  }
+  let rows = (data ?? []) as TaskActivity[];
+  const userIds = [...new Set(rows.map((r) => r.user_id).filter((v): v is string => !!v))];
+  if (userIds.length > 0) {
+    const { data: authors } = await db.from("profiles").select("*").in("user_id", userIds);
+    const authorByUserId = new Map(((authors ?? []) as Profile[]).map((p) => [p.user_id, p]));
+    rows = rows.map((r) => ({ ...r, author: r.user_id ? authorByUserId.get(r.user_id) : undefined }));
+  }
+  return rows;
+}
+
+export async function loadTaskStageHistory(db: SupabaseClient, taskId: string): Promise<TaskStageHistory[]> {
+  const { data, error } = await db
+    .from("task_stage_history")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("changed_at", { ascending: false });
+  if (error) {
+    console.error("Failed to load task stage history:", error.message);
+    return [];
+  }
+  return (data ?? []) as TaskStageHistory[];
 }
