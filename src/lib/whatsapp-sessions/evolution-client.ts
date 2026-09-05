@@ -195,3 +195,30 @@ export async function sendText(
   );
   return { messageId: data?.key?.id ?? '' };
 }
+
+/** Send an image/video/document/audio message through a connected personal instance (Fase 2). */
+export async function sendMedia(
+  instanceName: string,
+  to: string,
+  media: {
+    mediaType: 'image' | 'video' | 'document' | 'audio';
+    url: string;
+    caption?: string;
+    fileName?: string;
+  },
+): Promise<{ messageId: string }> {
+  const data = await request<{ key?: { id?: string } }>(
+    `/message/sendMedia/${encodeURIComponent(instanceName)}`,
+    {
+      method: 'POST',
+      body: {
+        number: to,
+        mediatype: media.mediaType,
+        media: media.url,
+        caption: media.caption,
+        fileName: media.fileName,
+      },
+    },
+  );
+  return { messageId: data?.key?.id ?? '' };
+}

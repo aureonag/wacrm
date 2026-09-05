@@ -11,6 +11,10 @@ import {
   validateSendMessageParams,
   SendMessageError,
 } from '@/lib/whatsapp/send-message'
+import {
+  sendMessageThroughPersonalSession,
+  SendPersonalMessageError,
+} from '@/lib/whatsapp-sessions/send-message'
 
 // The dashboard's outbound-send endpoint. It owns auth, per-user rate
 // limiting, and the two ways the UI targets a thread — an existing
@@ -146,6 +150,42 @@ export async function POST(request: Request) {
         { error: 'Conversation not found' },
         { status: 404 }
       )
+    }
+
+    // A conversation born from a personal QR-code connection carries
+    // whatsapp_session_id (migration 072) — route those replies through
+    // that person's Evolution API instance instead of the account's
+    // official Meta number, so the customer sees the reply come from
+    // the same device the conversation started on.
+    const { data: convRow } = await supabase
+      .from('conversations')
+      .select('whatsapp_session_id')
+      .eq('id', conversationId)
+      .single()
+
+    if (convRow?.whatsapp_session_id) {
+      try {
+        const result = await sendMessageThroughPersonalSession(supabase, accountId, {
+          conversationId,
+          whatsappSessionId: convRow.whatsapp_session_id,
+          messageType: message_type,
+          contentText: content_text,
+          mediaUrl: media_url,
+          filename,
+          replyToMessageId: reply_to_message_id,
+        })
+
+        return NextResponse.json({
+          success: true,
+          message_id: result.messageId,
+          whatsapp_message_id: result.whatsappMessageId,
+        })
+      } catch (err) {
+        if (err instanceof SendPersonalMessageError) {
+          return NextResponse.json({ error: err.message }, { status: err.status })
+        }
+        throw err
+      }
     }
 
     // Delegate to the shared send core (validates, sends to Meta with
