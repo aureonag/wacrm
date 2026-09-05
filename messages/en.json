@@ -744,7 +744,19 @@
       "deals": "Deals",
       "noTags": "No tags",
       "noDeals": "No deals",
-      "addNotePlaceholder": "Add a note..."
+      "addNotePlaceholder": "Add a note...",
+      "linkToPipeline": "Link to a pipeline"
+    },
+    "linkDeal": {
+      "title": "Link to a pipeline",
+      "pipeline": "Pipeline",
+      "pipelinePlaceholder": "Select a pipeline",
+      "cancel": "Cancel",
+      "save": "Link",
+      "saving": "Linking...",
+      "toastRequired": "Deal name, pipeline, and stage are required",
+      "toastFailed": "Failed to link the conversation",
+      "toastLinked": "Conversation linked to the pipeline"
     },
     "aiBanner": {
       "pausedTitle": "AI assistant is paused here",

@@ -15,17 +15,20 @@ import {
   DollarSign,
   StickyNote,
   Plus,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
+import { LinkDealModal } from "./link-deal-modal";
 
 interface ContactSidebarProps {
   contact: Contact | null;
+  conversationId?: string | null;
 }
 
-export function ContactSidebar({ contact }: ContactSidebarProps) {
+export function ContactSidebar({ contact, conversationId }: ContactSidebarProps) {
   const tSidebar = useTranslations("Inbox.sidebar");
   const tThread = useTranslations("Inbox.messageThread");
 
@@ -36,6 +39,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const [tags, setTags] = useState<(Tag & { contact_tag_id: string })[]>([]);
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
   const fetchContactData = useCallback(async () => {
     if (!contact) return;
@@ -217,6 +221,18 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
               {tSidebar("deals")}
             </div>
             <div className="mt-2 space-y-2">
+              {conversationId &&
+                !deals.some((d) => d.conversation_id === conversationId) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start gap-2 border-border text-muted-foreground hover:bg-muted"
+                    onClick={() => setLinkModalOpen(true)}
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    {tSidebar("linkToPipeline")}
+                  </Button>
+                )}
               {deals.length === 0 ? (
                 <p className="px-1 text-xs text-muted-foreground">{tSidebar("noDeals")}</p>
               ) : (
@@ -298,6 +314,16 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
           </div>
         </div>
       </ScrollArea>
+
+      {conversationId && (
+        <LinkDealModal
+          open={linkModalOpen}
+          onOpenChange={setLinkModalOpen}
+          conversationId={conversationId}
+          contact={contact}
+          onSaved={fetchContactData}
+        />
+      )}
     </div>
   );
 }

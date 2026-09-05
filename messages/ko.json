@@ -744,7 +744,19 @@
       "deals": "딜",
       "noTags": "태그 없음",
       "noDeals": "딜 없음",
-      "addNotePlaceholder": "메모 추가..."
+      "addNotePlaceholder": "메모 추가...",
+      "linkToPipeline": "파이프라인에 연결"
+    },
+    "linkDeal": {
+      "title": "파이프라인에 연결",
+      "pipeline": "파이프라인",
+      "pipelinePlaceholder": "파이프라인을 선택하세요",
+      "cancel": "취소",
+      "save": "연결",
+      "saving": "연결 중...",
+      "toastRequired": "딜 이름, 파이프라인, 단계는 필수입니다",
+      "toastFailed": "대화를 연결하지 못했습니다",
+      "toastLinked": "대화가 파이프라인에 연결되었습니다"
     },
     "aiBanner": {
       "pausedTitle": "이 대화에서 AI 어시스턴트가 일시 중지됨",

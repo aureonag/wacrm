@@ -744,7 +744,19 @@
       "deals": "Negócios",
       "noTags": "Sem tags",
       "noDeals": "Sem negócios",
-      "addNotePlaceholder": "Adicionar uma nota..."
+      "addNotePlaceholder": "Adicionar uma nota...",
+      "linkToPipeline": "Vincular a um pipeline"
+    },
+    "linkDeal": {
+      "title": "Vincular a um pipeline",
+      "pipeline": "Pipeline",
+      "pipelinePlaceholder": "Selecione um pipeline",
+      "cancel": "Cancelar",
+      "save": "Vincular",
+      "saving": "Vinculando...",
+      "toastRequired": "Nome do negócio, pipeline e etapa são obrigatórios",
+      "toastFailed": "Falha ao vincular a conversa",
+      "toastLinked": "Conversa vinculada ao pipeline"
     },
     "aiBanner": {
       "pausedTitle": "O assistente de IA está pausado aqui",
