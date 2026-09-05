@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Loader2, QrCode, Smartphone, Unplug } from 'lucide-react';
+import { History, Loader2, QrCode, Smartphone, Unplug } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +28,7 @@ export function MyWhatsAppPanel() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -132,6 +133,24 @@ export function MyWhatsAppPanel() {
     }
   }
 
+  async function handleImportHistory() {
+    setImporting(true);
+    try {
+      const res = await fetch('/api/whatsapp-sessions/import-history', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(body.error || t('importHistoryError'));
+        return;
+      }
+      toast.success(t('importHistoryStarted'));
+    } catch (err) {
+      console.error('[MyWhatsAppPanel] import history failed:', err);
+      toast.error(t('importHistoryError'));
+    } finally {
+      setImporting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -161,18 +180,35 @@ export function MyWhatsAppPanel() {
                     : t('connectedDesc')}
                 </p>
               </div>
-              <Button
-                variant="outline"
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-              >
-                {disconnecting ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Unplug className="size-4" />
-                )}
-                {t('disconnect')}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleImportHistory}
+                  disabled={importing}
+                >
+                  {importing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <History className="size-4" />
+                  )}
+                  {t('importHistory')}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnect}
+                  disabled={disconnecting}
+                >
+                  {disconnecting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Unplug className="size-4" />
+                  )}
+                  {t('disconnect')}
+                </Button>
+              </div>
+              <p className="max-w-[42ch] text-xs text-muted-foreground">
+                {t('importHistoryHint')}
+              </p>
             </>
           ) : qrBase64 ? (
             <>

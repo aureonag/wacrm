@@ -183,6 +183,63 @@ export async function deleteInstance(instanceName: string): Promise<void> {
   }
 }
 
+/** Best-effort profile picture lookup for one number. Null if none set. */
+export async function fetchProfilePictureUrl(
+  instanceName: string,
+  phone: string,
+): Promise<string | null> {
+  try {
+    const data = await request<{ profilePictureUrl?: string }>(
+      `/chat/fetchProfilePictureUrl/${encodeURIComponent(instanceName)}`,
+      { method: 'POST', body: { number: phone } },
+    );
+    return data?.profilePictureUrl ?? null;
+  } catch {
+    // No picture set, or the number can't be resolved — not an error
+    // worth surfacing to the caller.
+    return null;
+  }
+}
+
+export interface EvolutionChat {
+  remoteJid: string;
+  pushName?: string | null;
+  profilePicUrl?: string | null;
+  updatedAt?: string;
+  unreadCount?: number;
+  lastMessage?: { pushName?: string | null } | null;
+}
+
+/** Every chat (1:1 and group) Baileys has synced for this instance. */
+export async function findChats(instanceName: string): Promise<EvolutionChat[]> {
+  const data = await request<EvolutionChat[]>(
+    `/chat/findChats/${encodeURIComponent(instanceName)}`,
+    { method: 'POST', body: {} },
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export interface EvolutionMessageRecord {
+  key: { id?: string; fromMe?: boolean; remoteJid?: string };
+  pushName?: string | null;
+  messageType?: string;
+  message?: Record<string, unknown>;
+  messageTimestamp?: number | string;
+}
+
+/** Most recent `limit` messages Baileys has synced for one chat. */
+export async function findMessages(
+  instanceName: string,
+  remoteJid: string,
+  limit: number,
+): Promise<EvolutionMessageRecord[]> {
+  const data = await request<{ messages?: { records?: EvolutionMessageRecord[] } }>(
+    `/chat/findMessages/${encodeURIComponent(instanceName)}`,
+    { method: 'POST', body: { where: { key: { remoteJid } }, limit } },
+  );
+  return data?.messages?.records ?? [];
+}
+
 /** Send a plain text message through a connected personal instance (Fase 2). */
 export async function sendText(
   instanceName: string,

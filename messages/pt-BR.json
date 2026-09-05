@@ -2473,7 +2473,11 @@
       "connectError": "Não foi possível gerar o QR code",
       "newQr": "Gerar novo QR",
       "qrAlt": "QR code para conectar o WhatsApp",
-      "scanInstructions": "Abra o WhatsApp no seu celular, toque em Mais opções → Aparelhos conectados → Conectar aparelho, e escaneie este código."
+      "scanInstructions": "Abra o WhatsApp no seu celular, toque em Mais opções → Aparelhos conectados → Conectar aparelho, e escaneie este código.",
+      "importHistory": "Importar histórico",
+      "importHistoryStarted": "Importação iniciada — as conversas vão aparecer no Inbox conforme forem processadas",
+      "importHistoryError": "Não foi possível iniciar a importação",
+      "importHistoryHint": "Importa as conversas 1 a 1 mais recentes (até 50) com as últimas mensagens de cada uma. Grupos e mídias (fotos, áudios, vídeos) não são importados."
     },
     "whatsapp": {
       "title": "Conexão com o WhatsApp",

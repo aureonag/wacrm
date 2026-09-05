@@ -1,9 +1,14 @@
 import { NextResponse, after } from 'next/server';
 
 import { supabaseAdmin } from '@/lib/flows/admin-client';
-import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
-import { normalizePhone } from '@/lib/whatsapp/phone-utils';
 import { reopenClosedConversation } from '@/lib/conversations/reopen';
+import {
+  classifyMessage,
+  findOrCreateContact,
+  findOrCreateConversation,
+  phoneFromJid,
+} from '@/lib/whatsapp-sessions/contact-sync';
+import { fetchProfilePictureUrl } from '@/lib/whatsapp-sessions/evolution-client';
 
 // Evolution API's own connection/QR events don't carry a shared secret
 // the way Meta's HMAC-signed webhook does — the URL itself is only
@@ -15,29 +20,6 @@ interface EvolutionWebhookBody {
   event?: string;
   instance?: string;
   data?: unknown;
-}
-
-// Baileys' remoteJid is "<digits>@s.whatsapp.net" for a 1:1 chat, or
-// "<digits>@g.us" for a group. Fase 1 only handles 1:1 — group inbound
-// is out of scope (mirrors how the official Meta webhook has no group
-// concept either).
-function phoneFromJid(jid: string | undefined | null): string | null {
-  if (!jid) return null;
-  if (jid.endsWith('@g.us')) return null;
-  const [digits] = jid.split('@');
-  return normalizePhone(digits ?? '');
-}
-
-function extractText(message: Record<string, unknown> | undefined): string | null {
-  if (!message) return null;
-  if (typeof message.conversation === 'string') return message.conversation;
-  const extended = message.extendedTextMessage as { text?: string } | undefined;
-  if (extended?.text) return extended.text;
-  const image = message.imageMessage as { caption?: string } | undefined;
-  if (image?.caption) return image.caption;
-  const video = message.videoMessage as { caption?: string } | undefined;
-  if (video?.caption) return video.caption;
-  return null;
 }
 
 export async function POST(request: Request) {
@@ -69,7 +51,7 @@ async function processEvent(body: EvolutionWebhookBody) {
   const db = supabaseAdmin();
   const { data: session, error: sessionError } = await db
     .from('whatsapp_sessions')
-    .select('user_id, account_id, status')
+    .select('user_id, account_id, status, instance_name')
     .eq('instance_name', instance)
     .maybeSingle();
 
@@ -119,7 +101,7 @@ async function handleConnectionUpdate(
 
 async function handleMessagesUpsert(
   db: ReturnType<typeof supabaseAdmin>,
-  session: { user_id: string; account_id: string },
+  session: { user_id: string; account_id: string; instance_name: string },
   data: unknown,
 ) {
   // Evolution can deliver either a single message object or
@@ -134,24 +116,36 @@ async function handleMessagesUpsert(
 
 async function processInboundMessage(
   db: ReturnType<typeof supabaseAdmin>,
-  session: { user_id: string; account_id: string },
+  session: { user_id: string; account_id: string; instance_name: string },
   msg: Record<string, unknown>,
 ) {
   const key = msg.key as { remoteJid?: string; fromMe?: boolean; id?: string } | undefined;
   if (!key || key.fromMe) return; // our own outbound echo — ignore
 
   const phone = phoneFromJid(key.remoteJid);
-  if (!phone) return; // group chat or malformed jid — out of Fase 1 scope
+  if (!phone) return; // group chat or malformed jid — out of scope
 
   const contactName = (msg.pushName as string | undefined) || phone;
-  const contentText = extractText(msg.message as Record<string, unknown> | undefined);
+  const { contentText } = classifyMessage(
+    msg.messageType as string | undefined,
+    msg.message as Record<string, unknown> | undefined,
+  );
   const metaMessageId = key.id || crypto.randomUUID();
   const timestampRaw = msg.messageTimestamp as number | string | undefined;
   const createdAt = timestampRaw
     ? new Date(Number(timestampRaw) * 1000).toISOString()
     : new Date().toISOString();
 
-  const contact = await findOrCreateContact(db, session.account_id, session.user_id, phone, contactName);
+  const contact = await findOrCreateContact(
+    db,
+    session.account_id,
+    session.user_id,
+    phone,
+    contactName,
+    // Best-effort avatar, only fetched if this turns out to be a new
+    // contact — never blocks message ingestion either way.
+    () => fetchProfilePictureUrl(session.instance_name, phone),
+  );
   if (!contact) return;
 
   const conversation = await findOrCreateConversation(
@@ -191,79 +185,4 @@ async function processInboundMessage(
   });
 
   await reopenClosedConversation(db, conversation);
-}
-
-async function findOrCreateContact(
-  db: ReturnType<typeof supabaseAdmin>,
-  accountId: string,
-  ownerUserId: string,
-  phone: string,
-  name: string,
-) {
-  const existing = await findExistingContact(db, accountId, phone);
-  if (existing) return existing;
-
-  const { data: created, error } = await db
-    .from('contacts')
-    .insert({ account_id: accountId, user_id: ownerUserId, phone, name: name || phone })
-    .select()
-    .single();
-
-  if (error) {
-    if (isUniqueViolation(error)) {
-      return findExistingContact(db, accountId, phone);
-    }
-    console.error('[whatsapp-sessions/webhook] contact create failed:', error);
-    return null;
-  }
-  return created;
-}
-
-async function findOrCreateConversation(
-  db: ReturnType<typeof supabaseAdmin>,
-  accountId: string,
-  ownerUserId: string,
-  contactId: string,
-  whatsappSessionId: string,
-) {
-  const { data: existingRows, error: findError } = await db
-    .from('conversations')
-    .select('*')
-    .eq('account_id', accountId)
-    .eq('contact_id', contactId)
-    .order('created_at', { ascending: true })
-    .limit(1);
-
-  if (findError) {
-    console.error('[whatsapp-sessions/webhook] conversation lookup failed:', findError);
-    return null;
-  }
-  if (existingRows && existingRows.length > 0) return existingRows[0];
-
-  const { data: created, error: createError } = await db
-    .from('conversations')
-    .insert({
-      account_id: accountId,
-      user_id: ownerUserId,
-      contact_id: contactId,
-      whatsapp_session_id: whatsappSessionId,
-    })
-    .select()
-    .single();
-
-  if (createError) {
-    if (isUniqueViolation(createError)) {
-      const { data: raced } = await db
-        .from('conversations')
-        .select('*')
-        .eq('account_id', accountId)
-        .eq('contact_id', contactId)
-        .order('created_at', { ascending: true })
-        .limit(1);
-      if (raced && raced.length > 0) return raced[0];
-    }
-    console.error('[whatsapp-sessions/webhook] conversation create failed:', createError);
-    return null;
-  }
-  return created;
 }
