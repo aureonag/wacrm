@@ -142,7 +142,12 @@ export function MyWhatsAppPanel() {
         toast.error(body.error || t('importHistoryError'));
         return;
       }
-      toast.success(t('importHistoryStarted'));
+      toast.success(
+        t('importHistoryDone', {
+          chats: body.chatsProcessed ?? 0,
+          messages: body.messagesImported ?? 0,
+        }),
+      );
     } catch (err) {
       console.error('[MyWhatsAppPanel] import history failed:', err);
       toast.error(t('importHistoryError'));

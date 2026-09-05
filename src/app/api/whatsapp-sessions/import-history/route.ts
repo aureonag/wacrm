@@ -1,4 +1,4 @@
-import { NextResponse, after } from 'next/server';
+import { NextResponse } from 'next/server';
 
 import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
@@ -16,22 +16,39 @@ import {
 } from '@/lib/whatsapp-sessions/evolution-client';
 
 // Bounds on a one-time, user-triggered backfill — not a full mirror of
-// years of WhatsApp history. Chosen so the background job finishes in
-// well under a minute for a typical personal account (tens to low
-// hundreds of 1:1 chats), not the ~30s+ per-chat crawl a full sync
-// would take. Re-running the import is safe (idempotent, upserts by
-// message_id) so a user who wants more can just run it again later if
-// this cap ever changes.
+// years of WhatsApp history. Chosen so the request finishes in well
+// under a minute for a typical personal account (tens to low hundreds
+// of 1:1 chats), not the crawl a full sync would take. Re-running the
+// import is safe (idempotent, upserts by message_id, and self-heals
+// any contact still on the phone-number fallback) so a user who wants
+// more can just run it again later if this cap ever changes.
 const MAX_CHATS = 50;
 const MAX_MESSAGES_PER_CHAT = 30;
+// How many chats to process concurrently. This route runs
+// synchronously (the request waits for the full import — see the note
+// on `after()` below), so bounded parallelism is what keeps a ~50-chat
+// import from taking minutes serially.
+const CONCURRENCY = 6;
+
+// Persistent-server route with maxDuration set for parity with the
+// other WhatsApp webhook routes' convention; on hosts that don't
+// enforce it (this app's Node server included) it's a no-op.
+export const maxDuration = 120;
 
 /**
  * POST /api/whatsapp-sessions/import-history — one-time backfill of
  * recent 1:1 chat history from the caller's personal WhatsApp session
- * into the Inbox. Responds immediately and does the work in `after()`;
- * imported conversations/messages stream into the Inbox via the same
- * Realtime subscriptions that already drive live inbound messages, so
- * there's no separate progress UI to build.
+ * into the Inbox.
+ *
+ * Deliberately synchronous (awaits the full import before responding)
+ * rather than using `after()` to ack-then-process: this job makes
+ * dozens of sequential Evolution API round trips per run, and in
+ * testing `after()`'s background continuation did not reliably survive
+ * long enough to finish that many calls on this host (unlike the
+ * webhook routes, whose `after()` work is a single short burst). A
+ * user-triggered, one-time action is exactly the case where making the
+ * caller wait for a real result is preferable to a fire-and-forget
+ * that might silently stop partway.
  */
 export async function POST() {
   try {
@@ -54,24 +71,37 @@ export async function POST() {
       );
     }
 
-    after(async () => {
-      try {
-        await importHistory(db, session);
-      } catch (err) {
-        console.error('[whatsapp-sessions/import-history] failed:', err);
-      }
-    });
-
-    return NextResponse.json({ started: true });
+    const result = await importHistory(db, session);
+    return NextResponse.json({ success: true, ...result });
   } catch (err) {
+    console.error('[whatsapp-sessions/import-history] failed:', err);
     return toErrorResponse(err);
   }
+}
+
+/** Run `fn` over `items` with at most `limit` in flight at once. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
 async function importHistory(
   db: ReturnType<typeof supabaseAdmin>,
   session: { user_id: string; account_id: string; instance_name: string },
-) {
+): Promise<{ chatsProcessed: number; messagesImported: number }> {
   const [chats, contactRows] = await Promise.all([
     findChats(session.instance_name),
     findContacts(session.instance_name),
@@ -93,12 +123,11 @@ async function importHistory(
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
     .slice(0, MAX_CHATS);
 
-  let chatsProcessed = 0;
-  let messagesImported = 0;
-
-  for (const chat of directChats) {
+  async function processChat(
+    chat: (typeof directChats)[number],
+  ): Promise<{ processed: boolean; imported: number }> {
     const phone = phoneFromJid(chat.remoteJid);
-    if (!phone) continue;
+    if (!phone) return { processed: false, imported: 0 };
 
     const known = contactsByPhone.get(phone);
     const displayName = known?.pushName || phone;
@@ -112,7 +141,7 @@ async function importHistory(
       displayName,
       () => Promise.resolve(avatarUrl),
     );
-    if (!contact) continue;
+    if (!contact) return { processed: false, imported: 0 };
 
     // Self-healing backfill: a contact created earlier (live webhook or
     // a previous import run) before we had this name/photo is still
@@ -136,11 +165,10 @@ async function importHistory(
       contact.id,
       session.user_id,
     );
-    if (!conversation) continue;
+    if (!conversation) return { processed: false, imported: 0 };
 
     if (records.length === 0) {
-      chatsProcessed++;
-      continue;
+      return { processed: true, imported: 0 };
     }
 
     const rows = records
@@ -169,10 +197,8 @@ async function importHistory(
 
     if (insertError) {
       console.error('[whatsapp-sessions/import-history] message insert failed:', insertError);
-      continue;
+      return { processed: false, imported: 0 };
     }
-    messagesImported += inserted?.length ?? 0;
-    chatsProcessed++;
 
     // Only refresh the preview if the newest imported message is more
     // recent than what the conversation already shows — a live inbound
@@ -192,9 +218,18 @@ async function importHistory(
         })
         .eq('id', conversation.id);
     }
+
+    return { processed: true, imported: inserted?.length ?? 0 };
   }
+
+  const outcomes = await mapWithConcurrency(directChats, CONCURRENCY, processChat);
+
+  const chatsProcessed = outcomes.filter((o) => o.processed).length;
+  const messagesImported = outcomes.reduce((sum, o) => sum + o.imported, 0);
 
   console.log(
     `[whatsapp-sessions/import-history] done for user ${session.user_id}: ${chatsProcessed} chats, ${messagesImported} messages`,
   );
+
+  return { chatsProcessed, messagesImported };
 }

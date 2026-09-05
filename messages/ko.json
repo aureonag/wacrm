@@ -2475,8 +2475,8 @@
       "qrAlt": "WhatsApp 연결용 QR 코드",
       "scanInstructions": "휴대폰에서 WhatsApp을 열고 더보기 → 연결된 기기 → 기기 연결을 누른 다음 이 코드를 스캔하세요.",
       "importHistory": "기록 가져오기",
-      "importHistoryStarted": "가져오기가 시작되었습니다 — 처리되는 대로 대화가 받은 편지함에 표시됩니다",
-      "importHistoryError": "가져오기를 시작할 수 없습니다",
+      "importHistoryDone": "가져오기 완료 — 대화 {chats}개, 메시지 {messages}개",
+      "importHistoryError": "기록을 가져올 수 없습니다",
       "importHistoryHint": "가장 최근의 1:1 대화(최대 50개)와 각 대화의 최신 메시지를 가져옵니다. 그룹과 미디어(사진, 음성 메모, 동영상)는 가져오지 않습니다."
     },
     "whatsapp": {

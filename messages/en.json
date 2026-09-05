@@ -2475,8 +2475,8 @@
       "qrAlt": "QR code to connect WhatsApp",
       "scanInstructions": "Open WhatsApp on your phone, tap More options → Linked devices → Link a device, and scan this code.",
       "importHistory": "Import history",
-      "importHistoryStarted": "Import started — conversations will appear in the Inbox as they're processed",
-      "importHistoryError": "Couldn't start the import",
+      "importHistoryDone": "Import complete — {chats} conversations, {messages} messages",
+      "importHistoryError": "Couldn't import history",
       "importHistoryHint": "Imports the most recent 1:1 chats (up to 50) with their latest messages. Groups and media (photos, voice notes, videos) aren't imported."
     },
     "whatsapp": {
