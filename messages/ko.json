@@ -592,7 +592,15 @@
   },
   "Inbox": {
     "page": {
-      "whatsappNotConnected": "WhatsApp®이 연결되어 있지 않습니다. 설정으로 이동해 계정을 연결하세요."
+      "whatsappNotConnected": "WhatsApp®이 연결되어 있지 않습니다. 설정으로 이동해 계정을 연결하세요.",
+      "viewList": "목록",
+      "viewKanban": "칸반"
+    },
+    "kanban": {
+      "pipeline": "파이프라인",
+      "loading": "불러오는 중…",
+      "dropHere": "여기에 대화를 놓으세요",
+      "toastFailedMove": "딜을 이동하지 못했습니다"
     },
     "conversationList": {
       "searchPlaceholder": "대화 검색...",

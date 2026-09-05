@@ -592,7 +592,15 @@
   },
   "Inbox": {
     "page": {
-      "whatsappNotConnected": "O WhatsApp® não está conectado. Acesse Configurações para conectar sua conta."
+      "whatsappNotConnected": "O WhatsApp® não está conectado. Acesse Configurações para conectar sua conta.",
+      "viewList": "Lista",
+      "viewKanban": "Kanban"
+    },
+    "kanban": {
+      "pipeline": "Pipeline",
+      "loading": "Carregando…",
+      "dropHere": "Solte uma conversa aqui",
+      "toastFailedMove": "Falha ao mover o negócio"
     },
     "conversationList": {
       "searchPlaceholder": "Buscar conversas...",

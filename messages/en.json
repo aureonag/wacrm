@@ -592,7 +592,15 @@
   },
   "Inbox": {
     "page": {
-      "whatsappNotConnected": "WhatsApp® is not connected. Go to Settings to connect your account."
+      "whatsappNotConnected": "WhatsApp® is not connected. Go to Settings to connect your account.",
+      "viewList": "List",
+      "viewKanban": "Kanban"
+    },
+    "kanban": {
+      "pipeline": "Pipeline",
+      "loading": "Loading…",
+      "dropHere": "Drop a conversation here",
+      "toastFailedMove": "Failed to move the deal"
     },
     "conversationList": {
       "searchPlaceholder": "Search conversations...",

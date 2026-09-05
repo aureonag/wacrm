@@ -13,8 +13,9 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { MessageThread } from "@/components/inbox/message-thread";
 import { ContactSidebar } from "@/components/inbox/contact-sidebar";
+import { InboxKanbanView } from "@/components/inbox/inbox-kanban-view";
 import { toast } from "sonner";
-import { WifiOff } from "lucide-react";
+import { WifiOff, List, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Remembers the agent's show/hide choice for the desktop contact panel
@@ -69,6 +70,7 @@ function InboxPageInner() {
    * below reconciles to the stored value right after mount instead.
    */
   const [contactPanelOpen, setContactPanelOpen] = useState(true);
+  const [view, setView] = useState<"list" | "kanban">("list");
   useEffect(() => {
     try {
       const stored = localStorage.getItem(CONTACT_PANEL_STORAGE_KEY);
@@ -488,6 +490,19 @@ function InboxPageInner() {
     [activeConversation?.id, router]
   );
 
+  // Fase 4 — Kanban card click: switch back to list view and open the
+  // conversation, same as clicking it in the list. `conversations` is
+  // already the full unpaginated set (loaded by ConversationList, which
+  // stays mounted under the kanban view), so no extra fetch is needed.
+  const handleSelectFromKanban = useCallback(
+    (conversationId: string) => {
+      const conv = conversations.find((c) => c.id === conversationId);
+      setView("list");
+      if (conv) handleSelectConversation(conv);
+    },
+    [conversations, handleSelectConversation],
+  );
+
   // Mobile "back" — deselect the conversation so the list pane comes
   // back. Also clears the ?c= param so a refresh lands on the list
   // instead of re-opening the thread the user just backed out of.
@@ -574,7 +589,44 @@ function InboxPageInner() {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      {/* List/Kanban toggle — desktop only, mirrors the Pipeline board's
+          kanban for conversations already linked to a deal (Fase 4). */}
+      <div className="hidden shrink-0 items-center gap-1 border-b border-border px-4 py-1.5 lg:flex">
+        <button
+          type="button"
+          onClick={() => setView("list")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+            view === "list"
+              ? "bg-primary-soft text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          <List className="size-3.5" />
+          {t("viewList")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("kanban")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+            view === "kanban"
+              ? "bg-primary-soft text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          <LayoutGrid className="size-3.5" />
+          {t("viewKanban")}
+        </button>
+      </div>
+
+      {view === "kanban" && (
+        <div className="hidden flex-1 overflow-hidden lg:flex">
+          <InboxKanbanView onSelectConversation={handleSelectFromKanban} />
+        </div>
+      )}
+
+      <div className={cn("flex-1 overflow-hidden", view === "kanban" ? "hidden" : "flex")}>
         {/* Left panel: Conversation list.
             Hidden on mobile when a conversation is selected so the
             thread can occupy the full width. Always visible on lg+. */}
