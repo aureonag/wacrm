@@ -8,7 +8,12 @@ import {
   findOrCreateConversation,
   phoneFromJid,
 } from '@/lib/whatsapp-sessions/contact-sync';
-import { findChats, findMessages } from '@/lib/whatsapp-sessions/evolution-client';
+import {
+  findChats,
+  findContacts,
+  findMessages,
+  type EvolutionContact,
+} from '@/lib/whatsapp-sessions/evolution-client';
 
 // Bounds on a one-time, user-triggered backfill — not a full mirror of
 // years of WhatsApp history. Chosen so the background job finishes in
@@ -67,7 +72,21 @@ async function importHistory(
   db: ReturnType<typeof supabaseAdmin>,
   session: { user_id: string; account_id: string; instance_name: string },
 ) {
-  const chats = await findChats(session.instance_name);
+  const [chats, contactRows] = await Promise.all([
+    findChats(session.instance_name),
+    findContacts(session.instance_name),
+  ]);
+
+  // Baileys' own contact store (findContacts) is the authoritative
+  // name/photo per number — independent of any one chat's message
+  // history. Far more reliable than a chat's `lastMessage.pushName`
+  // (whoever sent the newest message — "Você" when that's Allan
+  // himself) or scanning message records for one with a name.
+  const contactsByPhone = new Map<string, EvolutionContact>();
+  for (const c of contactRows) {
+    const phone = phoneFromJid(c.remoteJid);
+    if (phone) contactsByPhone.set(phone, c);
+  }
 
   const directChats = chats
     .filter((c) => phoneFromJid(c.remoteJid))
@@ -81,16 +100,9 @@ async function importHistory(
     const phone = phoneFromJid(chat.remoteJid);
     if (!phone) continue;
 
-    const records = await findMessages(session.instance_name, chat.remoteJid, MAX_MESSAGES_PER_CHAT);
-
-    // The contact's own name only ever shows up on a message THEY sent —
-    // `chat.lastMessage.pushName` is whoever sent the most recent message
-    // in the chat, which is "Você" (literally "You") whenever that
-    // happens to be Allan's own outbound reply. Find the newest
-    // customer-authored record instead so the contact isn't created
-    // named "Você".
-    const customerRecord = records.find((r) => r.key?.fromMe === false && r.pushName);
-    const displayName = customerRecord?.pushName || phone;
+    const known = contactsByPhone.get(phone);
+    const displayName = known?.pushName || phone;
+    const avatarUrl = known?.profilePicUrl || chat.profilePicUrl || null;
 
     const contact = await findOrCreateContact(
       db,
@@ -98,9 +110,24 @@ async function importHistory(
       session.user_id,
       phone,
       displayName,
-      () => Promise.resolve(chat.profilePicUrl ?? null),
+      () => Promise.resolve(avatarUrl),
     );
     if (!contact) continue;
+
+    // Self-healing backfill: a contact created earlier (live webhook or
+    // a previous import run) before we had this name/photo is still
+    // sitting on the phone-number fallback — fill it in now rather than
+    // requiring the user to notice and re-import. Never overwrites a
+    // name/photo that's already something other than the raw fallback,
+    // so a manual edit or a genuinely-resolved value is never clobbered.
+    const contactUpdate: Record<string, unknown> = {};
+    if (contact.name === phone && displayName !== phone) contactUpdate.name = displayName;
+    if (!contact.avatar_url && avatarUrl) contactUpdate.avatar_url = avatarUrl;
+    if (Object.keys(contactUpdate).length > 0) {
+      await db.from('contacts').update(contactUpdate).eq('id', contact.id);
+    }
+
+    const records = await findMessages(session.instance_name, chat.remoteJid, MAX_MESSAGES_PER_CHAT);
 
     const conversation = await findOrCreateConversation(
       db,

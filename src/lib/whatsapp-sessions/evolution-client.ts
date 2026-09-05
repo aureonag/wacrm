@@ -219,6 +219,27 @@ export async function findChats(instanceName: string): Promise<EvolutionChat[]> 
   return Array.isArray(data) ? data : [];
 }
 
+export interface EvolutionContact {
+  remoteJid: string;
+  pushName?: string | null;
+  profilePicUrl?: string | null;
+}
+
+/**
+ * Baileys' own contact store for this instance — the authoritative
+ * name/photo per number, independent of any single chat's message
+ * history. Far more reliable than `findChats`' `lastMessage.pushName`
+ * (whoever sent the chat's newest message — "Você" when that's the
+ * account owner) or scanning message records for one with a name.
+ */
+export async function findContacts(instanceName: string): Promise<EvolutionContact[]> {
+  const data = await request<EvolutionContact[]>(
+    `/chat/findContacts/${encodeURIComponent(instanceName)}`,
+    { method: 'POST', body: {} },
+  );
+  return Array.isArray(data) ? data : [];
+}
+
 export interface EvolutionMessageRecord {
   key: { id?: string; fromMe?: boolean; remoteJid?: string };
   pushName?: string | null;
