@@ -2438,6 +2438,23 @@
       "loadError": "Não foi possível carregar a configuração de handoff",
       "saveError": "Não foi possível salvar a configuração de handoff"
     },
+    "myWhatsapp": {
+      "title": "Meu WhatsApp",
+      "description": "Conecte seu próprio número pessoal escaneando um QR code — como o WhatsApp Web. Independente do número oficial da empresa configurado em WhatsApp, abaixo.",
+      "connected": "Conectado",
+      "connectedDesc": "Seu WhatsApp pessoal está conectado e recebendo mensagens.",
+      "connectedPhone": "Conectado como {phone}",
+      "disconnect": "Desconectar",
+      "disconnectedToast": "WhatsApp desconectado",
+      "disconnectError": "Não foi possível desconectar",
+      "notConnected": "Não conectado",
+      "notConnectedDesc": "Conecte seu WhatsApp pessoal para ter sua própria caixa de entrada.",
+      "connect": "Conectar",
+      "connectError": "Não foi possível gerar o QR code",
+      "newQr": "Gerar novo QR",
+      "qrAlt": "QR code para conectar o WhatsApp",
+      "scanInstructions": "Abra o WhatsApp no seu celular, toque em Mais opções → Aparelhos conectados → Conectar aparelho, e escaneie este código."
+    },
     "whatsapp": {
       "title": "Conexão com o WhatsApp",
       "description": "Conecte sua API do WhatsApp Business da Meta. Credenciais, webhook e passos de configuração ficam todos aqui.",
@@ -2515,6 +2532,7 @@
       "profile": "Seu perfil",
       "security": "Login e segurança",
       "appearance": "Aparência",
+      "my-whatsapp": "Meu WhatsApp",
       "whatsapp": "WhatsApp",
       "templates": "Modelos",
       "quick-replies": "Respostas rápidas",

@@ -2438,6 +2438,23 @@
       "loadError": "Failed to load handoff settings",
       "saveError": "Failed to save handoff settings"
     },
+    "myWhatsapp": {
+      "title": "My WhatsApp",
+      "description": "Connect your own personal number by scanning a QR code — like WhatsApp Web. Independent of the official company number configured under WhatsApp, below.",
+      "connected": "Connected",
+      "connectedDesc": "Your personal WhatsApp is connected and receiving messages.",
+      "connectedPhone": "Connected as {phone}",
+      "disconnect": "Disconnect",
+      "disconnectedToast": "WhatsApp disconnected",
+      "disconnectError": "Couldn't disconnect",
+      "notConnected": "Not connected",
+      "notConnectedDesc": "Connect your personal WhatsApp to get your own inbox.",
+      "connect": "Connect",
+      "connectError": "Couldn't generate the QR code",
+      "newQr": "Generate new QR",
+      "qrAlt": "QR code to connect WhatsApp",
+      "scanInstructions": "Open WhatsApp on your phone, tap More options → Linked devices → Link a device, and scan this code."
+    },
     "whatsapp": {
       "title": "WhatsApp connection",
       "description": "Connect your Meta WhatsApp Business API. Credentials, webhook, and setup steps all live here.",
@@ -2515,6 +2532,7 @@
       "profile": "Your profile",
       "security": "Login & security",
       "appearance": "Appearance",
+      "my-whatsapp": "My WhatsApp",
       "whatsapp": "WhatsApp",
       "templates": "Templates",
       "quick-replies": "Quick replies",

@@ -2438,6 +2438,23 @@
       "loadError": "핸드오프 설정을 불러오지 못했습니다",
       "saveError": "핸드오프 설정을 저장하지 못했습니다"
     },
+    "myWhatsapp": {
+      "title": "내 WhatsApp",
+      "description": "QR 코드를 스캔하여 본인 개인 번호를 연결하세요 — WhatsApp Web과 동일한 방식입니다. 아래의 회사 공식 번호(WhatsApp) 설정과는 별개입니다.",
+      "connected": "연결됨",
+      "connectedDesc": "개인 WhatsApp이 연결되어 메시지를 수신하고 있습니다.",
+      "connectedPhone": "{phone}(으)로 연결됨",
+      "disconnect": "연결 해제",
+      "disconnectedToast": "WhatsApp 연결이 해제되었습니다",
+      "disconnectError": "연결을 해제할 수 없습니다",
+      "notConnected": "연결되지 않음",
+      "notConnectedDesc": "개인 WhatsApp을 연결하면 나만의 받은 편지함이 생깁니다.",
+      "connect": "연결하기",
+      "connectError": "QR 코드를 생성할 수 없습니다",
+      "newQr": "새 QR 생성",
+      "qrAlt": "WhatsApp 연결용 QR 코드",
+      "scanInstructions": "휴대폰에서 WhatsApp을 열고 더보기 → 연결된 기기 → 기기 연결을 누른 다음 이 코드를 스캔하세요."
+    },
     "whatsapp": {
       "title": "WhatsApp 연결",
       "description": "Meta WhatsApp 비즈니스 API를 연결하세요. 자격 증명, 웹훅, 설정 단계가 모두 여기 있습니다.",
@@ -2515,6 +2532,7 @@
       "profile": "내 프로필",
       "security": "로그인 & 보안",
       "appearance": "화면 설정",
+      "my-whatsapp": "내 WhatsApp",
       "whatsapp": "WhatsApp",
       "templates": "템플릿",
       "quick-replies": "빠른 답장",

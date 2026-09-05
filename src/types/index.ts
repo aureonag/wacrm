@@ -1172,3 +1172,12 @@ export interface TaskActivity {
   created_at: string;
   author?: Profile;
 }
+
+/** Personal WhatsApp connection (QR-code / Evolution API) — see migration 072. */
+export interface WhatsAppSession {
+  user_id: string;
+  status: 'disconnected' | 'connecting' | 'connected';
+  phone_number: string | null;
+  connected_at: string | null;
+  created_at: string;
+}
