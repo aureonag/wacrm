@@ -81,7 +81,16 @@ async function importHistory(
     const phone = phoneFromJid(chat.remoteJid);
     if (!phone) continue;
 
-    const displayName = chat.lastMessage?.pushName || chat.pushName || phone;
+    const records = await findMessages(session.instance_name, chat.remoteJid, MAX_MESSAGES_PER_CHAT);
+
+    // The contact's own name only ever shows up on a message THEY sent —
+    // `chat.lastMessage.pushName` is whoever sent the most recent message
+    // in the chat, which is "Você" (literally "You") whenever that
+    // happens to be Allan's own outbound reply. Find the newest
+    // customer-authored record instead so the contact isn't created
+    // named "Você".
+    const customerRecord = records.find((r) => r.key?.fromMe === false && r.pushName);
+    const displayName = customerRecord?.pushName || phone;
 
     const contact = await findOrCreateContact(
       db,
@@ -102,7 +111,6 @@ async function importHistory(
     );
     if (!conversation) continue;
 
-    const records = await findMessages(session.instance_name, chat.remoteJid, MAX_MESSAGES_PER_CHAT);
     if (records.length === 0) {
       chatsProcessed++;
       continue;
