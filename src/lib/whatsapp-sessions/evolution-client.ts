@@ -248,17 +248,51 @@ export interface EvolutionMessageRecord {
   messageTimestamp?: number | string;
 }
 
-/** Most recent `limit` messages Baileys has synced for one chat. */
+export interface FindMessagesPage {
+  records: EvolutionMessageRecord[];
+  currentPage: number;
+  totalPages: number;
+}
+
+/** One page of messages Baileys has synced for one chat (newest first). */
 export async function findMessages(
   instanceName: string,
   remoteJid: string,
   limit: number,
+  page = 1,
+): Promise<FindMessagesPage> {
+  const data = await request<{
+    messages?: { records?: EvolutionMessageRecord[]; currentPage?: number; pages?: number };
+  }>(`/chat/findMessages/${encodeURIComponent(instanceName)}`, {
+    method: 'POST',
+    body: { where: { key: { remoteJid } }, limit, page },
+  });
+  return {
+    records: data?.messages?.records ?? [],
+    currentPage: data?.messages?.currentPage ?? page,
+    totalPages: data?.messages?.pages ?? 1,
+  };
+}
+
+/** All messages Baileys has synced for one chat, walking every page. */
+export async function findAllMessages(
+  instanceName: string,
+  remoteJid: string,
+  pageSize = 100,
 ): Promise<EvolutionMessageRecord[]> {
-  const data = await request<{ messages?: { records?: EvolutionMessageRecord[] } }>(
-    `/chat/findMessages/${encodeURIComponent(instanceName)}`,
-    { method: 'POST', body: { where: { key: { remoteJid } }, limit } },
-  );
-  return data?.messages?.records ?? [];
+  const all: EvolutionMessageRecord[] = [];
+  let page = 1;
+  // Hard ceiling so a pagination-count bug can't spin this forever —
+  // 500 pages * 100/page = 50k messages, far beyond any single chat's
+  // realistic history.
+  const MAX_PAGES = 500;
+  while (page <= MAX_PAGES) {
+    const { records, totalPages } = await findMessages(instanceName, remoteJid, pageSize, page);
+    all.push(...records);
+    if (page >= totalPages || records.length === 0) break;
+    page++;
+  }
+  return all;
 }
 
 /** Send a plain text message through a connected personal instance (Fase 2). */

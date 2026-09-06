@@ -1,6 +1,6 @@
 'use client';
 
-// MyWhatsAppPanel — Settings → Meu WhatsApp (migration 072, Fase 1).
+// MyWhatsAppPanel — Settings → Meu WhatsApp (migration 072/073).
 // Personal WhatsApp connection via QR code (Evolution API), separate
 // from the account-wide official Meta number configured in the
 // "WhatsApp" section above. Any account member manages only their own
@@ -20,6 +20,11 @@ import type { WhatsAppSession } from '@/types';
 
 const POLL_MS = 3000;
 
+interface ImportProgress {
+  totalChats: number;
+  doneChats: number;
+}
+
 export function MyWhatsAppPanel() {
   const t = useTranslations('Settings.myWhatsapp');
   const { user } = useAuth();
@@ -28,9 +33,15 @@ export function MyWhatsAppPanel() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [importRunning, setImportRunning] = useState(false);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  // Guards against two overlapping process-loops (e.g. the mount-time
+  // auto-resume racing a manual click) — the loop checks this before
+  // each iteration and bails if another loop already claimed it.
+  const importLoopTokenRef = useRef(0);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -45,6 +56,59 @@ export function MyWhatsAppPanel() {
     const body = (await res.json()) as { session: WhatsAppSession | null };
     setSession(body.session);
     return body.session;
+  }, []);
+
+  const runImportLoop = useCallback(async () => {
+    const token = ++importLoopTokenRef.current;
+    setImportRunning(true);
+    let messagesTotal = 0;
+    try {
+      while (importLoopTokenRef.current === token) {
+        const res = await fetch('/api/whatsapp-sessions/import-history/process', {
+          method: 'POST',
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(body.error || t('importHistoryError'));
+          return;
+        }
+        messagesTotal += body.messagesImportedThisBatch ?? 0;
+        setImportProgress({ totalChats: body.totalChats ?? 0, doneChats: body.doneChats ?? 0 });
+        if (body.done) {
+          toast.success(
+            t('importHistoryDone', { chats: body.doneChats ?? 0, messages: messagesTotal }),
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('[MyWhatsAppPanel] import process loop failed:', err);
+      toast.error(t('importHistoryError'));
+    } finally {
+      if (importLoopTokenRef.current === token) setImportRunning(false);
+    }
+  }, [t]);
+
+  // On mount: if a previous run was left "running" (tab closed, page
+  // reloaded mid-import), pick up where it stopped instead of making
+  // the user notice and click again.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/whatsapp-sessions/import-history/status', {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const body = await res.json();
+        setImportProgress({ totalChats: body.totalChats ?? 0, doneChats: body.doneChats ?? 0 });
+        if (body.status === 'running') {
+          void runImportLoop();
+        }
+      } catch {
+        // Best-effort — a failed status check just means no resume banner.
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -114,7 +178,9 @@ export function MyWhatsAppPanel() {
 
   async function handleDisconnect() {
     if (!user?.id) return;
+    if (!window.confirm(t('disconnectConfirm'))) return;
     setDisconnecting(true);
+    importLoopTokenRef.current++; // stop any running import loop
     try {
       const res = await fetch(`/api/whatsapp-sessions/${user.id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -124,6 +190,8 @@ export function MyWhatsAppPanel() {
       }
       setQrBase64(null);
       setSession(null);
+      setImportProgress(null);
+      setImportRunning(false);
       toast.success(t('disconnectedToast'));
     } catch (err) {
       console.error('[MyWhatsAppPanel] disconnect failed:', err);
@@ -134,25 +202,18 @@ export function MyWhatsAppPanel() {
   }
 
   async function handleImportHistory() {
-    setImporting(true);
     try {
-      const res = await fetch('/api/whatsapp-sessions/import-history', { method: 'POST' });
+      const res = await fetch('/api/whatsapp-sessions/import-history/start', { method: 'POST' });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         toast.error(body.error || t('importHistoryError'));
         return;
       }
-      toast.success(
-        t('importHistoryDone', {
-          chats: body.chatsProcessed ?? 0,
-          messages: body.messagesImported ?? 0,
-        }),
-      );
+      setImportProgress({ totalChats: body.totalChats ?? 0, doneChats: 0 });
+      void runImportLoop();
     } catch (err) {
-      console.error('[MyWhatsAppPanel] import history failed:', err);
+      console.error('[MyWhatsAppPanel] import history start failed:', err);
       toast.error(t('importHistoryError'));
-    } finally {
-      setImporting(false);
     }
   }
 
@@ -165,6 +226,10 @@ export function MyWhatsAppPanel() {
   }
 
   const status = session?.status ?? 'disconnected';
+  const importPct =
+    importProgress && importProgress.totalChats > 0
+      ? Math.round((importProgress.doneChats / importProgress.totalChats) * 100)
+      : 0;
 
   return (
     <section className="animate-in fade-in-50 space-y-6 duration-200">
@@ -186,23 +251,15 @@ export function MyWhatsAppPanel() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleImportHistory}
-                  disabled={importing}
-                >
-                  {importing ? (
+                <Button variant="outline" onClick={handleImportHistory} disabled={importRunning}>
+                  {importRunning ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <History className="size-4" />
                   )}
                   {t('importHistory')}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleDisconnect}
-                  disabled={disconnecting}
-                >
+                <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting}>
                   {disconnecting ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
@@ -211,6 +268,29 @@ export function MyWhatsAppPanel() {
                   {t('disconnect')}
                 </Button>
               </div>
+
+              {importProgress && importProgress.totalChats > 0 && (
+                <div className="w-full max-w-[360px] space-y-1.5">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${importPct}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {importRunning
+                      ? t('importProgressRunning', {
+                          done: importProgress.doneChats,
+                          total: importProgress.totalChats,
+                        })
+                      : t('importProgressPaused', {
+                          done: importProgress.doneChats,
+                          total: importProgress.totalChats,
+                        })}
+                  </p>
+                </div>
+              )}
+
               <p className="max-w-[42ch] text-xs text-muted-foreground">
                 {t('importHistoryHint')}
               </p>

@@ -11,13 +11,40 @@ import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
 import { normalizePhone } from '@/lib/whatsapp/phone-utils';
 
 // Baileys' remoteJid is "<digits>@s.whatsapp.net" for a 1:1 chat, or
-// "<digits>@g.us" for a group. Group inbound/import is out of scope
-// (mirrors how the official Meta webhook has no group concept either).
+// "<digits>@g.us" for a group. Live inbound (the webhook) only handles
+// 1:1 — mirrors how the official Meta webhook has no group concept
+// either. History import handles both (see identityFromJid below).
 export function phoneFromJid(jid: string | undefined | null): string | null {
   if (!jid) return null;
   if (jid.endsWith('@g.us')) return null;
   const [digits] = jid.split('@');
   return normalizePhone(digits ?? '');
+}
+
+/**
+ * Resolve a chat's identity for history import, which — unlike the
+ * live webhook — also imports groups. A group has no phone number, so
+ * its numeric id (unique, stable) is stored in `contacts.phone` as an
+ * arbitrary-but-unique key; `contacts.is_group` is what tells the UI
+ * (and anything that shouldn't treat a group as a person, like
+ * "Vincular a um pipeline") which kind of row it is. Returns null for
+ * jids this app doesn't have an identity model for yet (e.g. `@lid`
+ * addressing — a WhatsApp identity system without a stable phone
+ * number Evolution API exposes).
+ */
+export function identityFromJid(
+  jid: string | undefined | null,
+): { id: string; isGroup: boolean } | null {
+  if (!jid) return null;
+  if (jid.endsWith('@g.us')) {
+    const [id] = jid.split('@');
+    return id ? { id, isGroup: true } : null;
+  }
+  if (jid.endsWith('@s.whatsapp.net')) {
+    const phone = phoneFromJid(jid);
+    return phone ? { id: phone, isGroup: false } : null;
+  }
+  return null;
 }
 
 /**
@@ -74,6 +101,7 @@ export async function findOrCreateContact(
   // Lazy — only called when a contact row is actually about to be
   // inserted, so an existing contact never pays for an avatar lookup.
   fetchAvatarUrl?: () => Promise<string | null>,
+  isGroup = false,
 ) {
   const existing = await findExistingContact(db, accountId, phone);
   if (existing) return existing;
@@ -88,6 +116,7 @@ export async function findOrCreateContact(
       phone,
       name: name || phone,
       avatar_url: avatarUrl || null,
+      is_group: isGroup,
     })
     .select()
     .single();

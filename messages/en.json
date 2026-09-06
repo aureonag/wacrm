@@ -2474,10 +2474,13 @@
       "newQr": "Generate new QR",
       "qrAlt": "QR code to connect WhatsApp",
       "scanInstructions": "Open WhatsApp on your phone, tap More options → Linked devices → Link a device, and scan this code.",
-      "importHistory": "Import history",
+      "importHistory": "Import full history",
       "importHistoryDone": "Import complete — {chats} conversations, {messages} messages",
       "importHistoryError": "Couldn't import history",
-      "importHistoryHint": "Imports the most recent 1:1 chats (up to 50) with their latest messages. Groups and media (photos, voice notes, videos) aren't imported."
+      "importHistoryHint": "Imports every conversation (including groups) with all of its messages. Can take several minutes — you can leave the page and come back, it resumes where it left off. Media (photos, voice notes, videos) isn't imported, only text.",
+      "importProgressRunning": "Importing... {done} of {total} conversations",
+      "importProgressPaused": "Paused at {done} of {total} conversations — click Import to continue",
+      "disconnectConfirm": "Disconnecting will delete all history imported from this personal WhatsApp (contacts, conversations, and messages). This can't be undone. Continue?"
     },
     "whatsapp": {
       "title": "WhatsApp connection",
