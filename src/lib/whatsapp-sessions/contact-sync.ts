@@ -150,7 +150,24 @@ export async function findOrCreateConversation(
     console.error('[whatsapp-sessions] conversation lookup failed:', findError);
     return null;
   }
-  if (existingRows && existingRows.length > 0) return existingRows[0];
+  if (existingRows && existingRows.length > 0) {
+    const existing = existingRows[0];
+    // Re-link on every message, not just at creation. A conversation
+    // can lose its tag (disconnect nulls it — migration 072's FK is ON
+    // DELETE SET NULL) and then get a new inbound message after the
+    // person reconnects; without this, it stays permanently untagged
+    // and a future disconnect's cleanup can never find it again.
+    if (existing.whatsapp_session_id !== whatsappSessionId) {
+      const { data: relinked } = await db
+        .from('conversations')
+        .update({ whatsapp_session_id: whatsappSessionId })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      return relinked ?? existing;
+    }
+    return existing;
+  }
 
   const { data: created, error: createError } = await db
     .from('conversations')
