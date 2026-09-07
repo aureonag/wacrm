@@ -47,6 +47,12 @@ export async function POST() {
           user_id: ctx.userId,
           remote_jid: chat.remoteJid,
           is_group: identity.isGroup,
+          // For a group, findChats' pushName/profilePicUrl IS the
+          // group's subject/photo (verified live) -- there's no
+          // separate "contact" entry for a group to look up later,
+          // so this is the only chance to capture it.
+          chat_name: chat.pushName || null,
+          chat_avatar_url: chat.profilePicUrl || null,
         };
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);

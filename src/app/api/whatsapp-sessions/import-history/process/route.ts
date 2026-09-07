@@ -48,7 +48,7 @@ export async function POST() {
 
     const { data: batch, error: batchError } = await db
       .from('whatsapp_history_import_chats')
-      .select('remote_jid, is_group')
+      .select('remote_jid, is_group, chat_name, chat_avatar_url')
       .eq('user_id', ctx.userId)
       .eq('status', 'pending')
       .order('updated_at', { ascending: true })
@@ -118,7 +118,7 @@ export async function POST() {
 async function processOneChat(
   db: ReturnType<typeof supabaseAdmin>,
   session: { user_id: string; account_id: string; instance_name: string },
-  chat: { remote_jid: string; is_group: boolean },
+  chat: { remote_jid: string; is_group: boolean; chat_name: string | null; chat_avatar_url: string | null },
   contactsByPhone: Map<string, EvolutionContact>,
 ): Promise<number> {
   const markResult = (status: 'done' | 'failed', messagesImported: number) =>
@@ -134,9 +134,15 @@ async function processOneChat(
     return 0;
   }
 
+  // A group has no entry in Baileys' contact store -- its name/photo
+  // only ever come from the chat itself (findChats' pushName/
+  // profilePicUrl IS the group's subject/photo, captured at queue
+  // time). For a 1:1, the contact store is authoritative when it has
+  // the number, but the chat's own pushName/profilePicUrl is a real
+  // fallback for numbers that were never saved as a contact.
   const known = identity.isGroup ? undefined : contactsByPhone.get(identity.id);
-  const displayName = known?.pushName || identity.id;
-  const avatarUrl = known?.profilePicUrl || null;
+  const displayName = known?.pushName || chat.chat_name || identity.id;
+  const avatarUrl = known?.profilePicUrl || chat.chat_avatar_url || null;
 
   const contact = await findOrCreateContact(
     db,
