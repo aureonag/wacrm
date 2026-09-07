@@ -10,7 +10,9 @@ import {
 } from '@/lib/whatsapp-sessions/contact-sync';
 import {
   findAllMessages,
+  findChats,
   findContacts,
+  type EvolutionChat,
   type EvolutionContact,
 } from '@/lib/whatsapp-sessions/evolution-client';
 
@@ -72,8 +74,20 @@ export async function POST() {
         if (identity && !identity.isGroup) contactsByPhone.set(identity.id, c);
       }
 
+      // Groups have no entry in Baileys' contact store -- their name/
+      // photo only ever come from the chat itself (findChats' pushName/
+      // profilePicUrl IS the group's subject/photo). Fetched live here
+      // rather than trusting whatsapp_history_import_chats.chat_name,
+      // since that column is only populated for chats queued by a
+      // /start call made after that column existed -- a chat queued
+      // earlier and merely reset back to 'pending' would otherwise
+      // have it NULL forever.
+      const chatRows = await findChats(session.instance_name).catch(() => []);
+      const chatsByJid = new Map<string, EvolutionChat>();
+      for (const c of chatRows) chatsByJid.set(c.remoteJid, c);
+
       for (const chat of batch) {
-        const imported = await processOneChat(db, session, chat, contactsByPhone);
+        const imported = await processOneChat(db, session, chat, contactsByPhone, chatsByJid);
         messagesImportedThisBatch += imported;
       }
     }
@@ -120,6 +134,7 @@ async function processOneChat(
   session: { user_id: string; account_id: string; instance_name: string },
   chat: { remote_jid: string; is_group: boolean; chat_name: string | null; chat_avatar_url: string | null },
   contactsByPhone: Map<string, EvolutionContact>,
+  chatsByJid: Map<string, EvolutionChat>,
 ): Promise<number> {
   const markResult = (status: 'done' | 'failed', messagesImported: number) =>
     db
@@ -134,15 +149,14 @@ async function processOneChat(
     return 0;
   }
 
-  // A group has no entry in Baileys' contact store -- its name/photo
-  // only ever come from the chat itself (findChats' pushName/
-  // profilePicUrl IS the group's subject/photo, captured at queue
-  // time). For a 1:1, the contact store is authoritative when it has
-  // the number, but the chat's own pushName/profilePicUrl is a real
-  // fallback for numbers that were never saved as a contact.
+  // For a 1:1, the contact store is authoritative when it has the
+  // number; the live chat and the stored queue-time snapshot are both
+  // fallbacks for numbers never saved as a contact. For a group there
+  // is no contact-store entry at all, so the live chat is primary.
   const known = identity.isGroup ? undefined : contactsByPhone.get(identity.id);
-  const displayName = known?.pushName || chat.chat_name || identity.id;
-  const avatarUrl = known?.profilePicUrl || chat.chat_avatar_url || null;
+  const liveChat = chatsByJid.get(chat.remote_jid);
+  const displayName = known?.pushName || liveChat?.pushName || chat.chat_name || identity.id;
+  const avatarUrl = known?.profilePicUrl || liveChat?.profilePicUrl || chat.chat_avatar_url || null;
 
   const contact = await findOrCreateContact(
     db,
