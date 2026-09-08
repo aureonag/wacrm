@@ -1104,7 +1104,11 @@ async function parseMessageContent(
     default:
       return {
         ...empty,
-        contentText: `[Unsupported message type: ${message.type}]`,
+        // Kept in Portuguese and worded the same as the Baileys path's
+        // fallback (src/lib/whatsapp-sessions/contact-sync.ts) so the
+        // thread never shows a raw internal type name regardless of
+        // which WhatsApp channel a message came in on.
+        contentText: '[Mensagem não suportada]',
       }
   }
 }

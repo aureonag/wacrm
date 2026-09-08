@@ -29,6 +29,7 @@ import { formatDistanceToNow } from "date-fns";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtime } from "@/hooks/use-realtime";
 import { loadPipelines, loadPipelineStages } from "@/lib/pipelines/queries";
 import { formatCurrency } from "@/lib/currency";
 import type { Conversation, Deal, Pipeline, PipelineStage } from "@/types";
@@ -89,6 +90,50 @@ export function InboxKanbanView({
   useEffect(() => {
     loadStagesAndDeals();
   }, [loadStagesAndDeals]);
+
+  const handleDealEvent = useCallback(
+    (event: { eventType: string; new: Deal }) => {
+      if (event.eventType === "UPDATE") {
+        const updated = event.new;
+        if (updated.pipeline_id !== pipelineId) return;
+        setDeals((prev) => {
+          const exists = prev.some((d) => d.id === updated.id);
+          if (!exists) return prev;
+          return prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d));
+        });
+        return;
+      }
+      // INSERT / DELETE need the joined contact+conversation this
+      // event doesn't carry — cheapest correct option is a reload.
+      loadStagesAndDeals();
+    },
+    [pipelineId, loadStagesAndDeals],
+  );
+
+  const handleConversationEvent = useCallback((event: { new: Conversation }) => {
+    const updated = event.new;
+    setDeals((prev) =>
+      prev.map((d) =>
+        d.conversation_id === updated.id
+          ? { ...d, conversation: { ...(d.conversation ?? updated), ...updated } }
+          : d,
+      ),
+    );
+  }, []);
+
+  // Live-patch: a stage move made in the Pipeline board (or by another
+  // agent, or from this same view in another tab) shows up here without
+  // a refetch, and vice versa — same `deals` realtime channel the
+  // Pipeline board subscribes to (migration 076 added the table to the
+  // publication). A brand new deal/unlink isn't patchable from the bare
+  // payload (no joined contact/conversation), so those fall back to a
+  // full reload; a plain stage_id change is the overwhelmingly common
+  // case and is patched in place.
+  useRealtime({
+    channelName: "inbox-kanban",
+    onDealEvent: handleDealEvent,
+    onConversationEvent: handleConversationEvent,
+  });
 
   const sortedStages = useMemo(
     () => [...stages].sort((a, b) => a.position - b.position),

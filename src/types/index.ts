@@ -216,6 +216,14 @@ export interface Conversation {
   updated_at: string;
   contact?: Contact;
   /**
+   * Which team member's personal QR connection (migration 072) this
+   * conversation came through, if any — `null`/`undefined` means it
+   * came via the account's official Meta number instead. The 24h/
+   * template-required session rule is a Meta Cloud API business rule
+   * and must be skipped whenever this is set.
+   */
+  whatsapp_session_id?: string | null;
+  /**
    * AI auto-reply state for this thread (migration 029 + 033):
    *  - `ai_autoreply_disabled` — the bot is paused here (a human took
    *    over, or the model handed off). Sticky until re-enabled.

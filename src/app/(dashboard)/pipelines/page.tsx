@@ -23,6 +23,7 @@ import { GitBranch, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtime } from "@/hooks/use-realtime";
 import { GatedButton } from "@/components/ui/gated-button";
 import { useTranslations } from "next-intl";
 import {
@@ -237,6 +238,30 @@ export default function PipelinesPage() {
     if (!selectedPipelineId) return;
     setDeals(await loadDeals(selectedPipelineId));
   }, [loadDeals, selectedPipelineId]);
+
+  // Live-patch: a stage move made from the Inbox's Kanban view (same
+  // `deals.stage_id` write, see inbox-kanban-view.tsx) shows up here
+  // without a refetch, and vice versa — migration 076 added `deals` to
+  // the realtime publication for exactly this. INSERT/DELETE fall back
+  // to a full reload since the bare payload has no joined contact.
+  const handleDealEvent = useCallback(
+    (event: { eventType: string; new: Deal }) => {
+      if (event.eventType === "UPDATE") {
+        const updated = event.new;
+        if (updated.pipeline_id !== selectedPipelineId) return;
+        setDeals((prev) => {
+          const exists = prev.some((d) => d.id === updated.id);
+          if (!exists) return prev;
+          return prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d));
+        });
+        return;
+      }
+      refreshDeals();
+    },
+    [selectedPipelineId, refreshDeals],
+  );
+
+  useRealtime({ channelName: "pipeline-board", onDealEvent: handleDealEvent });
 
   const handleDealMoved = useCallback(
     async (dealId: string, newStageId: string) => {

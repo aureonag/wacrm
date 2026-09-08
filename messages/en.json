@@ -764,7 +764,9 @@
       "saving": "Linking...",
       "toastRequired": "Deal name, pipeline, and stage are required",
       "toastFailed": "Failed to link the conversation",
-      "toastLinked": "Conversation linked to the pipeline"
+      "toastLinked": "Conversation linked to the pipeline",
+      "existingDealWarning": "This conversation is already linked to the deal \"{title}\" ({pipeline}).",
+      "confirmDuplicateLabel": "I understand, link it to a second deal anyway"
     },
     "aiBanner": {
       "pausedTitle": "AI assistant is paused here",
@@ -2477,7 +2479,7 @@
       "importHistory": "Import full history",
       "importHistoryDone": "Import complete — {chats} conversations, {messages} messages",
       "importHistoryError": "Couldn't import history",
-      "importHistoryHint": "Imports every conversation (including groups) with all of its messages. Can take several minutes — you can leave the page and come back, it resumes where it left off. Media (photos, voice notes, videos) isn't imported, only text.",
+      "importHistoryHint": "Imports every conversation (including groups) with all of its messages. Can take several minutes — you can leave the page and come back, it resumes where it left off. Media (photos, voice notes, videos) isn't imported, only text. WhatsApp's \"archived\" status isn't imported or synced today — the connection provider doesn't expose that information.",
       "importProgressRunning": "Importing... {done} of {total} conversations",
       "importProgressPaused": "Paused at {done} of {total} conversations — click Import to continue",
       "disconnectConfirm": "Disconnecting will delete all history imported from this personal WhatsApp (contacts, conversations, and messages). This can't be undone. Continue?"

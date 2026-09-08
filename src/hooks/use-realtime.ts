@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Message, Conversation } from "@/types";
+import type { Message, Conversation, Deal } from "@/types";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 interface RealtimeEvent<T> {
@@ -15,6 +15,13 @@ interface UseRealtimeOptions {
   channelName: string;
   onMessageEvent?: (event: RealtimeEvent<Message>) => void;
   onConversationEvent?: (event: RealtimeEvent<Conversation>) => void;
+  /**
+   * Deal changes (migration 076 added `deals` to the realtime
+   * publication) — lets the Pipeline board and the Inbox Kanban view
+   * patch a `stage_id` move live from each other instead of only
+   * seeing it after a refetch/re-navigation.
+   */
+  onDealEvent?: (event: RealtimeEvent<Deal>) => void;
   enabled?: boolean;
 }
 
@@ -22,6 +29,7 @@ export function useRealtime({
   channelName,
   onMessageEvent,
   onConversationEvent,
+  onDealEvent,
   enabled = true,
 }: UseRealtimeOptions) {
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -34,9 +42,11 @@ export function useRealtime({
   // callbacks, which always run after the render that updates it.
   const onMessageRef = useRef(onMessageEvent);
   const onConversationRef = useRef(onConversationEvent);
+  const onDealRef = useRef(onDealEvent);
   useEffect(() => {
     onMessageRef.current = onMessageEvent;
     onConversationRef.current = onConversationEvent;
+    onDealRef.current = onDealEvent;
   });
 
   useEffect(() => {
@@ -65,6 +75,17 @@ export function useRealtime({
             eventType: payload.eventType as RealtimeEvent<Conversation>["eventType"],
             new: payload.new as Conversation,
             old: payload.old as Partial<Conversation>,
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "deals" },
+        (payload) => {
+          onDealRef.current?.({
+            eventType: payload.eventType as RealtimeEvent<Deal>["eventType"],
+            new: payload.new as Deal,
+            old: payload.old as Partial<Deal>,
           });
         }
       )

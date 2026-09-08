@@ -87,8 +87,21 @@ export function classifyMessage(
       return { contentText: '[Figurinha]' };
     case 'reactionMessage':
       return { contentText: (get('reactionMessage')?.text as string) || '[Reação]' };
+    // Real WhatsApp protocol message kinds this thread doesn't render
+    // (channel/community comment, business template send, interactive
+    // message, history-sync placeholder) — named explicitly so the
+    // default case below never has to leak Baileys' raw camelCase type
+    // name to the end user.
+    case 'commentMessage':
+      return { contentText: '[Comentário]' };
+    case 'templateMessage':
+      return { contentText: '[Modelo]' };
+    case 'interactiveMessage':
+      return { contentText: '[Mensagem interativa]' };
+    case 'placeholderMessage':
+      return { contentText: '[Mensagem indisponível]' };
     default:
-      return { contentText: messageType ? `[${messageType}]` : '[mensagem]' };
+      return { contentText: '[Mensagem não suportada]' };
   }
 }
 

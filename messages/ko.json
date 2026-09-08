@@ -764,7 +764,9 @@
       "saving": "연결 중...",
       "toastRequired": "딜 이름, 파이프라인, 단계는 필수입니다",
       "toastFailed": "대화를 연결하지 못했습니다",
-      "toastLinked": "대화가 파이프라인에 연결되었습니다"
+      "toastLinked": "대화가 파이프라인에 연결되었습니다",
+      "existingDealWarning": "이 대화는 이미 \"{title}\" 딜({pipeline})에 연결되어 있습니다.",
+      "confirmDuplicateLabel": "알고 있습니다. 그래도 두 번째 딜에 연결하겠습니다"
     },
     "aiBanner": {
       "pausedTitle": "이 대화에서 AI 어시스턴트가 일시 중지됨",
@@ -2477,7 +2479,7 @@
       "importHistory": "전체 기록 가져오기",
       "importHistoryDone": "가져오기 완료 — 대화 {chats}개, 메시지 {messages}개",
       "importHistoryError": "기록을 가져올 수 없습니다",
-      "importHistoryHint": "그룹을 포함한 모든 대화와 각 대화의 모든 메시지를 가져옵니다. 몇 분 정도 걸릴 수 있습니다 — 페이지를 벗어났다가 나중에 돌아와도 중단된 지점부터 이어집니다. 미디어(사진, 음성 메모, 동영상)는 가져오지 않고 텍스트만 가져옵니다.",
+      "importHistoryHint": "그룹을 포함한 모든 대화와 각 대화의 모든 메시지를 가져옵니다. 몇 분 정도 걸릴 수 있습니다 — 페이지를 벗어났다가 나중에 돌아와도 중단된 지점부터 이어집니다. 미디어(사진, 음성 메모, 동영상)는 가져오지 않고 텍스트만 가져옵니다. WhatsApp의 \"보관됨\" 상태는 현재 가져오거나 동기화되지 않습니다 — 연결 제공업체가 이 정보를 제공하지 않습니다.",
       "importProgressRunning": "가져오는 중... {total}개 중 {done}개 대화",
       "importProgressPaused": "{total}개 중 {done}개에서 일시중지됨 — 계속하려면 가져오기를 클릭하세요",
       "disconnectConfirm": "연결을 해제하면 이 개인 WhatsApp에서 가져온 모든 기록(연락처, 대화, 메시지)이 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?"

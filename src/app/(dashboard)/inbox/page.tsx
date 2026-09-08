@@ -202,13 +202,33 @@ function InboxPageInner() {
         return;
       }
 
-      const { data } = await supabase
-        .from("whatsapp_config")
-        .select("status")
-        .eq("account_id", accountId)
-        .maybeSingle();
+      // Two independent WhatsApp channels can back this inbox — the
+      // account-wide official Meta number (`whatsapp_config`) and any
+      // team member's personal QR connection (`whatsapp_sessions`, one
+      // row per user). The banner should only warn when NEITHER is
+      // usable; checking `whatsapp_config` alone made every account
+      // running purely on a personal connection see a false "not
+      // connected" warning. The personal-session check goes through
+      // /api/whatsapp-sessions/account-status (service-role) instead of
+      // querying whatsapp_sessions directly — its RLS only lets a user
+      // read their own row or an admin read every row, so a plain agent
+      // checking a teammate's connection here would otherwise always
+      // see nothing.
+      const [{ data: officialConfig }, accountStatusRes] = await Promise.all([
+        supabase
+          .from("whatsapp_config")
+          .select("status")
+          .eq("account_id", accountId)
+          .maybeSingle(),
+        fetch("/api/whatsapp-sessions/account-status").catch(() => null),
+      ]);
 
-      setWhatsappConnected(data?.status === "connected");
+      const officialConnected = officialConfig?.status === "connected";
+      const accountStatus = accountStatusRes?.ok
+        ? ((await accountStatusRes.json()) as { anyConnected?: boolean })
+        : null;
+      const personalConnected = accountStatus?.anyConnected === true;
+      setWhatsappConnected(officialConnected || personalConnected);
     };
 
     checkConnection();

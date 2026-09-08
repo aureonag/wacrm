@@ -98,6 +98,15 @@ export function LinkDealModal({
   const [instagram, setInstagram] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // deals.conversation_id has no unique constraint, so nothing at the DB
+  // level stops the same conversation from ending up linked to more than
+  // one deal — which would render as two Kanban cards for one chat. Not
+  // forbidden outright (a contact can legitimately get a second deal
+  // later), but surfaced clearly and gated behind an explicit checkbox
+  // instead of silently allowing an accidental duplicate.
+  const [existingDeal, setExistingDeal] = useState<{ id: string; title: string; pipelineName: string | null } | null>(null);
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
@@ -119,6 +128,8 @@ export function LinkDealModal({
     setEmail(contact.email ?? "");
     setWebsite(contact.website ?? "");
     setInstagram(contact.instagram ?? "");
+    setExistingDeal(null);
+    setConfirmDuplicate(false);
   }, [open, contact, profile?.id]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -126,18 +137,30 @@ export function LinkDealModal({
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const [pipelineRows, profileRows] = await Promise.all([
+      const [pipelineRows, profileRows, existingRes] = await Promise.all([
         loadPipelines(supabase),
         supabase.from("profiles").select("*").order("full_name"),
+        supabase
+          .from("deals")
+          .select("id, title, pipeline:pipelines(name)")
+          .eq("conversation_id", conversationId)
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (cancelled) return;
       setPipelines(pipelineRows);
       setProfiles((profileRows.data ?? []) as Profile[]);
+      const existing = existingRes.data as { id: string; title: string; pipeline: { name: string } | null } | null;
+      setExistingDeal(
+        existing
+          ? { id: existing.id, title: existing.title, pipelineName: existing.pipeline?.name ?? null }
+          : null,
+      );
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, supabase]);
+  }, [open, supabase, conversationId]);
 
   async function handlePipelineChange(id: string) {
     setPipelineId(id);
@@ -163,6 +186,7 @@ export function LinkDealModal({
       toast.error(tLink("toastRequired"));
       return;
     }
+    if (existingDeal && !confirmDuplicate) return;
     if (!user || !accountId) return;
     setSaving(true);
 
@@ -232,6 +256,26 @@ export function LinkDealModal({
         </DialogHeader>
 
         <div className="max-h-[70vh] space-y-4 overflow-y-auto py-2">
+          {existingDeal && (
+            <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-400">
+              <p>
+                {tLink("existingDealWarning", {
+                  title: existingDeal.title,
+                  pipeline: existingDeal.pipelineName ?? "—",
+                })}
+              </p>
+              <label className="flex items-center gap-2 font-medium">
+                <input
+                  type="checkbox"
+                  checked={confirmDuplicate}
+                  onChange={(e) => setConfirmDuplicate(e.target.checked)}
+                  className="size-3.5 rounded border-amber-500/50"
+                />
+                {tLink("confirmDuplicateLabel")}
+              </label>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label className="text-muted-foreground">{tLink("pipeline")}</Label>
@@ -450,7 +494,13 @@ export function LinkDealModal({
           </Button>
           <Button
             onClick={handleLink}
-            disabled={saving || !title.trim() || !pipelineId || !stageId}
+            disabled={
+              saving ||
+              !title.trim() ||
+              !pipelineId ||
+              !stageId ||
+              (!!existingDeal && !confirmDuplicate)
+            }
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {saving ? tLink("saving") : tLink("save")}

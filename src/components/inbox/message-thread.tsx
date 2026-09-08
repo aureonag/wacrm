@@ -231,8 +231,12 @@ export function MessageThread({
     };
   }, []);
 
-  // 24-hour session timer
+  // 24-hour session timer — a Meta Cloud API business rule (outside a
+  // 24h customer-service window you can only send an approved template)
+  // that has no equivalent on a personal QR/Baileys connection. Skip it
+  // entirely for conversations that came in through one.
   const sessionInfo = useMemo(() => {
+    if (conversation?.whatsapp_session_id) return { expired: false, remaining: "" };
     if (!messages.length) return { expired: false, remaining: "" };
 
     // Find last customer message
@@ -256,7 +260,7 @@ export function MessageThread({
         : tTimer("xmRemaining", { minutes: Math.floor(hoursLeft * 60) });
 
     return { expired, remaining };
-  }, [messages, tTimer]);
+  }, [messages, tTimer, conversation?.whatsapp_session_id]);
 
   // Store latest callback in a ref so fetchMessages doesn't need to
   // depend on `onMessagesLoaded` — otherwise parent re-renders cause

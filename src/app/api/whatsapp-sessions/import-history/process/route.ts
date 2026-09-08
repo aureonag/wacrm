@@ -33,6 +33,15 @@ const MESSAGE_UPSERT_CHUNK = 500;
 // that don't enforce it, same convention as the other routes).
 export const maxDuration = 120;
 
+// A row stuck in 'processing' this long is treated as abandoned (the
+// request that claimed it crashed or timed out mid-batch) and becomes
+// reclaimable again, so one dead request can't wedge the import forever.
+const STALE_PROCESSING_MINUTES = 5;
+
+function staleProcessingCutoffIso(): string {
+  return new Date(Date.now() - STALE_PROCESSING_MINUTES * 60_000).toISOString();
+}
+
 export async function POST() {
   try {
     const ctx = await getCurrentAccount();
@@ -48,17 +57,51 @@ export async function POST() {
       return NextResponse.json({ error: 'WhatsApp session not found' }, { status: 404 });
     }
 
-    const { data: batch, error: batchError } = await db
+    // Claim a batch atomically instead of just reading 'pending' rows:
+    // pick candidates, then flip them to 'processing' with the same
+    // status='pending' filter still attached. If a second concurrent
+    // /process call (e.g. two open tabs both resuming the import) picked
+    // the same candidates, Postgres' row locking serializes the two
+    // UPDATEs and only the first one's rows actually match — the loser
+    // gets back fewer (or zero) rows instead of silently redoing work
+    // the winner already claimed. Rows abandoned mid-processing by a
+    // crashed/timed-out request become reclaimable again after
+    // STALE_PROCESSING_MINUTES so one dead request can't wedge things.
+    const staleCutoff = staleProcessingCutoffIso();
+    const { data: candidates, error: candidatesError } = await db
       .from('whatsapp_history_import_chats')
-      .select('remote_jid, is_group, chat_name, chat_avatar_url')
+      .select('remote_jid')
       .eq('user_id', ctx.userId)
-      .eq('status', 'pending')
+      .or(`status.eq.pending,and(status.eq.processing,updated_at.lt.${staleCutoff})`)
       .order('updated_at', { ascending: true })
       .limit(BATCH_SIZE);
 
-    if (batchError) {
-      console.error('[whatsapp-sessions/import-history/process] batch fetch failed:', batchError);
+    if (candidatesError) {
+      console.error(
+        '[whatsapp-sessions/import-history/process] candidate fetch failed:',
+        candidatesError,
+      );
       return NextResponse.json({ error: 'Failed to load next batch' }, { status: 500 });
+    }
+
+    let batch: { remote_jid: string; is_group: boolean; chat_name: string | null; chat_avatar_url: string | null }[] = [];
+    if (candidates && candidates.length > 0) {
+      const { data: claimed, error: claimError } = await db
+        .from('whatsapp_history_import_chats')
+        .update({ status: 'processing', updated_at: new Date().toISOString() })
+        .eq('user_id', ctx.userId)
+        .or(`status.eq.pending,and(status.eq.processing,updated_at.lt.${staleCutoff})`)
+        .in(
+          'remote_jid',
+          candidates.map((c) => c.remote_jid),
+        )
+        .select('remote_jid, is_group, chat_name, chat_avatar_url');
+
+      if (claimError) {
+        console.error('[whatsapp-sessions/import-history/process] claim failed:', claimError);
+        return NextResponse.json({ error: 'Failed to claim next batch' }, { status: 500 });
+      }
+      batch = claimed ?? [];
     }
 
     let messagesImportedThisBatch = 0;
@@ -101,7 +144,11 @@ export async function POST() {
         .from('whatsapp_history_import_chats')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', ctx.userId)
-        .eq('status', 'pending'),
+        // 'processing' still counts as outstanding — it means another
+        // concurrent /process call is actively working on it right now
+        // (or, if stale, will be reclaimed by a future batch); either
+        // way the import isn't done yet.
+        .in('status', ['pending', 'processing']),
       db
         .from('whatsapp_history_import_chats')
         .select('*', { count: 'exact', head: true })

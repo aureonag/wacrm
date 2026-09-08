@@ -764,7 +764,9 @@
       "saving": "Vinculando...",
       "toastRequired": "Nome do negócio, pipeline e etapa são obrigatórios",
       "toastFailed": "Falha ao vincular a conversa",
-      "toastLinked": "Conversa vinculada ao pipeline"
+      "toastLinked": "Conversa vinculada ao pipeline",
+      "existingDealWarning": "Esta conversa já está vinculada ao negócio \"{title}\" ({pipeline}).",
+      "confirmDuplicateLabel": "Sei disso e quero vincular a um segundo negócio mesmo assim"
     },
     "aiBanner": {
       "pausedTitle": "O assistente de IA está pausado aqui",
@@ -2477,7 +2479,7 @@
       "importHistory": "Importar histórico completo",
       "importHistoryDone": "Importação concluída — {chats} conversas, {messages} mensagens",
       "importHistoryError": "Não foi possível importar o histórico",
-      "importHistoryHint": "Importa todas as conversas (incluindo grupos) com todas as mensagens de cada uma. Pode levar vários minutos — dá pra sair da tela e voltar depois que continua de onde parou. Mídias (fotos, áudios, vídeos) não são importadas, só o texto.",
+      "importHistoryHint": "Importa todas as conversas (incluindo grupos) com todas as mensagens de cada uma. Pode levar vários minutos — dá pra sair da tela e voltar depois que continua de onde parou. Mídias (fotos, áudios, vídeos) não são importadas, só o texto. O status de \"arquivada\" no WhatsApp não é importado nem sincronizado hoje — o provedor de conexão não expõe essa informação.",
       "importProgressRunning": "Importando... {done} de {total} conversas",
       "importProgressPaused": "Pausado em {done} de {total} conversas — clique em Importar para continuar",
       "disconnectConfirm": "Desconectar vai apagar todo o histórico importado desse WhatsApp pessoal (contatos, conversas e mensagens). Essa ação não pode ser desfeita. Continuar?"
