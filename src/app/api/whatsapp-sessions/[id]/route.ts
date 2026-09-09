@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { ForbiddenError, getCurrentAccount, toErrorResponse } from '@/lib/auth/account';
 import { hasMinRole } from '@/lib/auth/roles';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
-import { deleteInstance, logoutInstance } from '@/lib/whatsapp-sessions/evolution-client';
+import { disconnectInstance } from '@/lib/whatsapp-sessions/zapi-client';
 
 /**
  * DELETE /api/whatsapp-sessions/[id] — disconnect a personal WhatsApp
@@ -26,7 +26,7 @@ export async function DELETE(
     const db = supabaseAdmin();
     const { data: session, error: findError } = await db
       .from('whatsapp_sessions')
-      .select('user_id, instance_name, account_id')
+      .select('user_id, zapi_instance_id, zapi_instance_token, account_id')
       .eq('user_id', id)
       .eq('account_id', ctx.accountId)
       .maybeSingle();
@@ -39,14 +39,18 @@ export async function DELETE(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Best-effort against Evolution API — the DB row is the source of
-    // truth for the UI, so a slow/unreachable gateway shouldn't block
-    // the user from clearing their own connection state.
-    try {
-      await logoutInstance(session.instance_name);
-      await deleteInstance(session.instance_name);
-    } catch (err) {
-      console.error('[whatsapp-sessions] Evolution API cleanup failed:', err);
+    // Best-effort against Z-API — the DB row is the source of truth for
+    // the UI, so a slow/unreachable gateway shouldn't block the user
+    // from clearing their own connection state. Unlike the old Evolution
+    // API flow there's no "delete instance": a regular Z-API account's
+    // instance keeps existing and being billed until cancelled by hand
+    // in their dashboard — the UI must warn about that separately.
+    if (session.zapi_instance_id && session.zapi_instance_token) {
+      try {
+        await disconnectInstance(session.zapi_instance_id, session.zapi_instance_token);
+      } catch (err) {
+        console.error('[whatsapp-sessions] Z-API disconnect failed:', err);
+      }
     }
 
     // Disconnecting wipes everything this connection ever imported —

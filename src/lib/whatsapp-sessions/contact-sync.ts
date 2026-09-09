@@ -48,6 +48,28 @@ export function identityFromJid(
 }
 
 /**
+ * Resolve a Z-API chat's identity. Z-API's `phone` field uses a
+ * different suffix convention than Baileys' JIDs: a 1:1 chat is plain
+ * digits, a group is `<digits>-group` (verified live against Z-API),
+ * and a channel/community broadcast is `<digits>@newsletter` (also
+ * seen live) — this app has no identity model for channels (they're
+ * not a person or a group conversation), so those return null, same
+ * treatment as `@lid` in identityFromJid above.
+ */
+export function identityFromZApiPhone(
+  phone: string | undefined | null,
+): { id: string; isGroup: boolean } | null {
+  if (!phone) return null;
+  if (phone.endsWith('@newsletter')) return null;
+  if (phone.endsWith('-group')) {
+    const id = phone.slice(0, -'-group'.length);
+    return id ? { id, isGroup: true } : null;
+  }
+  const normalized = normalizePhone(phone);
+  return normalized ? { id: normalized, isGroup: false } : null;
+}
+
+/**
  * Classify one Baileys message record into our `messages.content_type` /
  * `content_text`. Media messages (image/video/document/audio/sticker)
  * are never mirrored here — Baileys media URLs point at Meta's
@@ -103,6 +125,40 @@ export function classifyMessage(
     default:
       return { contentText: '[Mensagem não suportada]' };
   }
+}
+
+/**
+ * Classify one Z-API webhook message into our `messages.content_text`.
+ * Z-API's payload is a flat object with one key per message kind
+ * (`text.message`, `image.caption`, ...) rather than Baileys' single
+ * `messageType` string + nested `message[type]` object — different
+ * enough shape that this is a parallel function, not a shared one with
+ * classifyMessage above. Media is never downloaded/displayed here
+ * either (out of scope for the provider swap — Z-API does host media
+ * for 30 days, which is a real future opportunity, just not this pass).
+ */
+export function classifyZApiMessage(body: {
+  text?: { message?: string } | null;
+  image?: { caption?: string } | null;
+  video?: { caption?: string } | null;
+  audio?: unknown;
+  document?: { caption?: string; fileName?: string } | null;
+  sticker?: unknown;
+}): { contentText: string } {
+  if (body.text?.message) return { contentText: body.text.message };
+  if (body.image) {
+    return { contentText: body.image.caption ? `[Imagem] ${body.image.caption}` : '[Imagem]' };
+  }
+  if (body.video) {
+    return { contentText: body.video.caption ? `[Vídeo] ${body.video.caption}` : '[Vídeo]' };
+  }
+  if (body.document) {
+    const name = body.document.fileName || body.document.caption || '';
+    return { contentText: name ? `[Documento] ${name}` : '[Documento]' };
+  }
+  if (body.audio) return { contentText: '[Áudio]' };
+  if (body.sticker) return { contentText: '[Figurinha]' };
+  return { contentText: '[Mensagem não suportada]' };
 }
 
 export async function findOrCreateContact(

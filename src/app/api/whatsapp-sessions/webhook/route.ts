@@ -3,27 +3,43 @@ import { NextResponse, after } from 'next/server';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import { reopenClosedConversation } from '@/lib/conversations/reopen';
 import {
-  classifyMessage,
+  classifyZApiMessage,
   findOrCreateContact,
   findOrCreateConversation,
-  phoneFromJid,
+  identityFromZApiPhone,
 } from '@/lib/whatsapp-sessions/contact-sync';
-import { fetchProfilePictureUrl } from '@/lib/whatsapp-sessions/evolution-client';
 
-// Evolution API's own connection/QR events don't carry a shared secret
-// the way Meta's HMAC-signed webhook does — the URL itself is only
-// known to our Evolution API deployment (registered at instance-create
-// time, never exposed to the client). Same trust model as an internal
-// service-to-service callback.
+// Z-API's webhook URL is only known to our Z-API instance config (set
+// via configureWebhook, never exposed to the client) — same trust model
+// the Evolution webhook used, no shared-secret verification needed.
+// One URL receives every event category (message received, connected,
+// disconnected, ...); `type` tells them apart.
 
-interface EvolutionWebhookBody {
-  event?: string;
-  instance?: string;
-  data?: unknown;
+interface ZApiWebhookBody {
+  type?: string; // 'ReceivedCallback' | 'ConnectedCallback' | 'DisconnectedCallback' | ...
+  instanceId?: string;
+  phone?: string;
+  isGroup?: boolean;
+  isNewsletter?: boolean;
+  fromMe?: boolean;
+  participantPhone?: string | null;
+  chatName?: string | null;
+  senderName?: string | null;
+  photo?: string | null;
+  senderPhoto?: string | null;
+  messageId?: string;
+  momment?: number;
+  connected?: boolean;
+  text?: { message?: string } | null;
+  image?: { caption?: string } | null;
+  video?: { caption?: string } | null;
+  audio?: unknown;
+  document?: { caption?: string; fileName?: string } | null;
+  sticker?: unknown;
 }
 
 export async function POST(request: Request) {
-  let body: EvolutionWebhookBody;
+  let body: ZApiWebhookBody;
   try {
     body = await request.json();
   } catch {
@@ -31,8 +47,7 @@ export async function POST(request: Request) {
   }
 
   // Ack immediately, process after — same rationale as the Meta webhook
-  // (src/app/api/whatsapp/webhook/route.ts): don't let downstream work
-  // risk a slow/duplicate delivery from the gateway.
+  // (src/app/api/whatsapp/webhook/route.ts).
   after(async () => {
     try {
       await processEvent(body);
@@ -44,15 +59,15 @@ export async function POST(request: Request) {
   return NextResponse.json({ status: 'received' });
 }
 
-async function processEvent(body: EvolutionWebhookBody) {
-  const { event, instance, data } = body;
-  if (!event || !instance) return;
+async function processEvent(body: ZApiWebhookBody) {
+  const { type, instanceId } = body;
+  if (!type || !instanceId) return;
 
   const db = supabaseAdmin();
   const { data: session, error: sessionError } = await db
     .from('whatsapp_sessions')
-    .select('user_id, account_id, status, instance_name')
-    .eq('instance_name', instance)
+    .select('user_id, account_id, status, zapi_instance_id, zapi_instance_token')
+    .eq('zapi_instance_id', instanceId)
     .maybeSingle();
 
   if (sessionError) {
@@ -60,91 +75,64 @@ async function processEvent(body: EvolutionWebhookBody) {
     return;
   }
   if (!session) {
-    console.warn('[whatsapp-sessions/webhook] unknown instance:', instance);
+    console.warn('[whatsapp-sessions/webhook] unknown instance:', instanceId);
     return;
   }
 
-  switch (event) {
-    case 'connection.update':
-      await handleConnectionUpdate(db, session, data);
-      break;
-    case 'messages.upsert':
-      await handleMessagesUpsert(db, session, data);
-      break;
-    default:
-      // qrcode.updated and everything else: no DB-side effect needed —
-      // the "Meu WhatsApp" panel polls/refetches the QR itself.
-      break;
+  if (type.includes('Connected') || type.includes('Disconnected')) {
+    await handleConnectionEvent(db, session, body);
+    return;
   }
+  if (type === 'ReceivedCallback') {
+    await processInboundMessage(db, session, body);
+  }
+  // Delivery/read-status callbacks and everything else: no DB-side
+  // effect needed today.
 }
 
-async function handleConnectionUpdate(
+async function handleConnectionEvent(
   db: ReturnType<typeof supabaseAdmin>,
   session: { user_id: string },
-  data: unknown,
+  body: ZApiWebhookBody,
 ) {
-  const state = (data as { state?: string } | null)?.state;
-  if (state !== 'open' && state !== 'close' && state !== 'connecting') return;
+  const connected = body.type?.includes('Disconnected') ? false : Boolean(body.connected ?? true);
+  const update: Record<string, unknown> = { status: connected ? 'connected' : 'disconnected' };
+  if (connected) {
+    update.connected_at = new Date().toISOString();
+    if (body.phone) update.phone_number = body.phone;
+  }
 
-  const status = state === 'open' ? 'connected' : state === 'close' ? 'disconnected' : 'connecting';
-  const update: Record<string, unknown> = { status };
-  if (status === 'connected') update.connected_at = new Date().toISOString();
-
-  const { error } = await db
-    .from('whatsapp_sessions')
-    .update(update)
-    .eq('user_id', session.user_id);
+  const { error } = await db.from('whatsapp_sessions').update(update).eq('user_id', session.user_id);
   if (error) {
     console.error('[whatsapp-sessions/webhook] status update failed:', error);
   }
 }
 
-async function handleMessagesUpsert(
-  db: ReturnType<typeof supabaseAdmin>,
-  session: { user_id: string; account_id: string; instance_name: string },
-  data: unknown,
-) {
-  // Evolution can deliver either a single message object or
-  // { messages: [...] } depending on version — handle both.
-  const raw = data as Record<string, unknown> | null;
-  const messages = Array.isArray(raw?.messages) ? raw!.messages : raw ? [raw] : [];
-
-  for (const msg of messages) {
-    await processInboundMessage(db, session, msg as Record<string, unknown>);
-  }
-}
-
 async function processInboundMessage(
   db: ReturnType<typeof supabaseAdmin>,
-  session: { user_id: string; account_id: string; instance_name: string },
-  msg: Record<string, unknown>,
+  session: { user_id: string; account_id: string },
+  body: ZApiWebhookBody,
 ) {
-  const key = msg.key as { remoteJid?: string; fromMe?: boolean; id?: string } | undefined;
-  if (!key || key.fromMe) return; // our own outbound echo — ignore
+  if (body.fromMe) return; // our own outbound echo — ignore
+  if (body.isNewsletter) return; // channel/community broadcast — not a conversation
 
-  const phone = phoneFromJid(key.remoteJid);
-  if (!phone) return; // group chat or malformed jid — out of scope
+  const identity = identityFromZApiPhone(body.phone);
+  if (!identity) return;
 
-  const contactName = (msg.pushName as string | undefined) || phone;
-  const { contentText } = classifyMessage(
-    msg.messageType as string | undefined,
-    msg.message as Record<string, unknown> | undefined,
-  );
-  const metaMessageId = key.id || crypto.randomUUID();
-  const timestampRaw = msg.messageTimestamp as number | string | undefined;
-  const createdAt = timestampRaw
-    ? new Date(Number(timestampRaw) * 1000).toISOString()
-    : new Date().toISOString();
+  const displayName = body.chatName || body.senderName || identity.id;
+  const avatarUrl = body.photo || body.senderPhoto || null;
+  const { contentText } = classifyZApiMessage(body);
+  const metaMessageId = body.messageId || crypto.randomUUID();
+  const createdAt = body.momment ? new Date(body.momment).toISOString() : new Date().toISOString();
 
   const contact = await findOrCreateContact(
     db,
     session.account_id,
     session.user_id,
-    phone,
-    contactName,
-    // Best-effort avatar, only fetched if this turns out to be a new
-    // contact — never blocks message ingestion either way.
-    () => fetchProfilePictureUrl(session.instance_name, phone),
+    identity.id,
+    displayName,
+    () => Promise.resolve(avatarUrl),
+    identity.isGroup,
   );
   if (!contact) return;
 

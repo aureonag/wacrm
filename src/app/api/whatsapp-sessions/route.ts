@@ -3,43 +3,40 @@ import { NextResponse } from 'next/server';
 import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import {
-  createInstance,
-  EvolutionApiError,
+  configureWebhook,
+  fetchConnectionState,
   fetchQrCode,
-  isEvolutionApiConfigured,
-  setInstanceWebhook,
-} from '@/lib/whatsapp-sessions/evolution-client';
-
-// Deterministic, globally-unique-enough instance name — Evolution API
-// instance names are unique across the whole deployment (shared by
-// every account), not just within ours, so keying by user_id (already
-// a global UUID) is sufficient without needing the account_id in it.
-function instanceNameFor(userId: string): string {
-  return `wacrm_${userId}`;
-}
+  isZApiConfigured,
+  ZApiError,
+} from '@/lib/whatsapp-sessions/zapi-client';
 
 function webhookUrl(): string {
   const site = process.env.NEXT_PUBLIC_SITE_URL;
   if (!site) {
     throw new Error(
-      'NEXT_PUBLIC_SITE_URL must be set to register the Evolution API webhook',
+      'NEXT_PUBLIC_SITE_URL must be set to register the Z-API webhook',
     );
   }
   return `${site.replace(/\/+$/, '')}/api/whatsapp-sessions/webhook`;
 }
 
 /**
- * POST /api/whatsapp-sessions — connect (or reconnect) the caller's
- * own personal WhatsApp. Creates the Evolution API instance on first
- * call; on a later call while still disconnected, just re-fetches a
- * fresh QR for the same instance (Evolution rejects re-creating an
- * instance name that already exists).
+ * POST /api/whatsapp-sessions — connect (or reconnect) the caller's own
+ * personal WhatsApp.
+ *
+ * Unlike the old Evolution API flow, this app doesn't create the
+ * underlying instance — a regular (non-"integrador") Z-API account only
+ * creates instances by hand in their own dashboard. On first connect the
+ * caller pastes the Instance ID + Instance Token they got from
+ * app.z-api.io into the request body; we save them, point every Z-API
+ * webhook at our route, and fetch the QR. On a later call while still
+ * disconnected, the saved credentials are reused to just refresh the QR.
  */
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const ctx = await getCurrentAccount();
 
-    if (!isEvolutionApiConfigured()) {
+    if (!isZApiConfigured()) {
       return NextResponse.json(
         { error: 'WhatsApp pessoal não está configurado neste ambiente' },
         { status: 503 },
@@ -60,25 +57,40 @@ export async function POST() {
       );
     }
 
-    let qrBase64: string | null;
-    let instanceName: string;
+    let instanceId: string;
+    let instanceToken: string;
 
-    if (existing) {
-      instanceName = existing.instance_name;
-      qrBase64 = await fetchQrCode(instanceName);
+    if (existing?.zapi_instance_id && existing?.zapi_instance_token) {
+      instanceId = existing.zapi_instance_id;
+      instanceToken = existing.zapi_instance_token;
     } else {
-      instanceName = instanceNameFor(ctx.userId);
-      const created = await createInstance(instanceName);
-      await setInstanceWebhook(instanceName, webhookUrl());
-      qrBase64 = created.qrBase64 ?? (await fetchQrCode(instanceName));
+      const body = await req.json().catch(() => ({}));
+      instanceId = typeof body?.instanceId === 'string' ? body.instanceId.trim() : '';
+      instanceToken = typeof body?.instanceToken === 'string' ? body.instanceToken.trim() : '';
+      if (!instanceId || !instanceToken) {
+        return NextResponse.json(
+          { error: 'Informe o Instance ID e o Instance Token da sua instância Z-API' },
+          { status: 400 },
+        );
+      }
+      await configureWebhook(instanceId, instanceToken, webhookUrl());
     }
+
+    // A pasted-in instance may already be paired (e.g. someone scanned
+    // the QR straight from the Z-API dashboard before ever touching the
+    // CRM) — check the real state instead of always assuming a QR is
+    // needed, or the panel would be stuck showing nothing.
+    const state = await fetchConnectionState(instanceId, instanceToken);
+    const qrBase64 = state === 'connected' ? null : await fetchQrCode(instanceId, instanceToken);
 
     const { error: upsertError } = await db.from('whatsapp_sessions').upsert(
       {
         user_id: ctx.userId,
         account_id: ctx.accountId,
-        instance_name: instanceName,
-        status: 'connecting',
+        zapi_instance_id: instanceId,
+        zapi_instance_token: instanceToken,
+        status: state === 'connected' ? 'connected' : 'connecting',
+        connected_at: state === 'connected' ? new Date().toISOString() : null,
       },
       { onConflict: 'user_id' },
     );
@@ -87,10 +99,10 @@ export async function POST() {
       return NextResponse.json({ error: 'Failed to save session' }, { status: 500 });
     }
 
-    return NextResponse.json({ qrBase64, instanceName });
+    return NextResponse.json({ qrBase64 });
   } catch (err) {
-    if (err instanceof EvolutionApiError) {
-      console.error('[whatsapp-sessions] Evolution API error:', err.message);
+    if (err instanceof ZApiError) {
+      console.error('[whatsapp-sessions] Z-API error:', err.message);
       return NextResponse.json({ error: err.message }, { status: 502 });
     }
     console.error('[whatsapp-sessions] POST failed:', err);

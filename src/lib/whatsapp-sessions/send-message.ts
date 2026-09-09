@@ -14,7 +14,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { sanitizePhoneForMeta, isValidE164 } from '@/lib/whatsapp/phone-utils';
-import { sendText, sendMedia } from '@/lib/whatsapp-sessions/evolution-client';
+import { sendText, sendMedia } from '@/lib/whatsapp-sessions/zapi-client';
 import { logMessageActivityForContact } from '@/lib/deals/log-message-activity';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 
@@ -92,11 +92,12 @@ export async function sendMessageThroughPersonalSession(
     throw new SendPersonalMessageError('bad_request', 'Invalid phone number format', 400);
   }
 
-  // The row's instance_name, not the account's — this send must go out
-  // through the specific person's device, never a different teammate's.
+  // The row's own instance credentials, not the account's — this send
+  // must go out through the specific person's device, never a different
+  // teammate's.
   const { data: session, error: sessionError } = await supabaseAdmin()
     .from('whatsapp_sessions')
-    .select('instance_name, status')
+    .select('zapi_instance_id, zapi_instance_token, status')
     .eq('user_id', whatsappSessionId)
     .maybeSingle();
 
@@ -114,10 +115,15 @@ export async function sendMessageThroughPersonalSession(
   let waMessageId: string;
   try {
     if (messageType === 'text') {
-      const result = await sendText(session.instance_name, sanitizedPhone, contentText!);
+      const result = await sendText(
+        session.zapi_instance_id,
+        session.zapi_instance_token,
+        sanitizedPhone,
+        contentText!,
+      );
       waMessageId = result.messageId;
     } else {
-      const result = await sendMedia(session.instance_name, sanitizedPhone, {
+      const result = await sendMedia(session.zapi_instance_id, session.zapi_instance_token, sanitizedPhone, {
         mediaType: messageType as (typeof PERSONAL_MEDIA_KINDS)[number],
         url: mediaUrl!,
         caption: contentText || undefined,
@@ -126,8 +132,8 @@ export async function sendMessageThroughPersonalSession(
       waMessageId = result.messageId;
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown Evolution API error';
-    throw new SendPersonalMessageError('evolution_error', `Evolution API error: ${message}`, 502);
+    const message = err instanceof Error ? err.message : 'Unknown Z-API error';
+    throw new SendPersonalMessageError('zapi_error', `Z-API error: ${message}`, 502);
   }
 
   const { data: messageRecord, error: msgError } = await db

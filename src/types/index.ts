@@ -1188,4 +1188,10 @@ export interface WhatsAppSession {
   phone_number: string | null;
   connected_at: string | null;
   created_at: string;
+  /**
+   * Whether this row already has a Z-API instance ID + token saved.
+   * The raw token never reaches the client — this flag is what the
+   * connect form uses to decide if it still needs to ask for them.
+   */
+  hasZapiCredentials: boolean;
 }

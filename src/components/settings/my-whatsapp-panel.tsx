@@ -1,10 +1,16 @@
 'use client';
 
-// MyWhatsAppPanel — Settings → Meu WhatsApp (migration 072/073).
-// Personal WhatsApp connection via QR code (Evolution API), separate
-// from the account-wide official Meta number configured in the
-// "WhatsApp" section above. Any account member manages only their own
-// row — no RequireRole gate needed here.
+// MyWhatsAppPanel — Settings → Meu WhatsApp (migration 072/073, 077).
+// Personal WhatsApp connection via QR code (Z-API), separate from the
+// account-wide official Meta number configured in the "WhatsApp"
+// section above. Any account member manages only their own row — no
+// RequireRole gate needed here.
+//
+// Unlike the earlier Evolution API version, this app doesn't create
+// the underlying instance — a regular Z-API account only creates one
+// by hand in their own dashboard (app.z-api.io). The very first
+// connect asks for that instance's ID + Token; every later action
+// (new QR, sync, disconnect) reuses whatever was saved.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -13,6 +19,8 @@ import { History, Loader2, QrCode, Smartphone, Unplug } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { createClient } from '@/lib/supabase/client';
 import { SettingsPanelHead } from './settings-panel-head';
@@ -34,6 +42,8 @@ export function MyWhatsAppPanel() {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [qrBase64, setQrBase64] = useState<string | null>(null);
+  const [instanceIdInput, setInstanceIdInput] = useState('');
+  const [instanceTokenInput, setInstanceTokenInput] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [importRunning, setImportRunning] = useState(false);
@@ -61,7 +71,6 @@ export function MyWhatsAppPanel() {
   const runImportLoop = useCallback(async () => {
     const token = ++importLoopTokenRef.current;
     setImportRunning(true);
-    let messagesTotal = 0;
     try {
       while (importLoopTokenRef.current === token) {
         const res = await fetch('/api/whatsapp-sessions/import-history/process', {
@@ -72,12 +81,9 @@ export function MyWhatsAppPanel() {
           toast.error(body.error || t('importHistoryError'));
           return;
         }
-        messagesTotal += body.messagesImportedThisBatch ?? 0;
         setImportProgress({ totalChats: body.totalChats ?? 0, doneChats: body.doneChats ?? 0 });
         if (body.done) {
-          toast.success(
-            t('importHistoryDone', { chats: body.doneChats ?? 0, messages: messagesTotal }),
-          );
+          toast.success(t('importHistoryDone', { chats: body.doneChats ?? 0 }));
           return;
         }
       }
@@ -157,10 +163,31 @@ export function MyWhatsAppPanel() {
   }, [session?.status, loadStatus, stopPolling]);
 
   async function handleConnect() {
+    // Only the very first connect (no Z-API credentials saved yet) needs
+    // the instance ID/token — every later call (new QR, reconnect after
+    // a page reload) reuses what's already saved server-side. A session
+    // row can already exist without them (e.g. migrated from the old
+    // Evolution API integration), so this checks the credentials flag,
+    // not just row existence.
+    const needsCredentials = !session?.hasZapiCredentials;
+    if (needsCredentials && (!instanceIdInput.trim() || !instanceTokenInput.trim())) {
+      toast.error(t('credentialsRequired'));
+      return;
+    }
+
     setConnecting(true);
     setQrBase64(null);
     try {
-      const res = await fetch('/api/whatsapp-sessions', { method: 'POST' });
+      const res = await fetch('/api/whatsapp-sessions', {
+        method: 'POST',
+        headers: needsCredentials ? { 'Content-Type': 'application/json' } : undefined,
+        body: needsCredentials
+          ? JSON.stringify({
+              instanceId: instanceIdInput.trim(),
+              instanceToken: instanceTokenInput.trim(),
+            })
+          : undefined,
+      });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         toast.error(body.error || t('connectError'));
@@ -325,6 +352,29 @@ export function MyWhatsAppPanel() {
                   {t('notConnectedDesc')}
                 </p>
               </div>
+              {!session?.hasZapiCredentials && (
+                <div className="w-full max-w-[360px] space-y-3 text-left">
+                  <p className="text-xs text-muted-foreground">{t('credentialsHint')}</p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="zapi-instance-id">{t('instanceIdLabel')}</Label>
+                    <Input
+                      id="zapi-instance-id"
+                      value={instanceIdInput}
+                      onChange={(e) => setInstanceIdInput(e.target.value)}
+                      placeholder={t('instanceIdPlaceholder')}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="zapi-instance-token">{t('instanceTokenLabel')}</Label>
+                    <Input
+                      id="zapi-instance-token"
+                      value={instanceTokenInput}
+                      onChange={(e) => setInstanceTokenInput(e.target.value)}
+                      placeholder={t('instanceTokenPlaceholder')}
+                    />
+                  </div>
+                </div>
+              )}
               <Button onClick={handleConnect} disabled={connecting}>
                 {connecting ? (
                   <Loader2 className="size-4 animate-spin" />

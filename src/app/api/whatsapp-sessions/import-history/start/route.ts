@@ -2,19 +2,25 @@ import { NextResponse } from 'next/server';
 
 import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
-import { identityFromJid } from '@/lib/whatsapp-sessions/contact-sync';
-import { findChats } from '@/lib/whatsapp-sessions/evolution-client';
+import { identityFromZApiPhone } from '@/lib/whatsapp-sessions/contact-sync';
+import { findChats } from '@/lib/whatsapp-sessions/zapi-client';
 
 /**
  * POST /api/whatsapp-sessions/import-history/start — (re)builds the
- * caller's import queue from every chat Evolution currently knows
- * about (1:1 *and* groups) and flips the session into "running".
+ * caller's sync queue from every chat Z-API currently knows about (1:1
+ * *and* groups) and flips the session into "running".
+ *
+ * Despite the "history" name kept from the Evolution API days, this
+ * only syncs CONTACT/GROUP identity (name, photo) — Z-API has no
+ * endpoint that returns past message text (confirmed live + their own
+ * docs), unlike Evolution API. `whatsapp_history_import_chats.remote_jid`
+ * now holds a Z-API `phone` string instead of a Baileys JID; same
+ * column, different provider's identifier shape.
  *
  * Safe to call again later: chats already queued keep whatever status
- * they have (`ON CONFLICT DO NOTHING`), so re-starting after a full
- * run only queues chats that are new since then, and re-starting after
- * an interrupted run resumes it rather than redoing finished chats.
- * Each chat is then imported by repeated calls to .../process.
+ * they have (`ON CONFLICT DO NOTHING`), so re-starting after a full run
+ * only queues chats that are new since then, and re-starting after an
+ * interrupted run resumes it rather than redoing finished chats.
  */
 export async function POST() {
   try {
@@ -23,7 +29,7 @@ export async function POST() {
     const db = supabaseAdmin();
     const { data: session, error: sessionError } = await db
       .from('whatsapp_sessions')
-      .select('user_id, instance_name, status')
+      .select('user_id, zapi_instance_id, zapi_instance_token, status')
       .eq('user_id', ctx.userId)
       .maybeSingle();
 
@@ -32,27 +38,23 @@ export async function POST() {
     }
     if (session.status !== 'connected') {
       return NextResponse.json(
-        { error: 'Conecte seu WhatsApp antes de importar o histórico' },
+        { error: 'Conecte seu WhatsApp antes de sincronizar contatos e grupos' },
         { status: 409 },
       );
     }
 
-    const chats = await findChats(session.instance_name);
+    const chats = await findChats(session.zapi_instance_id, session.zapi_instance_token);
 
     const rows = chats
       .map((chat) => {
-        const identity = identityFromJid(chat.remoteJid);
+        const identity = identityFromZApiPhone(chat.phone);
         if (!identity) return null;
         return {
           user_id: ctx.userId,
-          remote_jid: chat.remoteJid,
+          remote_jid: chat.phone,
           is_group: identity.isGroup,
-          // For a group, findChats' pushName/profilePicUrl IS the
-          // group's subject/photo (verified live) -- there's no
-          // separate "contact" entry for a group to look up later,
-          // so this is the only chance to capture it.
-          chat_name: chat.pushName || null,
-          chat_avatar_url: chat.profilePicUrl || null,
+          chat_name: chat.name || null,
+          chat_avatar_url: null, // Z-API's chat list doesn't include a photo; fetched per-chat in /process.
         };
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);

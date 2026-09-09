@@ -3,39 +3,27 @@ import { NextResponse } from 'next/server';
 import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import {
-  classifyMessage,
   findOrCreateContact,
   findOrCreateConversation,
-  identityFromJid,
+  identityFromZApiPhone,
 } from '@/lib/whatsapp-sessions/contact-sync';
 import {
-  findAllMessages,
-  findChats,
+  fetchProfilePictureUrl,
   findContacts,
-  type EvolutionChat,
-  type EvolutionContact,
-} from '@/lib/whatsapp-sessions/evolution-client';
+  type ZApiContact,
+} from '@/lib/whatsapp-sessions/zapi-client';
 
-// Chats per call. Kept small and synchronous (see the note on why
-// import-history dropped `after()`) — a handful of chats, each
-// possibly needing several paginated Evolution API calls, keeps one
-// request's duration predictable. The client calls this repeatedly
-// until { done: true }, which is what makes the overall import
-// "background" from the user's point of view without needing a real
-// background-job runtime.
-const BATCH_SIZE = 4;
-// How many message rows to upsert in one Supabase call — a chat with
-// thousands of messages still writes in bounded chunks.
-const MESSAGE_UPSERT_CHUNK = 500;
+// Chats per call. Z-API has no message-history endpoint, so a "chat" is
+// now just one find-or-create (name + photo) — much cheaper per item
+// than the old Evolution path's full per-chat message pagination, so a
+// larger batch still keeps one request's duration well within budget.
+const BATCH_SIZE = 20;
 
-// Message-content pagination inside Evolution can itself be slow for
-// very active groups; give this route real headroom (no-op on hosts
-// that don't enforce it, same convention as the other routes).
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 // A row stuck in 'processing' this long is treated as abandoned (the
 // request that claimed it crashed or timed out mid-batch) and becomes
-// reclaimable again, so one dead request can't wedge the import forever.
+// reclaimable again, so one dead request can't wedge the sync forever.
 const STALE_PROCESSING_MINUTES = 5;
 
 function staleProcessingCutoffIso(): string {
@@ -49,7 +37,7 @@ export async function POST() {
     const db = supabaseAdmin();
     const { data: session, error: sessionError } = await db
       .from('whatsapp_sessions')
-      .select('user_id, account_id, instance_name')
+      .select('user_id, account_id, zapi_instance_id, zapi_instance_token')
       .eq('user_id', ctx.userId)
       .maybeSingle();
 
@@ -57,16 +45,8 @@ export async function POST() {
       return NextResponse.json({ error: 'WhatsApp session not found' }, { status: 404 });
     }
 
-    // Claim a batch atomically instead of just reading 'pending' rows:
-    // pick candidates, then flip them to 'processing' with the same
-    // status='pending' filter still attached. If a second concurrent
-    // /process call (e.g. two open tabs both resuming the import) picked
-    // the same candidates, Postgres' row locking serializes the two
-    // UPDATEs and only the first one's rows actually match — the loser
-    // gets back fewer (or zero) rows instead of silently redoing work
-    // the winner already claimed. Rows abandoned mid-processing by a
-    // crashed/timed-out request become reclaimable again after
-    // STALE_PROCESSING_MINUTES so one dead request can't wedge things.
+    // Claim a batch atomically instead of just reading 'pending' rows —
+    // see 075_history_import_processing_status.sql for why.
     const staleCutoff = staleProcessingCutoffIso();
     const { data: candidates, error: candidatesError } = await db
       .from('whatsapp_history_import_chats')
@@ -104,34 +84,25 @@ export async function POST() {
       batch = claimed ?? [];
     }
 
-    let messagesImportedThisBatch = 0;
+    let contactsSyncedThisBatch = 0;
 
-    if (batch && batch.length > 0) {
-      // Baileys' own contact store — one call, reused for every chat in
-      // this batch. See the Fase-5 fix notes on why this beats a
-      // per-chat message-history name/photo guess.
-      const contactRows = await findContacts(session.instance_name).catch(() => []);
-      const contactsByPhone = new Map<string, EvolutionContact>();
+    if (batch.length > 0) {
+      // Z-API's own saved-contacts store — one call, reused for every
+      // chat in this batch, same reasoning as the old Evolution path:
+      // more reliable than any single chat's own name guess.
+      const contactRows = await findContacts(
+        session.zapi_instance_id,
+        session.zapi_instance_token,
+      ).catch(() => []);
+      const contactsByPhone = new Map<string, ZApiContact>();
       for (const c of contactRows) {
-        const identity = identityFromJid(c.remoteJid);
+        const identity = identityFromZApiPhone(c.phone);
         if (identity && !identity.isGroup) contactsByPhone.set(identity.id, c);
       }
 
-      // Groups have no entry in Baileys' contact store -- their name/
-      // photo only ever come from the chat itself (findChats' pushName/
-      // profilePicUrl IS the group's subject/photo). Fetched live here
-      // rather than trusting whatsapp_history_import_chats.chat_name,
-      // since that column is only populated for chats queued by a
-      // /start call made after that column existed -- a chat queued
-      // earlier and merely reset back to 'pending' would otherwise
-      // have it NULL forever.
-      const chatRows = await findChats(session.instance_name).catch(() => []);
-      const chatsByJid = new Map<string, EvolutionChat>();
-      for (const c of chatRows) chatsByJid.set(c.remoteJid, c);
-
       for (const chat of batch) {
-        const imported = await processOneChat(db, session, chat, contactsByPhone, chatsByJid);
-        messagesImportedThisBatch += imported;
+        const synced = await processOneChat(db, session, chat, contactsByPhone);
+        if (synced) contactsSyncedThisBatch += 1;
       }
     }
 
@@ -144,10 +115,6 @@ export async function POST() {
         .from('whatsapp_history_import_chats')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', ctx.userId)
-        // 'processing' still counts as outstanding — it means another
-        // concurrent /process call is actively working on it right now
-        // (or, if stale, will be reclaimed by a future batch); either
-        // way the import isn't done yet.
         .in('status', ['pending', 'processing']),
       db
         .from('whatsapp_history_import_chats')
@@ -168,7 +135,7 @@ export async function POST() {
       done: isDone,
       totalChats: total ?? 0,
       doneChats: done ?? 0,
-      messagesImportedThisBatch,
+      messagesImportedThisBatch: contactsSyncedThisBatch, // field name kept for the panel's existing toast copy
     });
   } catch (err) {
     console.error('[whatsapp-sessions/import-history/process] failed:', err);
@@ -178,32 +145,32 @@ export async function POST() {
 
 async function processOneChat(
   db: ReturnType<typeof supabaseAdmin>,
-  session: { user_id: string; account_id: string; instance_name: string },
+  session: { user_id: string; account_id: string; zapi_instance_id: string; zapi_instance_token: string },
   chat: { remote_jid: string; is_group: boolean; chat_name: string | null; chat_avatar_url: string | null },
-  contactsByPhone: Map<string, EvolutionContact>,
-  chatsByJid: Map<string, EvolutionChat>,
-): Promise<number> {
-  const markResult = (status: 'done' | 'failed', messagesImported: number) =>
+  contactsByPhone: Map<string, ZApiContact>,
+): Promise<boolean> {
+  const markResult = (status: 'done' | 'failed') =>
     db
       .from('whatsapp_history_import_chats')
-      .update({ status, messages_imported: messagesImported, updated_at: new Date().toISOString() })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq('user_id', session.user_id)
       .eq('remote_jid', chat.remote_jid);
 
-  const identity = identityFromJid(chat.remote_jid);
+  const identity = identityFromZApiPhone(chat.remote_jid);
   if (!identity) {
-    await markResult('failed', 0);
-    return 0;
+    await markResult('failed');
+    return false;
   }
 
-  // For a 1:1, the contact store is authoritative when it has the
-  // number; the live chat and the stored queue-time snapshot are both
-  // fallbacks for numbers never saved as a contact. For a group there
-  // is no contact-store entry at all, so the live chat is primary.
+  // For a 1:1, the saved-contacts store is authoritative when it has
+  // the number; the chat's own name (captured at /start time) is the
+  // fallback. For a group there is no contact-store entry at all, so
+  // the chat name (the group's subject) is primary.
   const known = identity.isGroup ? undefined : contactsByPhone.get(identity.id);
-  const liveChat = chatsByJid.get(chat.remote_jid);
-  const displayName = known?.pushName || liveChat?.pushName || chat.chat_name || identity.id;
-  const avatarUrl = known?.profilePicUrl || liveChat?.profilePicUrl || chat.chat_avatar_url || null;
+  const displayName = known?.name || known?.vname || chat.chat_name || identity.id;
+  const avatarUrl =
+    chat.chat_avatar_url ||
+    (await fetchProfilePictureUrl(session.zapi_instance_id, session.zapi_instance_token, identity.id));
 
   const contact = await findOrCreateContact(
     db,
@@ -215,13 +182,12 @@ async function processOneChat(
     identity.isGroup,
   );
   if (!contact) {
-    await markResult('failed', 0);
-    return 0;
+    await markResult('failed');
+    return false;
   }
 
-  // Self-healing backfill, same as the live-webhook / earlier import
-  // path: never overwrites a name/photo that already resolved to
-  // something real.
+  // Self-healing backfill, same as the live webhook: never overwrites a
+  // name/photo that already resolved to something real.
   const contactUpdate: Record<string, unknown> = {};
   if (contact.name === identity.id && displayName !== identity.id) contactUpdate.name = displayName;
   if (!contact.avatar_url && avatarUrl) contactUpdate.avatar_url = avatarUrl;
@@ -237,70 +203,10 @@ async function processOneChat(
     session.user_id,
   );
   if (!conversation) {
-    await markResult('failed', 0);
-    return 0;
+    await markResult('failed');
+    return false;
   }
 
-  let records;
-  try {
-    records = await findAllMessages(session.instance_name, chat.remote_jid);
-  } catch (err) {
-    console.error('[whatsapp-sessions/import-history/process] findAllMessages failed:', err);
-    await markResult('failed', 0);
-    return 0;
-  }
-
-  if (records.length === 0) {
-    await markResult('done', 0);
-    return 0;
-  }
-
-  const rows = records
-    .filter((r) => r.key?.id)
-    .map((r) => {
-      const { contentText } = classifyMessage(r.messageType, r.message);
-      const timestampRaw = r.messageTimestamp;
-      const createdAt = timestampRaw
-        ? new Date(Number(timestampRaw) * 1000).toISOString()
-        : new Date().toISOString();
-      return {
-        conversation_id: conversation.id,
-        sender_type: r.key?.fromMe ? 'agent' : 'customer',
-        content_type: 'text',
-        content_text: contentText,
-        message_id: r.key!.id as string,
-        status: r.key?.fromMe ? 'sent' : 'delivered',
-        created_at: createdAt,
-      };
-    });
-
-  let imported = 0;
-  for (let i = 0; i < rows.length; i += MESSAGE_UPSERT_CHUNK) {
-    const chunk = rows.slice(i, i + MESSAGE_UPSERT_CHUNK);
-    const { data: inserted, error: insertError } = await db
-      .from('messages')
-      .upsert(chunk, { onConflict: 'conversation_id,message_id', ignoreDuplicates: true })
-      .select('id');
-    if (insertError) {
-      console.error('[whatsapp-sessions/import-history/process] message insert failed:', insertError);
-      continue;
-    }
-    imported += inserted?.length ?? 0;
-  }
-
-  const newest = rows.reduce((a, b) => (a.created_at > b.created_at ? a : b));
-  const { data: convRow } = await db
-    .from('conversations')
-    .select('last_message_at')
-    .eq('id', conversation.id)
-    .maybeSingle();
-  if (!convRow?.last_message_at || newest.created_at > convRow.last_message_at) {
-    await db
-      .from('conversations')
-      .update({ last_message_text: newest.content_text, last_message_at: newest.created_at })
-      .eq('id', conversation.id);
-  }
-
-  await markResult('done', imported);
-  return imported;
+  await markResult('done');
+  return true;
 }
