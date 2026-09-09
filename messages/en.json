@@ -96,7 +96,16 @@
     "menuSignOut": "Sign out",
     "environment": {
       "comercial": "Comercial",
-      "operational": "Operational"
+      "operational": "Operational",
+      "financeiro": "Finance"
+    }
+  },
+  "Financeiro": {
+    "sidebar": {
+      "overview": "Overview",
+      "lines": "Service lines",
+      "expenses": "Expenses",
+      "team": "Team"
     }
   },
   "Header": {
@@ -109,6 +118,7 @@
     "broadcasts": "Broadcasts",
     "automations": "Automations",
     "settings": "Settings",
+    "financeiro": "Finance",
     "openMenu": "Open menu",
     "openAccountMenu": "Open account menu",
     "defaultUser": "User",

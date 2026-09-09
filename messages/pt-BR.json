@@ -96,7 +96,16 @@
     "menuSignOut": "Sair",
     "environment": {
       "comercial": "Comercial",
-      "operational": "Operacional"
+      "operational": "Operacional",
+      "financeiro": "Financeiro"
+    }
+  },
+  "Financeiro": {
+    "sidebar": {
+      "overview": "Visão geral",
+      "lines": "Linhas de serviço",
+      "expenses": "Despesas",
+      "team": "Equipe"
     }
   },
   "Header": {
@@ -109,6 +118,7 @@
     "broadcasts": "Transmissões",
     "automations": "Automações",
     "settings": "Configurações",
+    "financeiro": "Financeiro",
     "openMenu": "Abrir menu",
     "openAccountMenu": "Abrir menu da conta",
     "defaultUser": "Usuário",

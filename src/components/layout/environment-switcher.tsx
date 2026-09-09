@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Briefcase, ChevronsUpDown, Workflow } from "lucide-react";
+import { Briefcase, ChevronsUpDown, Wallet, Workflow } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -11,26 +11,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslations } from "next-intl";
 
-const ENVIRONMENT_META = {
+type SwitcherEnvironment = "comercial" | "operational" | "financeiro";
+
+const ENVIRONMENT_META: Record<SwitcherEnvironment, { icon: typeof Briefcase; root: string }> = {
   comercial: { icon: Briefcase, root: "/dashboard" },
   operational: { icon: Workflow, root: "/operational/dashboard" },
-} as const;
+  financeiro: { icon: Wallet, root: "/financeiro/dashboard" },
+};
 
 /**
- * Comercial ↔ Operacional switcher (migration 058, ETAPA 1). Only
- * renders when the current cargo grants more than one environment —
- * owner always has both. A single-environment user never sees this at
- * all, matching the spec ("se possuir somente acesso Comercial, não deve
- * visualizar o Operacional").
+ * Comercial ↔ Operacional ↔ Financeiro switcher. Comercial/Operacional
+ * follow the Cargos+Permissões environment grant (migration 058) — only
+ * shown when the cargo has more than one, owner always has both.
+ * Financeiro is deliberately NOT part of that system: it's gated on
+ * `isOwner` directly, the same hard check as the Financeiro shell/API
+ * routes/RLS, so it can never become grantable to another role through
+ * "Cargos e permissões" the way comercial/operational modules can.
  */
-export function EnvironmentSwitcher({ current }: { current: "comercial" | "operational" }) {
+export function EnvironmentSwitcher({ current }: { current: SwitcherEnvironment }) {
   const t = useTranslations("Sidebar.environment");
-  const { environments } = useAuth();
+  const { environments, isOwner } = useAuth();
   const router = useRouter();
 
-  if (environments.size < 2) return null;
+  if (environments.size < 2 && !isOwner) return null;
 
   const CurrentIcon = ENVIRONMENT_META[current].icon;
+  const visibleEnvs = (Object.keys(ENVIRONMENT_META) as SwitcherEnvironment[]).filter(
+    (env) => env !== "financeiro" || isOwner,
+  );
 
   return (
     <DropdownMenu>
@@ -40,7 +48,7 @@ export function EnvironmentSwitcher({ current }: { current: "comercial" | "opera
         <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-52 bg-popover text-popover-foreground ring-border">
-        {(Object.keys(ENVIRONMENT_META) as Array<keyof typeof ENVIRONMENT_META>).map((env) => {
+        {visibleEnvs.map((env) => {
           const Icon = ENVIRONMENT_META[env].icon;
           return (
             <DropdownMenuItem

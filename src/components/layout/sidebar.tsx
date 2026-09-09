@@ -98,21 +98,27 @@ interface NavItem {
    * navigate away from the CRM.
    */
   external?: boolean;
+  /**
+   * `comercial:<module>:view` permission (migration 079) gating this
+   * row's visibility. Omit for rows that should never be hideable
+   * (Dashboard is the account's landing page).
+   */
+  module?: string;
 }
 
 const navItems: NavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/inbox", labelKey: "inbox", icon: MessageSquare },
-  { href: "/notifications", labelKey: "notifications", icon: Bell },
-  { href: "/contacts", labelKey: "contacts", icon: Users },
-  { href: "/prospecting", labelKey: "prospecting", icon: Radar, beta: true },
-  { href: "/pipelines", labelKey: "pipelines", icon: GitBranch },
-  { href: "/activities", labelKey: "activities", icon: CheckSquare },
-  { href: "/broadcasts", labelKey: "broadcasts", icon: Radio },
-  { href: "/automations", labelKey: "automations", icon: Zap },
-  { href: "/flows", labelKey: "flows", icon: Workflow, beta: true },
-  { href: "/agents", labelKey: "aiAgents", icon: Bot },
-  { href: "https://playbook.aureonag.com", labelKey: "playbook", icon: BookOpen, external: true },
+  { href: "/inbox", labelKey: "inbox", icon: MessageSquare, module: "inbox" },
+  { href: "/notifications", labelKey: "notifications", icon: Bell, module: "notifications" },
+  { href: "/contacts", labelKey: "contacts", icon: Users, module: "contacts" },
+  { href: "/prospecting", labelKey: "prospecting", icon: Radar, beta: true, module: "prospecting" },
+  { href: "/pipelines", labelKey: "pipelines", icon: GitBranch, module: "pipelines" },
+  { href: "/activities", labelKey: "activities", icon: CheckSquare, module: "activities" },
+  { href: "/broadcasts", labelKey: "broadcasts", icon: Radio, module: "broadcasts" },
+  { href: "/automations", labelKey: "automations", icon: Zap, module: "automations" },
+  { href: "/flows", labelKey: "flows", icon: Workflow, beta: true, module: "flows" },
+  { href: "/agents", labelKey: "aiAgents", icon: Bot, module: "agents" },
+  { href: "https://playbook.aureonag.com", labelKey: "playbook", icon: BookOpen, external: true, module: "playbook" },
 ];
 
 const bottomNavItems = [
@@ -130,9 +136,17 @@ import { useTranslations } from "next-intl";
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { profile, profileLoading, account, accountRole, signOut, isOwner, permissions } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
+
+  // Mirrors useHasPermission's logic (hooks/use-permissions.ts) but as a
+  // plain function — calling a hook inside the .filter() below would
+  // violate rules-of-hooks, since the number of calls would vary with
+  // navItems.length instead of being fixed across renders.
+  const canView = (item: NavItem) =>
+    !item.module || isOwner || permissions.has(`comercial:${item.module}:view`);
+  const visibleNavItems = navItems.filter(canView);
   // Only surface the account-name strip when it actually carries
   // information. A solo user's personal account is named after them
   // (the 017 signup trigger seeds it from `full_name`), so showing it
@@ -230,7 +244,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive =
                 !item.external &&
                 (pathname === item.href ||

@@ -96,7 +96,16 @@
     "menuSignOut": "로그아웃",
     "environment": {
       "comercial": "영업",
-      "operational": "운영"
+      "operational": "운영",
+      "financeiro": "재무"
+    }
+  },
+  "Financeiro": {
+    "sidebar": {
+      "overview": "개요",
+      "lines": "서비스 라인",
+      "expenses": "지출",
+      "team": "팀"
     }
   },
   "Header": {
@@ -109,6 +118,7 @@
     "broadcasts": "브로드캐스트",
     "automations": "자동화",
     "settings": "설정",
+    "financeiro": "재무",
     "openMenu": "메뉴 열기",
     "openAccountMenu": "계정 메뉴 열기",
     "defaultUser": "사용자",
