@@ -480,6 +480,7 @@
       "system": "System"
     },
     "taskDrawer": {
+      "close": "Close",
       "toastFailed": "Could not save the change",
       "loading": "Loading...",
       "notFound": "Task not found",

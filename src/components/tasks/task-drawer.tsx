@@ -33,12 +33,6 @@ import type {
   TaskTag,
   TimesheetEntry,
 } from "@/types";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
@@ -83,10 +77,15 @@ import {
   X,
   Clock,
   FolderOpen,
+  Play,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import type { JSONContent } from "@tiptap/react";
+import { useActiveTimer } from "@/hooks/use-active-timer";
+import { useClockTick } from "@/hooks/use-clock-tick";
+import { formatElapsedClock } from "@/lib/tasks/timesheet";
 
 interface TaskDrawerProps {
   taskId: string | null;
@@ -105,6 +104,7 @@ const PRIORITIES: TaskPriority[] = ["low", "medium", "high"];
 export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }: TaskDrawerProps) {
   const t = useTranslations("Operational.taskDrawer");
   const tPriority = useTranslations("Operational.tasks.card.priority");
+  const tTimesheet = useTranslations("Operational.timesheet");
   const supabase = createClient();
   const { user, accountId } = useAuth();
   const canEdit = useHasPermission("operational", "tasks", "edit_tasks");
@@ -140,6 +140,45 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [moveTargetBoard, setMoveTargetBoard] = useState("");
   const [moveTargetStage, setMoveTargetStage] = useState("");
   const [moveTargetStages, setMoveTargetStages] = useState<BoardStage[]>([]);
+
+  // Compact start/pause timer control, fixed in the header — the full
+  // history/manual-entry UI stays in the Timesheet tab (TimesheetPanel).
+  // Reuses the same account-wide "one active timer" row the Header's
+  // ActiveTimerIndicator and TimesheetPanel already read.
+  const { activeTimer, refresh: refreshTimer } = useActiveTimer();
+  const [timerBusy, setTimerBusy] = useState(false);
+  const runningHere = task && activeTimer?.task_id === task.id ? activeTimer : null;
+  const runningElsewhere = task && activeTimer && activeTimer.task_id !== task.id ? activeTimer : null;
+  const clockNow = useClockTick(!!runningHere);
+
+  async function handleTimerStart() {
+    if (!task) return;
+    setTimerBusy(true);
+    const res = await fetch("/api/operational/timesheet/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task_id: task.id }),
+    });
+    setTimerBusy(false);
+    if (!res.ok) {
+      toast.error(tTimesheet("toastFailed"));
+      return;
+    }
+    refreshTimer();
+    await reloadAll();
+  }
+
+  async function handleTimerStop() {
+    setTimerBusy(true);
+    const res = await fetch("/api/operational/timesheet/stop", { method: "POST" });
+    setTimerBusy(false);
+    if (!res.ok) {
+      toast.error(tTimesheet("toastFailed"));
+      return;
+    }
+    refreshTimer();
+    await reloadAll();
+  }
 
   const reloadAll = useCallback(async () => {
     if (!taskId) return;
@@ -364,15 +403,18 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="top-0 left-0 flex h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0 sm:max-w-none"
+      >
         {loading || !task ? (
           <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
             {loading ? t("loading") : t("notFound")}
           </div>
         ) : (
           <>
-            <SheetHeader className="border-b border-border pb-3">
+            <div className="shrink-0 border-b border-border px-4 py-3 sm:px-6">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   {task.parent_task_id && (
@@ -393,10 +435,41 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                       className="border-transparent bg-transparent px-0 text-lg font-semibold text-foreground focus:border-border focus:bg-muted focus:px-2"
                     />
                   ) : (
-                    <SheetTitle>{task.title}</SheetTitle>
+                    <DialogTitle className="text-lg font-semibold text-foreground">{task.title}</DialogTitle>
                   )}
                 </div>
-                <div className="flex shrink-0 items-center gap-1 pr-8">
+                <div className="flex shrink-0 items-center gap-2">
+                  {canTrackTime &&
+                    (runningHere ? (
+                      <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 py-1 pr-1 pl-3 text-sm">
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                        </span>
+                        <span className="font-mono tabular-nums text-foreground">
+                          {formatElapsedClock(runningHere.started_at, clockNow)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleTimerStop}
+                          disabled={timerBusy}
+                          aria-label={tTimesheet("stop")}
+                          title={tTimesheet("stop")}
+                          className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+                        >
+                          <Square className="h-3 w-3 fill-current" />
+                        </button>
+                      </div>
+                    ) : runningElsewhere ? (
+                      <p className="max-w-[16rem] truncate text-xs text-muted-foreground">
+                        {tTimesheet("runningElsewhere", { title: runningElsewhere.task?.title ?? tTimesheet("untitledTask") })}
+                      </p>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={handleTimerStart} disabled={timerBusy}>
+                        <Play className="mr-1.5 h-3.5 w-3.5" />
+                        {tTimesheet("start")}
+                      </Button>
+                    ))}
                   <button
                     type="button"
                     onClick={() => canEdit && patchTask({ is_urgent: !task.is_urgent })}
@@ -455,11 +528,20 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  <button
+                    type="button"
+                    onClick={() => onOpenChange(false)}
+                    aria-label={t("close")}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-            </SheetHeader>
+            </div>
 
-            <div className="grid grid-cols-2 gap-3 px-4 sm:grid-cols-3">
+            <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-3 sm:px-6 lg:grid-cols-4">
               <FieldSelect
                 label={t("stage")}
                 value={task.stage_id}
@@ -561,7 +643,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 px-4">
+            <div className="flex flex-wrap items-center gap-1.5 px-4 sm:px-6">
               {(task.tags ?? []).map((tag) => (
                 <span
                   key={tag.id}
@@ -579,7 +661,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
               {canEdit && <TagAdder onAdd={handleAddTag} />}
             </div>
 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="flex-1 px-4">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="flex-1 px-4 pb-6 sm:px-6">
               <TabsList variant="line">
                 <TabsTrigger value="briefing">{t("tabBriefing")}</TabsTrigger>
                 <TabsTrigger value="comments">{t("tabComments", { count: comments.length })}</TabsTrigger>
@@ -651,9 +733,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                 <HistoryPanel activity={activity} />
               </TabsContent>
             </Tabs>
+            </div>
           </>
         )}
-      </SheetContent>
+      </DialogContent>
 
       <Dialog open={showMoveBoard} onOpenChange={setShowMoveBoard}>
         <DialogContent className="sm:max-w-sm bg-popover border-border">
@@ -760,7 +843,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Sheet>
+    </Dialog>
   );
 }
 

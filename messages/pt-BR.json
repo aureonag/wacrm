@@ -480,6 +480,7 @@
       "system": "Sistema"
     },
     "taskDrawer": {
+      "close": "Fechar",
       "toastFailed": "Não foi possível salvar a alteração",
       "loading": "Carregando...",
       "notFound": "Tarefa não encontrada",
