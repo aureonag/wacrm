@@ -21,7 +21,7 @@
 //   the role anyway.
 // ============================================================
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
@@ -30,6 +30,7 @@ import {
   Mail,
   MailX,
   Plus,
+  SlidersHorizontal,
   Trash2,
   UsersRound,
 } from 'lucide-react';
@@ -78,7 +79,11 @@ import { InviteMemberDialog } from './invite-member-dialog';
 import { ResetPasswordDialog } from './reset-password-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
-import type { Role, Sector } from '@/types';
+import { NAV_MODULES } from './nav-modules';
+import type { Permission, Role, Sector } from '@/types';
+
+/** Tri-state per module: 'default' follows the member's cargo. */
+type NavOverrideState = 'default' | 'visible' | 'hidden';
 
 interface Member {
   user_id: string;
@@ -90,6 +95,8 @@ interface Member {
   /** Cargo customizado (migration 058) — null se nunca atribuído. */
   role_id: string | null;
   sector_ids: string[];
+  /** Nav-visibility overrides (migration 079), keyed by module. */
+  nav_overrides: Record<string, boolean>;
 }
 
 interface Invitation {
@@ -135,6 +142,7 @@ export function MembersTab() {
   const t = useTranslations('Settings.members');
   const tRoles = useTranslations('Settings.roles');
   const tCargo = useTranslations('Settings.members.cargo');
+  const tSidebar = useTranslations('Sidebar');
   const { user, canManageMembers } = useAuth();
   const { getPresence, getRow, now } = usePresence();
 
@@ -142,6 +150,7 @@ export function MembersTab() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -149,19 +158,34 @@ export function MembersTab() {
   const [resettingMember, setResettingMember] = useState<Member | null>(null);
   const [editingSectorsFor, setEditingSectorsFor] = useState<Member | null>(null);
   const [draftSectorIds, setDraftSectorIds] = useState<Set<string>>(new Set());
+  const [editingPermissionsFor, setEditingPermissionsFor] = useState<Member | null>(null);
+  const [draftNavOverrides, setDraftNavOverrides] = useState<Map<string, NavOverrideState>>(new Map());
+  const [savingPermissions, setSavingPermissions] = useState(false);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
   );
 
+  // module -> permission id, for the `comercial:*:view` nav permissions
+  // only (built once permissions load; used both to render the editor
+  // and to translate the tri-state draft back into override rows).
+  const navPermissionIdByModule = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of permissions) {
+      if (p.environment === 'comercial' && p.action === 'view') map.set(p.module, p.id);
+    }
+    return map;
+  }, [permissions]);
+
   const loadEverything = useCallback(async () => {
     try {
-      const [mres, ires, rres, sres] = await Promise.all([
+      const [mres, ires, rres, sres, pres] = await Promise.all([
         fetch('/api/account/members', { cache: 'no-store' }),
         canManageMembers
           ? fetch('/api/account/invitations', { cache: 'no-store' })
           : Promise.resolve(null),
         fetch('/api/account/roles', { cache: 'no-store' }),
         fetch('/api/account/sectors', { cache: 'no-store' }),
+        fetch('/api/account/permissions', { cache: 'no-store' }),
       ]);
 
       if (!mres.ok) {
@@ -174,6 +198,7 @@ export function MembersTab() {
 
       if (rres.ok) setRoles(((await rres.json()) as { roles: Role[] }).roles);
       if (sres.ok) setSectors(((await sres.json()) as { sectors: Sector[] }).sectors);
+      if (pres.ok) setPermissions(((await pres.json()) as { permissions: Permission[] }).permissions);
 
       if (ires) {
         if (!ires.ok) {
@@ -297,6 +322,55 @@ export function MembersTab() {
     } catch (err) {
       console.error('[MembersTab] sectors save error:', err);
       toast.error('Could not reach the server');
+    }
+  }
+
+  function openPermissionsEditor(member: Member) {
+    const draft = new Map<string, NavOverrideState>();
+    for (const { module } of NAV_MODULES) {
+      const granted = member.nav_overrides[module];
+      draft.set(module, granted === undefined ? 'default' : granted ? 'visible' : 'hidden');
+    }
+    setDraftNavOverrides(draft);
+    setEditingPermissionsFor(member);
+  }
+
+  async function handleSavePermissions() {
+    if (!editingPermissionsFor) return;
+    const overrides: { permission_id: string; granted: boolean }[] = [];
+    const nextOverrides: Record<string, boolean> = {};
+    for (const [module, state] of draftNavOverrides) {
+      if (state === 'default') continue;
+      const permissionId = navPermissionIdByModule.get(module);
+      if (!permissionId) continue; // catalog not loaded yet — shouldn't happen once the dialog is open
+      const granted = state === 'visible';
+      overrides.push({ permission_id: permissionId, granted });
+      nextOverrides[module] = granted;
+    }
+    setSavingPermissions(true);
+    try {
+      const res = await fetch(`/api/account/members/${editingPermissionsFor.user_id}/permissions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overrides }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        toast.error(payload.error || tCargo('permissionsUpdateError'));
+        return;
+      }
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.user_id === editingPermissionsFor.user_id ? { ...m, nav_overrides: nextOverrides } : m,
+        ),
+      );
+      toast.success(tCargo('permissionsUpdatedToast', { name: editingPermissionsFor.full_name || t('unnamed') }));
+      setEditingPermissionsFor(null);
+    } catch (err) {
+      console.error('[MembersTab] permissions save error:', err);
+      toast.error('Could not reach the server');
+    } finally {
+      setSavingPermissions(false);
     }
   }
 
@@ -522,6 +596,29 @@ export function MembersTab() {
                         ? tCargo('sectorsCount', { count: member.sector_ids.length })
                         : tCargo('none')}
                     </Button>
+
+                    {/* Per-person menu-visibility overrides (migration
+                        079) — independent of Cargo, same pattern as
+                        Setores above. */}
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openPermissionsEditor(member)}
+                            disabled={!canManageMembers}
+                            className="border-border text-muted-foreground hover:bg-muted"
+                          >
+                            <SlidersHorizontal className="size-4" />
+                            {Object.keys(member.nav_overrides).length > 0
+                              ? tCargo('permissionsCount', { count: Object.keys(member.nav_overrides).length })
+                              : null}
+                          </Button>
+                        }
+                      />
+                      <TooltipContent>{tCargo('permissionsAction')}</TooltipContent>
+                    </Tooltip>
 
                     {/* Role display / editor. Inline Select is admin+
                         only AND not allowed on the owner row (owner
@@ -790,6 +887,59 @@ export function MembersTab() {
             </Button>
             <Button onClick={handleSaveSectors} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {tCargo('save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingPermissionsFor !== null} onOpenChange={(open) => !open && setEditingPermissionsFor(null)}>
+        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {tCargo('permissionsDialogTitle', { name: editingPermissionsFor?.full_name || t('unnamed') })}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {tCargo('permissionsDialogDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-1 overflow-y-auto pr-1">
+            {NAV_MODULES.map(({ module, labelKey }) => (
+              <div key={module} className="flex items-center justify-between gap-3 py-1.5">
+                <span className="text-sm text-foreground">{tSidebar(labelKey)}</span>
+                <Select
+                  value={draftNavOverrides.get(module) ?? 'default'}
+                  onValueChange={(v) =>
+                    setDraftNavOverrides((prev) => new Map(prev).set(module, v as NavOverrideState))
+                  }
+                >
+                  <SelectTrigger className="w-40 bg-muted border-border text-foreground">
+                    <SelectValue>
+                      {tCargo(`permissionsState.${draftNavOverrides.get(module) ?? 'default'}`)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">{tCargo('permissionsState.default')}</SelectItem>
+                    <SelectItem value="visible">{tCargo('permissionsState.visible')}</SelectItem>
+                    <SelectItem value="hidden">{tCargo('permissionsState.hidden')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="bg-popover border-border">
+            <Button
+              variant="outline"
+              onClick={() => setEditingPermissionsFor(null)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={handleSavePermissions}
+              disabled={savingPermissions}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {savingPermissions ? tCargo('saving') : tCargo('save')}
             </Button>
           </DialogFooter>
         </DialogContent>

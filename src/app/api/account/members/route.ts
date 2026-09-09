@@ -69,6 +69,33 @@ export async function GET() {
       }
     }
 
+    // Nav-visibility overrides (migration 079) — same batch shape as
+    // sectors above, scoped to `comercial:*:view` permissions only (the
+    // sidebar-visibility feature's slice of user_permission_overrides;
+    // other environments/modules aren't this endpoint's concern).
+    const navOverridesByProfile = new Map<string, Record<string, boolean>>();
+    if (profileIds.length > 0) {
+      const { data: overrides } = await ctx.supabase
+        .from("user_permission_overrides")
+        .select("profile_id, granted, permissions!inner(module, environment, action)")
+        .in("profile_id", profileIds)
+        .eq("permissions.environment", "comercial")
+        .eq("permissions.action", "view");
+      for (const row of (overrides ?? []) as unknown as {
+        profile_id: string;
+        granted: boolean;
+        permissions: { module: string } | { module: string }[];
+      }[]) {
+        // Supabase's embed typing for this relation isn't reliably a
+        // single object vs. an array across environments — handle both.
+        const perm = Array.isArray(row.permissions) ? row.permissions[0] : row.permissions;
+        if (!perm) continue;
+        const bucket = navOverridesByProfile.get(row.profile_id) ?? {};
+        bucket[perm.module] = row.granted;
+        navOverridesByProfile.set(row.profile_id, bucket);
+      }
+    }
+
     const members: AccountMember[] = rows.flatMap((row) => {
       // Defensive: the DB enum should never let an unknown role
       // through, but if a migration ever broadens the enum without
@@ -84,6 +111,7 @@ export async function GET() {
           joined_at: row.created_at,
           role_id: row.role_id,
           sector_ids: sectorsByProfile.get(row.id) ?? [],
+          nav_overrides: navOverridesByProfile.get(row.id) ?? {},
         },
       ];
     });

@@ -2165,7 +2165,19 @@
         "sectorsUpdatedToast": "{name}의 부서가 업데이트되었습니다",
         "sectorsDialogTitle": "부서 — {name}",
         "noSectorsYet": "아직 부서가 없습니다. 설정 → 부서에서 만드세요.",
-        "save": "저장"
+        "save": "저장",
+        "saving": "저장 중…",
+        "permissionsAction": "메뉴 권한",
+        "permissionsCount": "재정의 {count}개",
+        "permissionsDialogTitle": "메뉴 권한 — {name}",
+        "permissionsDialogDesc": "역할과 상관없이 이 사람에게만 표시되는 사이드바 항목을 제어합니다. \"기본값\"은 역할이 허용하는 대로 따릅니다.",
+        "permissionsState": {
+          "default": "기본값 (역할에 따름)",
+          "visible": "항상 표시",
+          "hidden": "항상 숨김"
+        },
+        "permissionsUpdateError": "권한을 업데이트하지 못했습니다",
+        "permissionsUpdatedToast": "{name}의 권한이 업데이트되었습니다"
       }
     },
     "resetPassword": {
@@ -2420,7 +2432,13 @@
       "deletedToast": "{name} 삭제됨",
       "deleteTitle": "역할 삭제",
       "deleteDesc": "\"{name}\"을(를) 삭제하시겠습니까? 이 역할을 가진 구성원은 기본 계정 역할은 유지하지만 이 역할이 부여한 권한을 잃습니다.",
-      "deleteBtn": "삭제"
+      "deleteBtn": "삭제",
+      "menuVisibilityTitle": "사이드바 표시 여부",
+      "menuVisibilityDesc": "각 역할을 일일이 수정하지 않고 한 번에 모든 역할의 메뉴에서 항목을 제거하는 단축 기능입니다.",
+      "grantedToCount": "역할 {count}개",
+      "disableEverywhere": "전체 비활성화",
+      "disableEverywhereToast": "\"{item}\"이(가) 모든 역할에서 비활성화되었습니다",
+      "disableEverywhereError": "모든 역할에서 비활성화하지 못했습니다"
     },
     "sectors": {
       "title": "부서",
@@ -2582,7 +2600,9 @@
     },
     "groups": {
       "account": "계정",
-      "workspace": "워크스페이스"
+      "communication": "커뮤니케이션",
+      "data": "데이터",
+      "team": "팀 관리"
     },
     "profile": {
       "title": "내 프로필",

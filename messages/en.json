@@ -2165,7 +2165,19 @@
         "sectorsUpdatedToast": "Updated {name}'s sectors",
         "sectorsDialogTitle": "Sectors — {name}",
         "noSectorsYet": "No sectors yet. Create one in Settings → Sectors.",
-        "save": "Save"
+        "save": "Save",
+        "saving": "Saving…",
+        "permissionsAction": "Menu permissions",
+        "permissionsCount": "{count} {count, plural, =1 {override} other {overrides}}",
+        "permissionsDialogTitle": "Menu permissions — {name}",
+        "permissionsDialogDesc": "Control which sidebar items show up for this person only, regardless of their role. \"Default\" follows whatever their role allows.",
+        "permissionsState": {
+          "default": "Default (follows role)",
+          "visible": "Always visible",
+          "hidden": "Always hidden"
+        },
+        "permissionsUpdateError": "Failed to update permissions",
+        "permissionsUpdatedToast": "Updated {name}'s permissions"
       }
     },
     "resetPassword": {
@@ -2420,7 +2432,13 @@
       "deletedToast": "Deleted {name}",
       "deleteTitle": "Delete role",
       "deleteDesc": "Delete \"{name}\"? Members with this role keep their base account role, but lose whatever this cargo granted them.",
-      "deleteBtn": "Delete"
+      "deleteBtn": "Delete",
+      "menuVisibilityTitle": "Sidebar visibility",
+      "menuVisibilityDesc": "Shortcut to remove an item from every role's menu at once, instead of editing each one.",
+      "grantedToCount": "{count} {count, plural, =0 {no roles} =1 {1 role} other {{count} roles}}",
+      "disableEverywhere": "Disable for all",
+      "disableEverywhereToast": "\"{item}\" disabled for every role",
+      "disableEverywhereError": "Failed to disable for every role"
     },
     "sectors": {
       "title": "Sectors",
@@ -2582,7 +2600,9 @@
     },
     "groups": {
       "account": "Account",
-      "workspace": "Workspace"
+      "communication": "Communication",
+      "data": "Data",
+      "team": "Team management"
     },
     "profile": {
       "title": "Your profile",

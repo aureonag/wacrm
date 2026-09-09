@@ -54,7 +54,7 @@ export interface SectionMeta {
   id: SettingsSection;
   label: string;
   icon: LucideIcon;
-  group: 'top' | 'account' | 'workspace';
+  group: 'top' | 'account' | 'communication' | 'data' | 'team';
 }
 
 export const SECTION_META: Record<SettingsSection, SectionMeta> = {
@@ -63,23 +63,25 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   security: { id: 'security', label: 'Login & security', icon: Shield, group: 'account' },
   appearance: { id: 'appearance', label: 'Appearance', icon: Palette, group: 'account' },
   'my-whatsapp': { id: 'my-whatsapp', label: 'Meu WhatsApp', icon: QrCode, group: 'account' },
-  whatsapp: { id: 'whatsapp', label: 'WhatsApp', icon: PlugZap, group: 'workspace' },
-  templates: { id: 'templates', label: 'Templates', icon: FileText, group: 'workspace' },
-  'quick-replies': { id: 'quick-replies', label: 'Quick replies', icon: Zap, group: 'workspace' },
-  fields: { id: 'fields', label: 'Fields & tags', icon: Tags, group: 'workspace' },
-  deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'workspace' },
-  'contract-templates': { id: 'contract-templates', label: 'Contract templates', icon: FileSignature, group: 'workspace' },
-  members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
-  roles: { id: 'roles', label: 'Roles & permissions', icon: ShieldCheck, group: 'workspace' },
-  sectors: { id: 'sectors', label: 'Sectors', icon: Radar, group: 'workspace' },
-  handoff: { id: 'handoff', label: 'Handoff', icon: Rocket, group: 'workspace' },
-  api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
+  whatsapp: { id: 'whatsapp', label: 'WhatsApp', icon: PlugZap, group: 'communication' },
+  templates: { id: 'templates', label: 'Templates', icon: FileText, group: 'communication' },
+  'quick-replies': { id: 'quick-replies', label: 'Quick replies', icon: Zap, group: 'communication' },
+  handoff: { id: 'handoff', label: 'Handoff', icon: Rocket, group: 'communication' },
+  fields: { id: 'fields', label: 'Fields & tags', icon: Tags, group: 'data' },
+  deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'data' },
+  'contract-templates': { id: 'contract-templates', label: 'Contract templates', icon: FileSignature, group: 'data' },
+  api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'data' },
+  members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'team' },
+  roles: { id: 'roles', label: 'Roles & permissions', icon: ShieldCheck, group: 'team' },
+  sectors: { id: 'sectors', label: 'Sectors', icon: Radar, group: 'team' },
 };
 
 export const RAIL_GROUPS: { label: string | null; group: SectionMeta['group'] }[] = [
   { label: null, group: 'top' },
   { label: 'Account', group: 'account' },
-  { label: 'Workspace', group: 'workspace' },
+  { label: 'Communication', group: 'communication' },
+  { label: 'Data', group: 'data' },
+  { label: 'Team management', group: 'team' },
 ];
 
 function isSection(value: string | null): value is SettingsSection {

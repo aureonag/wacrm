@@ -78,6 +78,14 @@ export interface AccountMember {
   /** Custom cargo (migration 058) — null if never assigned one. */
   role_id: string | null;
   sector_ids: string[];
+  /**
+   * Per-person overrides (migration 079) for `comercial:<module>:view`
+   * nav permissions only — keyed by module, value is the override's
+   * `granted`. A module absent here has no override (follows the
+   * member's cargo). Other environments/modules aren't surfaced here;
+   * this field exists for the sidebar-visibility feature specifically.
+   */
+  nav_overrides: Record<string, boolean>;
 }
 
 // ---- Cargos, Permissões, Setores (migration 058) --------------------------
