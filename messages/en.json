@@ -2435,7 +2435,7 @@
       "deleteBtn": "Delete",
       "menuVisibilityTitle": "Sidebar visibility",
       "menuVisibilityDesc": "Shortcut to remove an item from every role's menu at once, instead of editing each one.",
-      "grantedToCount": "{count} {count, plural, =0 {no roles} =1 {1 role} other {{count} roles}}",
+      "grantedToCount": "{count, plural, =0 {no roles} =1 {1 role} other {{count} roles}}",
       "disableEverywhere": "Disable for all",
       "disableEverywhereToast": "\"{item}\" disabled for every role",
       "disableEverywhereError": "Failed to disable for every role"
