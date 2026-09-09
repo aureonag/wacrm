@@ -132,7 +132,7 @@ export async function configureWebhook(
   webhookUrl: string,
 ): Promise<void> {
   await request(instanceId, instanceToken, '/update-every-webhooks', {
-    method: 'POST',
+    method: 'PUT',
     body: { value: webhookUrl },
   });
 }
