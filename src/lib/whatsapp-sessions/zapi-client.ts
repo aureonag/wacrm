@@ -45,7 +45,7 @@ async function request<T>(
   instanceId: string,
   instanceToken: string,
   path: string,
-  init?: { method?: string; body?: unknown },
+  init?: { method?: string; body?: unknown; allowErrorField?: boolean },
 ): Promise<T> {
   const url = `${ZAPI_BASE_URL}/instances/${encodeURIComponent(instanceId)}/token/${encodeURIComponent(instanceToken)}${path}`;
   const res = await fetch(url, {
@@ -69,9 +69,12 @@ async function request<T>(
 
   // Verified live: Z-API can return a 200 with a top-level `error`
   // string instead of a non-2xx status (e.g. the missing-client-token
-  // case) — check both, not just res.ok.
+  // case) — check both, not just res.ok. But /status is a confirmed
+  // exception: it returns a 200 with `error: "You are already
+  // connected."` as part of a *successful* connected response, so
+  // callers of that endpoint opt out via `allowErrorField`.
   const errorField = (json as { error?: unknown } | null)?.error;
-  if (!res.ok || (typeof errorField === 'string' && errorField)) {
+  if (!res.ok || (!init?.allowErrorField && typeof errorField === 'string' && errorField)) {
     const message =
       (json as { message?: string } | null)?.message ??
       (typeof errorField === 'string' ? errorField : null) ??
@@ -116,7 +119,9 @@ export async function fetchConnectionState(
   instanceId: string,
   instanceToken: string,
 ): Promise<ZApiConnectionState> {
-  const data = await request<{ connected?: boolean }>(instanceId, instanceToken, '/status');
+  const data = await request<{ connected?: boolean }>(instanceId, instanceToken, '/status', {
+    allowErrorField: true,
+  });
   return data?.connected ? 'connected' : 'disconnected';
 }
 
