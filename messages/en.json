@@ -2419,7 +2419,8 @@
       "viewer": "Viewer",
       "viewerHint": "Read-only across the app",
       "owner": "Owner",
-      "ownerHint": "Full control over account and billing"
+      "ownerHint": "Full control over account and billing",
+      "infoLabel": "What changes with each account type"
     },
     "rolesPanel": {
       "title": "Roles & permissions",

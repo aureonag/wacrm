@@ -2419,7 +2419,8 @@
       "viewer": "Visualizador",
       "viewerHint": "Somente leitura em todo o app",
       "owner": "Proprietário",
-      "ownerHint": "Controle total da conta e do faturamento"
+      "ownerHint": "Controle total da conta e do faturamento",
+      "infoLabel": "O que muda em cada tipo de conta"
     },
     "rolesPanel": {
       "title": "Cargos e permissões",

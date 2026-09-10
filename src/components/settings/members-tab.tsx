@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
+  Info,
   KeyRound,
   Loader2,
   Mail,
@@ -618,6 +619,40 @@ export function MembersTab() {
                         }
                       />
                       <TooltipContent>{tCargo('permissionsAction')}</TooltipContent>
+                    </Tooltip>
+
+                    {/* "Tipo" (base account role — Administrador/Agente/
+                        Visualizador) explained on hover: this is
+                        distinct from "Cargo" above, which happens to
+                        share the word "Administrador" as one of its
+                        own custom names and confused Allan into asking
+                        for this. */}
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={tRoles('infoLabel')}
+                            className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+                          />
+                        }
+                      >
+                        <Info className="size-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent className="block max-w-64 space-y-1.5 text-left">
+                        <p>
+                          <span className="font-semibold">{tRoles('owner')}:</span> {tRoles('ownerHint')}
+                        </p>
+                        <p>
+                          <span className="font-semibold">{tRoles('admin')}:</span> {tRoles('adminHint')}
+                        </p>
+                        <p>
+                          <span className="font-semibold">{tRoles('agent')}:</span> {tRoles('agentHint')}
+                        </p>
+                        <p>
+                          <span className="font-semibold">{tRoles('viewer')}:</span> {tRoles('viewerHint')}
+                        </p>
+                      </TooltipContent>
                     </Tooltip>
 
                     {/* Role display / editor. Inline Select is admin+
