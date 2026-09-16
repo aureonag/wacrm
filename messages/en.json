@@ -913,7 +913,8 @@
         "noNotes": "No notes yet."
       },
       "dealsTab": {
-        "noDeals": "No deals yet"
+        "noDeals": "No deals yet",
+        "linkDeal": "Link deal"
       },
       "tagsTab": {
         "clickTagDesc": "Click a tag to add or remove it from this contact.",
@@ -934,6 +935,14 @@
       "toastCustomFieldsFailed": "Failed to save custom fields",
       "toastTemplateSent": "Template \"{name}\" sent",
       "toastTemplateFailed": "Failed to send template: {reason}"
+    },
+    "linkDeal": {
+      "title": "Link deal",
+      "description": "Search for an already-created deal, not yet linked to a contact, to connect to this contact.",
+      "searchPlaceholder": "Search by deal name...",
+      "noResults": "No deals available to link",
+      "toastLinked": "Deal linked to the contact",
+      "toastFailed": "Failed to link the deal"
     },
     "importModal": {
       "title": "Import Contacts",
@@ -1125,6 +1134,8 @@
       "proposalUrlPlaceholder": "https://...",
       "mainContact": "Main contact",
       "noContact": "No linked contact",
+      "linkContact": "Link contact",
+      "toastContactLinked": "Contact linked to the deal",
       "viewContact": "View in Contacts",
       "phone": "Phone",
       "email": "Email",
@@ -1195,6 +1206,13 @@
       "deleteDealBtn": "Delete deal",
       "toastDealDeleted": "Deal deleted",
       "toastFailedDeleteDeal": "Failed to delete the deal"
+    },
+    "linkContact": {
+      "title": "Link contact",
+      "description": "Search for an existing contact or create a new one to link to this deal.",
+      "searchPlaceholder": "Search by name, phone or email...",
+      "noResults": "No contacts found",
+      "createNew": "Create new contact"
     },
     "settings": {
       "managePipeline": "Manage Pipeline",

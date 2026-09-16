@@ -913,7 +913,8 @@
         "noNotes": "Ainda não há notas."
       },
       "dealsTab": {
-        "noDeals": "Ainda não há negócios"
+        "noDeals": "Ainda não há negócios",
+        "linkDeal": "Vincular negócio"
       },
       "tagsTab": {
         "clickTagDesc": "Clique em uma tag para adicioná-la ou removê-la deste contato.",
@@ -934,6 +935,14 @@
       "toastCustomFieldsFailed": "Falha ao salvar campos personalizados",
       "toastTemplateSent": "Modelo \"{name}\" enviado",
       "toastTemplateFailed": "Falha ao enviar modelo: {reason}"
+    },
+    "linkDeal": {
+      "title": "Vincular negócio",
+      "description": "Busque um negócio já criado, ainda sem contato vinculado, para conectar a este contato.",
+      "searchPlaceholder": "Buscar por nome do negócio...",
+      "noResults": "Nenhum negócio disponível para vincular",
+      "toastLinked": "Negócio vinculado ao contato",
+      "toastFailed": "Falha ao vincular o negócio"
     },
     "importModal": {
       "title": "Importar contatos",
@@ -1125,6 +1134,8 @@
       "proposalUrlPlaceholder": "https://...",
       "mainContact": "Contato principal",
       "noContact": "Nenhum contato vinculado",
+      "linkContact": "Vincular contato",
+      "toastContactLinked": "Contato vinculado ao negócio",
       "viewContact": "Ver em Contatos",
       "phone": "Telefone",
       "email": "E-mail",
@@ -1195,6 +1206,13 @@
       "deleteDealBtn": "Excluir negócio",
       "toastDealDeleted": "Negócio excluído",
       "toastFailedDeleteDeal": "Falha ao excluir o negócio"
+    },
+    "linkContact": {
+      "title": "Vincular contato",
+      "description": "Busque um contato já cadastrado ou crie um novo para vincular a este negócio.",
+      "searchPlaceholder": "Buscar por nome, telefone ou e-mail...",
+      "noResults": "Nenhum contato encontrado",
+      "createNew": "Cadastrar novo contato"
     },
     "settings": {
       "managePipeline": "Gerenciar pipeline",

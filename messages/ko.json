@@ -913,7 +913,8 @@
         "noNotes": "아직 메모가 없습니다."
       },
       "dealsTab": {
-        "noDeals": "아직 딜이 없습니다"
+        "noDeals": "아직 딜이 없습니다",
+        "linkDeal": "딜 연결"
       },
       "tagsTab": {
         "clickTagDesc": "태그를 클릭해 이 연락처에 추가하거나 제거하세요.",
@@ -934,6 +935,14 @@
       "toastCustomFieldsFailed": "커스텀 필드를 저장하지 못했습니다",
       "toastTemplateSent": "\"{name}\" 템플릿을 보냈습니다",
       "toastTemplateFailed": "템플릿을 보내지 못했습니다: {reason}"
+    },
+    "linkDeal": {
+      "title": "딜 연결",
+      "description": "아직 연락처가 연결되지 않은 기존 딜을 검색하여 이 연락처에 연결하세요.",
+      "searchPlaceholder": "딜 이름으로 검색...",
+      "noResults": "연결할 수 있는 딜이 없습니다",
+      "toastLinked": "딜이 연락처에 연결되었습니다",
+      "toastFailed": "딜을 연결하지 못했습니다"
     },
     "importModal": {
       "title": "연락처 가져오기",
@@ -1125,6 +1134,8 @@
       "proposalUrlPlaceholder": "https://...",
       "mainContact": "주 연락처",
       "noContact": "연결된 연락처 없음",
+      "linkContact": "연락처 연결",
+      "toastContactLinked": "연락처가 거래에 연결되었습니다",
       "viewContact": "연락처에서 보기",
       "phone": "전화",
       "email": "이메일",
@@ -1195,6 +1206,13 @@
       "deleteDealBtn": "거래 삭제",
       "toastDealDeleted": "거래가 삭제되었습니다",
       "toastFailedDeleteDeal": "거래를 삭제하지 못했습니다"
+    },
+    "linkContact": {
+      "title": "연락처 연결",
+      "description": "기존 연락처를 검색하거나 새 연락처를 만들어 이 거래에 연결하세요.",
+      "searchPlaceholder": "이름, 전화번호 또는 이메일로 검색...",
+      "noResults": "연락처를 찾을 수 없습니다",
+      "createNew": "새 연락처 만들기"
     },
     "settings": {
       "managePipeline": "파이프라인 관리",

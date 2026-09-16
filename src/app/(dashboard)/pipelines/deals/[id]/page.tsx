@@ -14,6 +14,7 @@ import {
   syncDealValueFromLineItems,
 } from "@/lib/pipelines/queries";
 import type {
+  Contact,
   CustomField,
   Deal,
   DealActivity,
@@ -66,6 +67,7 @@ import {
   Radar,
   ExternalLink,
   PartyPopper,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
@@ -73,6 +75,7 @@ import { fireWonConfetti } from "@/lib/celebrate-won";
 import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 import { formatStepDueDate } from "@/lib/deals/next-step-date";
 import { ContractTab } from "@/components/pipelines/contract-tab";
+import { LinkContactDialog } from "@/components/pipelines/link-contact-dialog";
 
 interface ProspectingCandidateDetail {
   id: string;
@@ -215,6 +218,23 @@ export default function DealDetailPage() {
     setDeal({ ...deal, ...patch });
     const { error } = await supabase.from("deals").update(patch).eq("id", deal.id);
     if (error) toast.error(t("toastFailedSave"));
+  }
+
+  // ---- Link contact (empty "Contato principal" state) ----
+  // Not just updateDealField({ contact_id }) — that patches the FK but
+  // wouldn't populate `deal.contact`, the joined object the card
+  // actually renders, so the UI wouldn't update until a full reload.
+  const [linkContactOpen, setLinkContactOpen] = useState(false);
+
+  async function handleLinkContact(contact: Contact) {
+    if (!deal) return;
+    setDeal({ ...deal, contact_id: contact.id, contact });
+    const { error } = await supabase.from("deals").update({ contact_id: contact.id }).eq("id", deal.id);
+    if (error) {
+      toast.error(t("toastFailedSave"));
+      return;
+    }
+    toast.success(t("toastContactLinked"));
   }
 
   // Mirrors the activity log entry the Kanban's drag-and-drop writes, so a
@@ -1111,7 +1131,20 @@ export default function DealDetailPage() {
                 </Link>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">{t("noContact")}</p>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{t("noContact")}</p>
+                {canEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-border"
+                    onClick={() => setLinkContactOpen(true)}
+                  >
+                    <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                    {t("linkContact")}
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
@@ -1432,6 +1465,12 @@ export default function DealDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <LinkContactDialog
+        open={linkContactOpen}
+        onOpenChange={setLinkContactOpen}
+        onLinked={handleLinkContact}
+      />
     </div>
   );
 }

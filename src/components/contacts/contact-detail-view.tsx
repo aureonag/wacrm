@@ -11,6 +11,7 @@ import {
   TemplatePicker,
   type TemplateSendValues,
 } from '@/components/inbox/template-picker';
+import { LinkDealDialog } from '@/components/contacts/link-deal-dialog';
 import {
   Sheet,
   SheetContent,
@@ -97,6 +98,7 @@ export function ContactDetailView({
 
   // Deals tab
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [linkDealOpen, setLinkDealOpen] = useState(false);
   const [loadingDeals, setLoadingDeals] = useState(false);
 
   const fetchContact = useCallback(async () => {
@@ -712,6 +714,17 @@ export function ContactDetailView({
 
               {/* Deals Tab */}
               <TabsContent value="deals" className="flex-1 overflow-y-auto px-4 py-3">
+                <div className="mb-3 flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLinkDealOpen(true)}
+                    className="border-border text-muted-foreground hover:bg-muted"
+                  >
+                    <Plus className="size-3.5" />
+                    {t('dealsTab.linkDeal')}
+                  </Button>
+                </div>
                 {loadingDeals ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="size-5 animate-spin text-primary" />
@@ -776,6 +789,14 @@ export function ContactDetailView({
       onOpenChange={setTemplatePickerOpen}
       onSelect={handleSendTemplate}
     />
+    {contactId && (
+      <LinkDealDialog
+        open={linkDealOpen}
+        onOpenChange={setLinkDealOpen}
+        contactId={contactId}
+        onLinked={fetchDeals}
+      />
+    )}
     </>
   );
 }
