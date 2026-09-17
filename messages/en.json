@@ -97,7 +97,8 @@
     "environment": {
       "comercial": "Comercial",
       "operational": "Operational",
-      "financeiro": "Finance"
+      "financeiro": "Finance",
+      "chat": "Chat"
     }
   },
   "Financeiro": {
@@ -2814,6 +2815,48 @@
       "reindex": "Reindex",
       "reindexTooltip": "Re-embed all documents (e.g. after adding an embeddings key)",
       "loading": "Loading…"
+    }
+  },
+  "Chat": {
+    "loadError": "Could not load messages.",
+    "sendError": "Could not send the message.",
+    "channelNotFound": "Channel not found.",
+    "empty": {
+      "noChannelSelected": "Select a channel to get started.",
+      "noMessages": "No messages yet. Say hi!"
+    },
+    "message": {
+      "edited": "(edited)",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleted": "Message deleted",
+      "editPrompt": "Edit message",
+      "editError": "Could not edit the message.",
+      "deleteConfirm": "Delete this message?",
+      "deleteError": "Could not delete the message."
+    },
+    "sidebar": {
+      "newChannel": "New channel",
+      "publicChannels": "Public channels",
+      "privateChannels": "Private channels",
+      "loadError": "Could not load channels."
+    },
+    "createChannel": {
+      "title": "Create channel",
+      "nameLabel": "Channel name",
+      "namePlaceholder": "e.g. general",
+      "descriptionLabel": "Description (optional)",
+      "privateLabel": "Private channel",
+      "privateHint": "Only people you add will be able to see this channel.",
+      "cancel": "Cancel",
+      "create": "Create",
+      "createError": "Could not create the channel."
+    },
+    "composer": {
+      "placeholder": "Write a message...",
+      "attach": "Attach file",
+      "fileTooLarge": "File is too large (max 16 MB).",
+      "uploadError": "Upload failed."
     }
   }
 }

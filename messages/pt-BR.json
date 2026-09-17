@@ -97,7 +97,8 @@
     "environment": {
       "comercial": "Comercial",
       "operational": "Operacional",
-      "financeiro": "Financeiro"
+      "financeiro": "Financeiro",
+      "chat": "Chat"
     }
   },
   "Financeiro": {
@@ -2814,6 +2815,48 @@
       "reindex": "Reindexar",
       "reindexTooltip": "Regerar embeddings de todos os documentos (ex.: após adicionar uma chave de embeddings)",
       "loading": "Carregando…"
+    }
+  },
+  "Chat": {
+    "loadError": "Não foi possível carregar as mensagens.",
+    "sendError": "Não foi possível enviar a mensagem.",
+    "channelNotFound": "Canal não encontrado.",
+    "empty": {
+      "noChannelSelected": "Selecione um canal para começar.",
+      "noMessages": "Nenhuma mensagem ainda. Diga oi!"
+    },
+    "message": {
+      "edited": "(editado)",
+      "edit": "Editar",
+      "delete": "Apagar",
+      "deleted": "Mensagem apagada",
+      "editPrompt": "Editar mensagem",
+      "editError": "Não foi possível editar a mensagem.",
+      "deleteConfirm": "Apagar esta mensagem?",
+      "deleteError": "Não foi possível apagar a mensagem."
+    },
+    "sidebar": {
+      "newChannel": "Novo canal",
+      "publicChannels": "Canais públicos",
+      "privateChannels": "Canais privados",
+      "loadError": "Não foi possível carregar os canais."
+    },
+    "createChannel": {
+      "title": "Criar canal",
+      "nameLabel": "Nome do canal",
+      "namePlaceholder": "ex: geral",
+      "descriptionLabel": "Descrição (opcional)",
+      "privateLabel": "Canal privado",
+      "privateHint": "Só quem você adicionar poderá ver este canal.",
+      "cancel": "Cancelar",
+      "create": "Criar",
+      "createError": "Não foi possível criar o canal."
+    },
+    "composer": {
+      "placeholder": "Escreva uma mensagem...",
+      "attach": "Anexar arquivo",
+      "fileTooLarge": "Arquivo muito grande (máx. 16 MB).",
+      "uploadError": "Falha ao enviar o arquivo."
     }
   }
 }

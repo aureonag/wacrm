@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Briefcase, ChevronsUpDown, Wallet, Workflow } from "lucide-react";
+import { Briefcase, ChevronsUpDown, MessageSquare, Wallet, Workflow } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -11,34 +11,40 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslations } from "next-intl";
 
-type SwitcherEnvironment = "comercial" | "operational" | "financeiro";
+type SwitcherEnvironment = "comercial" | "operational" | "financeiro" | "chat";
 
 const ENVIRONMENT_META: Record<SwitcherEnvironment, { icon: typeof Briefcase; root: string }> = {
   comercial: { icon: Briefcase, root: "/dashboard" },
   operational: { icon: Workflow, root: "/operational/dashboard" },
   financeiro: { icon: Wallet, root: "/financeiro/dashboard" },
+  chat: { icon: MessageSquare, root: "/chat" },
 };
 
 /**
- * Comercial ↔ Operacional ↔ Financeiro switcher. Comercial/Operacional
- * follow the Cargos+Permissões environment grant (migration 058) — only
- * shown when the cargo has more than one, owner always has both.
- * Financeiro is deliberately NOT part of that system: it's gated on
- * `isOwner` directly, the same hard check as the Financeiro shell/API
- * routes/RLS, so it can never become grantable to another role through
- * "Cargos e permissões" the way comercial/operational modules can.
+ * Comercial ↔ Operacional ↔ Financeiro ↔ Chat switcher. Comercial/
+ * Operacional follow the Cargos+Permissões environment grant (migration
+ * 058) — only shown when the cargo has more than one, owner always has
+ * both. Financeiro is deliberately NOT part of that system: it's gated
+ * on `isOwner` directly, the same hard check as the Financeiro shell/
+ * API routes/RLS, so it can never become grantable to another role
+ * through "Cargos e permissões" the way comercial/operational modules
+ * can. Chat has NO gate at all (migration 084) — every account member
+ * reaches it regardless of cargo, so it's unconditionally included
+ * below and — unlike before Chat existed — the switcher no longer
+ * early-returns when the caller's cargo only grants one of comercial/
+ * operational: Chat is always a second destination.
  */
 export function EnvironmentSwitcher({ current }: { current: SwitcherEnvironment }) {
   const t = useTranslations("Sidebar.environment");
   const { environments, isOwner } = useAuth();
   const router = useRouter();
 
-  if (environments.size < 2 && !isOwner) return null;
-
   const CurrentIcon = ENVIRONMENT_META[current].icon;
-  const visibleEnvs = (Object.keys(ENVIRONMENT_META) as SwitcherEnvironment[]).filter(
-    (env) => env !== "financeiro" || isOwner,
-  );
+  const visibleEnvs = (Object.keys(ENVIRONMENT_META) as SwitcherEnvironment[]).filter((env) => {
+    if (env === "financeiro") return isOwner;
+    if (env === "chat") return true;
+    return isOwner || environments.has(env);
+  });
 
   return (
     <DropdownMenu>

@@ -1189,6 +1189,35 @@ export interface TaskActivity {
   author?: Profile;
 }
 
+/** Internal team chat channel — Fase 1, text-only (migration 084). */
+export interface ChatChannel {
+  id: string;
+  account_id: string;
+  name: string;
+  description?: string | null;
+  is_private: boolean;
+  created_by: string;
+  archived_at?: string | null;
+  created_at: string;
+}
+
+/** Internal team chat message (migration 084). */
+export interface ChatMessage {
+  id: string;
+  channel_id: string;
+  account_id: string;
+  author_id: string;
+  content?: string | null;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
+  reply_to_id?: string | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  created_at: string;
+  author?: Pick<Profile, 'id' | 'full_name' | 'avatar_url'>;
+}
+
 /** Personal WhatsApp connection (QR-code / Evolution API) — see migration 072. */
 export interface WhatsAppSession {
   user_id: string;
