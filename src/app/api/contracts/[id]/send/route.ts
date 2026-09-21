@@ -16,7 +16,7 @@
 import { NextResponse } from "next/server";
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
 import { renderTemplate } from "@/lib/contracts/templating";
-import { generateContractToken, contractSignUrl, contractExpiresAt } from "@/lib/contracts/tokens";
+import { generateContractToken, contractSignUrl, contractExpiresAt, contractExpiresOn } from "@/lib/contracts/tokens";
 
 function getBaseUrl(request: Request): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -69,8 +69,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // signing_method === 'virtual'
+    // Optional agent-picked validity date; absent -> default 7 days.
+    const body = (await request.json().catch(() => null)) as { expires_on?: unknown } | null;
+    let expiresAt = contractExpiresAt();
+    if (body?.expires_on !== undefined && body.expires_on !== null && body.expires_on !== "") {
+      const picked = contractExpiresOn(body.expires_on);
+      if (!picked) {
+        return NextResponse.json(
+          { error: "Data de validade inválida — escolha uma data futura (até 1 ano)." },
+          { status: 400 },
+        );
+      }
+      expiresAt = picked;
+    }
+
     const { token, hash } = generateContractToken();
-    const expiresAt = contractExpiresAt();
 
     const { error: updateError } = await supabase
       .from("deal_contracts")

@@ -1339,6 +1339,8 @@
       "templatePlaceholder": "모델을 선택하세요",
       "noTemplates": "활성화된 모델이 없습니다 — 관리자에게 생성을 요청하세요",
       "methodLabel": "서명 방식",
+      "validityLabel": "링크 유효 기한",
+      "validityHint": "수락 링크는 이 날짜가 끝날 때까지 작동합니다. 이후에는 고객이 서명할 수 없습니다.",
       "clicksignComingSoon": "Clicksign 연동은 곧 제공될 예정입니다",
       "comingSoon": "출시 예정",
       "previewLabel": "미리보기",

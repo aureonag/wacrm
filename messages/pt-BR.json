@@ -1339,6 +1339,8 @@
       "templatePlaceholder": "Selecione um modelo",
       "noTemplates": "Nenhum modelo ativo — peça a um admin para criar um",
       "methodLabel": "Método de assinatura",
+      "validityLabel": "Link válido até",
+      "validityHint": "O link de aceite funciona até o fim desse dia. Depois disso, o cliente não consegue mais assinar.",
       "clicksignComingSoon": "A integração com o Clicksign estará disponível em breve",
       "comingSoon": "em breve",
       "previewLabel": "Pré-visualização",

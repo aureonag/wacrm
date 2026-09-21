@@ -78,6 +78,15 @@ interface FormState {
   clientEmail: string;
   templateId: string;
   signingMethod: ContractSigningMethod;
+  /** "YYYY-MM-DD" — last day the acceptance link works. */
+  expiresOn: string;
+}
+
+function localDateInput(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function emptyForm(contact?: Contact): FormState {
@@ -90,6 +99,7 @@ function emptyForm(contact?: Contact): FormState {
     clientEmail: contact?.email ?? "",
     templateId: "",
     signingMethod: "virtual",
+    expiresOn: localDateInput(7),
   };
 }
 
@@ -151,7 +161,8 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
     form.nomeRepresentante.trim() &&
     form.cpfRepresentante.trim() &&
     form.clientEmail.trim() &&
-    form.templateId;
+    form.templateId &&
+    form.expiresOn;
 
   async function handleGenerate() {
     if (!canSubmit) return;
@@ -178,7 +189,11 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
         return;
       }
 
-      const sendRes = await fetch(`/api/contracts/${createJson.contract.id}/send`, { method: "POST" });
+      const sendRes = await fetch(`/api/contracts/${createJson.contract.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expires_on: form.expiresOn }),
+      });
       const sendJson = await sendRes.json().catch(() => null);
       if (!sendRes.ok) {
         toast.error(sendJson?.error ?? t("toastFailedSend"));
@@ -502,6 +517,21 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                   </button>
                 </div>
               </div>
+
+              {form.signingMethod === "virtual" && (
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground">{t("validityLabel")}</Label>
+                  <Input
+                    type="date"
+                    value={form.expiresOn}
+                    min={localDateInput(1)}
+                    max={localDateInput(365)}
+                    onChange={(e) => setForm((f) => ({ ...f, expiresOn: e.target.value }))}
+                    className="w-full bg-muted text-foreground sm:w-56"
+                  />
+                  <p className="text-xs text-muted-foreground">{t("validityHint")}</p>
+                </div>
+              )}
 
               {selectedTemplate && (
                 <div className="space-y-1.5">

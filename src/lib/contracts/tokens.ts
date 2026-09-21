@@ -38,3 +38,18 @@ export function contractSignUrl(token: string, baseUrl: string): string {
 export function contractExpiresAt(now: Date = new Date()): Date {
   return new Date(now.getTime() + CONTRACT_LINK_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 }
+
+/**
+ * Parses a user-picked "YYYY-MM-DD" validity date into the instant the link
+ * stops working: the END of that day in Brasília time (UTC-3, no DST since
+ * 2019), so "válido até 30/09" means it still works all day on the 30th.
+ * Returns null when malformed, not in the future, or beyond `maxDays`.
+ */
+export function contractExpiresOn(dateStr: unknown, now: Date = new Date(), maxDays = 365): Date | null {
+  if (typeof dateStr !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+  const end = new Date(`${dateStr}T23:59:59-03:00`);
+  if (Number.isNaN(end.getTime())) return null;
+  if (end.getTime() <= now.getTime()) return null;
+  if (end.getTime() - now.getTime() > maxDays * 24 * 60 * 60 * 1000) return null;
+  return end;
+}

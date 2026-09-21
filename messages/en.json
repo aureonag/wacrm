@@ -1339,6 +1339,8 @@
       "templatePlaceholder": "Select a template",
       "noTemplates": "No active templates — ask an admin to create one",
       "methodLabel": "Signing method",
+      "validityLabel": "Link valid until",
+      "validityHint": "The acceptance link works until the end of this day. After that, the client can no longer sign.",
       "clicksignComingSoon": "Clicksign integration is coming soon",
       "comingSoon": "coming soon",
       "previewLabel": "Preview",
