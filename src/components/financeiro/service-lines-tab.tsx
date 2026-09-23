@@ -321,25 +321,37 @@ export function ServiceLinesTab() {
   async function handleSaveAllocationValue(row: AllocRow, month: number, raw: string) {
     if (!accountId || !selectedLineId) return;
     const amount = parseFloat(raw.replace(",", ".")) || 0;
-    const conflictTarget = row.teamMemberId
-      ? "service_line_id,team_member_id,year,month"
-      : "service_line_id,freelancer_name,year,month";
-    const { data, error } = await supabase
-      .from("fin_team_allocations")
-      .upsert(
-        {
-          account_id: accountId,
-          service_line_id: selectedLineId,
-          team_member_id: row.teamMemberId,
-          freelancer_name: row.freelancerName,
-          year,
-          month,
-          amount,
-        },
-        { onConflict: conflictTarget },
-      )
-      .select()
-      .single();
+    // Not an upsert: this table's uniqueness lives in two *partial* unique
+    // indexes (member rows / freelancer rows), and Postgres can't infer a
+    // partial index from a plain ON CONFLICT (cols) — PostgREST can't send
+    // the index predicate — so upsert fails with "no unique or exclusion
+    // constraint matching". Update the existing row, or insert a new one.
+    const existing = allocations.find(
+      (a) =>
+        a.team_member_id === row.teamMemberId &&
+        a.freelancer_name === row.freelancerName &&
+        a.month === month,
+    );
+    const { data, error } = existing
+      ? await supabase
+          .from("fin_team_allocations")
+          .update({ amount })
+          .eq("id", existing.id)
+          .select()
+          .single()
+      : await supabase
+          .from("fin_team_allocations")
+          .insert({
+            account_id: accountId,
+            service_line_id: selectedLineId,
+            team_member_id: row.teamMemberId,
+            freelancer_name: row.freelancerName,
+            year,
+            month,
+            amount,
+          })
+          .select()
+          .single();
     if (error) {
       toast.error("Falha ao salvar alocação");
       return;
