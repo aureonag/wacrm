@@ -9,6 +9,12 @@ import { DealCreateModal } from "@/components/pipelines/deal-create-modal";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { PipelineSelector } from "@/components/pipelines/pipeline-selector";
 import { PipelineSearch } from "@/components/pipelines/pipeline-search";
+import {
+  PipelineOwnerFilter,
+  OWNER_FILTER_ALL,
+  OWNER_FILTER_MINE,
+  type OwnerFilterMember,
+} from "@/components/pipelines/pipeline-owner-filter";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +49,8 @@ import {
 // state — doesn't silently drop them back to whichever pipeline happens to
 // load first.
 const SELECTED_PIPELINE_STORAGE_KEY = "wacrm:pipelines:selected-pipeline-id";
+
+const OWNER_FILTER_STORAGE_KEY = "wacrm:pipelines:owner-filter";
 
 function persistSelectedPipeline(pipelineId: string) {
   try {
@@ -80,7 +88,13 @@ export default function PipelinesPage() {
   const supabase = createClient();
   const canEditSettings = useCan("edit-settings");
   const canCreateDeals = useCan("send-messages");
-  const { accountId } = useAuth();
+  const { accountId, user, isOwner } = useAuth();
+
+  // Only the account owner can slice the board by another person; everyone
+  // else gets All / Mine. The account's members are read live, so a newly
+  // added user shows up in the owner's list with no extra setup.
+  const [ownerFilter, setOwnerFilter] = useState<string>(OWNER_FILTER_ALL);
+  const [members, setMembers] = useState<OwnerFilterMember[]>([]);
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
@@ -215,6 +229,62 @@ export default function PipelinesPage() {
       cancelled = true;
     };
   }, [selectedPipelineId, loadStages, loadDeals]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(OWNER_FILTER_STORAGE_KEY);
+      if (stored) setOwnerFilter(stored);
+    } catch {
+      // Persistence is best-effort; ignore storage failures.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .order("full_name");
+      if (cancelled || !data) return;
+      setMembers(
+        data
+          .filter((p) => p.id !== user?.id)
+          .map((p) => ({ id: p.id, name: p.full_name || "—" })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwner, supabase, user?.id]);
+
+  const handleOwnerFilterChange = useCallback((value: string) => {
+    setOwnerFilter(value);
+    try {
+      localStorage.setItem(OWNER_FILTER_STORAGE_KEY, value);
+    } catch {
+      // Persistence is best-effort; ignore storage failures.
+    }
+  }, []);
+
+  // A non-owner can't pick a person, so a stale stored id (e.g. from a
+  // shared browser) falls back to "all".
+  const effectiveFilter =
+    ownerFilter === OWNER_FILTER_ALL || ownerFilter === OWNER_FILTER_MINE
+      ? ownerFilter
+      : isOwner && members.some((m) => m.id === ownerFilter)
+        ? ownerFilter
+        : OWNER_FILTER_ALL;
+
+  const visibleDeals =
+    effectiveFilter === OWNER_FILTER_ALL
+      ? deals
+      : deals.filter(
+          (d) =>
+            d.assigned_to ===
+            (effectiveFilter === OWNER_FILTER_MINE ? user?.id : effectiveFilter),
+        );
 
   const handleSelectPipeline = useCallback((pipelineId: string) => {
     setSelectedPipelineId(pipelineId);
@@ -396,6 +466,14 @@ export default function PipelinesPage() {
             emptyLabel={t("noPipelinesYet")}
             manageLabel={t("managePipelines")}
           />
+          <PipelineOwnerFilter
+            value={effectiveFilter}
+            onChange={handleOwnerFilterChange}
+            members={isOwner ? members : undefined}
+            allLabel={t("filterAll")}
+            mineLabel={t("filterMine")}
+            membersLabel={t("filterMembers")}
+          />
           <PipelineSearch />
         </div>
 
@@ -445,10 +523,10 @@ export default function PipelinesPage() {
         </div>
       ) : (
         <>
-          <PipelineAnalytics stages={stages} deals={deals} />
+          <PipelineAnalytics stages={stages} deals={visibleDeals} />
           <PipelineBoard
             stages={stages}
-            deals={deals}
+            deals={visibleDeals}
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
             onTagsChanged={handleTagsChanged}
