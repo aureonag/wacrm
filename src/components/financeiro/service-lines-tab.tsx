@@ -537,6 +537,22 @@ export function ServiceLinesTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    <TableRow className="bg-primary/10 hover:bg-primary/10">
+                      <TableCell className="sticky left-0 z-10 bg-card px-2 py-2 text-xs font-semibold text-foreground">
+                        Faturamento total do mês
+                      </TableCell>
+                      {MONTHS.map((m) => {
+                        const total = clients.reduce((s, c) => s + (valueByClientMonth.get(`${c.id}:${m}`) ?? 0), 0);
+                        return (
+                          <TableCell key={m} className="px-1.5 py-2 text-right text-xs font-semibold tabular-nums text-foreground">
+                            {total > 0
+                              ? total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              : "—"}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell />
+                    </TableRow>
                     {activeGroups.map((group) => {
                       const groupTotal = group.clients.reduce(
                         (sum, c) => sum + MONTHS.reduce((s, m) => s + (valueByClientMonth.get(`${c.id}:${m}`) ?? 0), 0),
