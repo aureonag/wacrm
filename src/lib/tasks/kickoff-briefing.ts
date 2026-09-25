@@ -27,6 +27,9 @@ export interface KickoffBriefingInput {
   origin?: string | null;
   scope: ScopeSection[];
   hasSignedContract: boolean;
+  /** Names of the signed contracts (their templates), e.g. "Termo de aceite - Tráfego Pago - Lead Generation".
+   *  A deal can have more than one (one per front). */
+  contractTitles?: string[];
   observations?: string | null;
 }
 
@@ -67,6 +70,14 @@ function linesToBlocks(lines: string[]): JSONContent[] {
 
 export function buildKickoffBriefing(input: KickoffBriefingInput): JSONContent {
   const content: JSONContent[] = [];
+
+  // First thing the person reads: which contract / front this kickoff is about.
+  const titles = (input.contractTitles ?? []).map((t) => t.trim()).filter(Boolean);
+  if (titles.length === 1) {
+    content.push(heading("Contrato assinado"), paragraph(titles[0]));
+  } else if (titles.length > 1) {
+    content.push(heading("Contratos assinados"), bullets(titles));
+  }
 
   const clientLines: string[] = [];
   if (input.contact?.name) clientLines.push(`Nome: ${input.contact.name}`);

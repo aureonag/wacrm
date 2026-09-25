@@ -16,7 +16,7 @@ export async function GET() {
 
     const { data: contracts, error } = await admin
       .from("deal_contracts")
-      .select("id, deal_id, razao_social, cnpj, signed_at, rendered_content, deal:deals(contact_id)")
+      .select("id, deal_id, razao_social, cnpj, signed_at, rendered_content, deal:deals(contact_id), template:contract_templates(name)")
       .eq("account_id", ctx.accountId)
       .eq("status", "signed")
       .is("terminated_at", null)
@@ -39,18 +39,16 @@ export async function GET() {
       if (t.deal_id && t.deal_id !== null) byDeal.set(t.deal_id as string, (byDeal.get(t.deal_id as string) ?? 0) + 1);
     }
 
-    const seenDeals = new Set<string>();
     const clients = [];
+    // One row per signed contract: a client with two fronts shows both.
     for (const c of contracts ?? []) {
-      // One row per deal (its most recent signed contract).
-      if (seenDeals.has(c.deal_id as string)) continue;
-      seenDeals.add(c.deal_id as string);
       const deal = (Array.isArray(c.deal) ? c.deal[0] : c.deal) as { contact_id: string | null } | null;
       const contactId = deal?.contact_id ?? null;
       const contactTasks = contactId ? (byContact.get(contactId) ?? 0) : 0;
       const dealOnlyTasks = byDeal.get(c.deal_id as string) ?? 0;
       clients.push({
         id: c.id,
+        title: ((Array.isArray(c.template) ? c.template[0] : c.template) as { name?: string | null } | null)?.name ?? null,
         razaoSocial: c.razao_social,
         cnpj: c.cnpj,
         signedAt: c.signed_at,

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/dashboard/skeleton";
 
 interface ActiveClient {
   id: string;
+  title: string | null;
   razaoSocial: string;
   cnpj: string;
   signedAt: string | null;
@@ -101,6 +102,7 @@ export default function ActiveClientsPage() {
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {c.cnpj} · {t("signedAt", { date: brDate(c.signedAt) })}
                     </p>
+                    {c.title && <p className="mt-1.5 truncate text-xs font-medium text-primary">{c.title}</p>}
                     {service && service.lines[0] && (
                       <p className="mt-1.5 truncate text-xs text-foreground/80">{service.lines[0]}</p>
                     )}

@@ -19,7 +19,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
-import { extractScopeSections } from "@/lib/contracts/scope";
+import { extractScopeSections, type ScopeSection } from "@/lib/contracts/scope";
 import { KICKOFF_CHECKLIST, buildKickoffBriefing } from "@/lib/tasks/kickoff-briefing";
 import {
   buildMonthlySchedule,
@@ -44,18 +44,33 @@ const FINANCE_MESSAGES: Record<FinanceError, string> = {
 };
 
 async function loadScope(supabase: SupabaseClient, dealId: string) {
-  const { data: contract } = await supabase
+  // A deal can carry more than one signed contract (one per front): the
+  // kickoff shows all their titles and the scope of all of them.
+  const { data: contracts } = await supabase
     .from("deal_contracts")
-    .select("rendered_content")
+    .select("rendered_content, template:contract_templates(name)")
     .eq("deal_id", dealId)
     .eq("status", "signed")
-    .order("signed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .is("terminated_at", null)
+    .order("signed_at", { ascending: true });
+
+  const rows = contracts ?? [];
+  const titles: string[] = [];
+  const merged = new Map<ScopeSection["key"], ScopeSection>();
+  for (const c of rows) {
+    const template = (Array.isArray(c.template) ? c.template[0] : c.template) as { name?: string | null } | null;
+    if (template?.name && !titles.includes(template.name)) titles.push(template.name);
+    for (const s of extractScopeSections(c.rendered_content as string | null | undefined)) {
+      const cur = merged.get(s.key);
+      if (!cur) merged.set(s.key, { ...s, lines: [...s.lines] });
+      else for (const line of s.lines) if (!cur.lines.includes(line)) cur.lines.push(line);
+    }
+  }
 
   return {
-    hasSignedContract: !!contract,
-    scope: extractScopeSections(contract?.rendered_content as string | null | undefined),
+    hasSignedContract: rows.length > 0,
+    contractTitles: titles,
+    scope: [...merged.values()],
   };
 }
 
@@ -217,8 +232,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       contact = data ?? null;
     }
 
-    const { hasSignedContract, scope } = await loadScope(supabase, id);
+    const { hasSignedContract, scope, contractTitles } = await loadScope(supabase, id);
     const briefing = buildKickoffBriefing({
+      contractTitles,
       contact,
       segment: deal.segment,
       region: deal.region,

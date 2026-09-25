@@ -25,29 +25,28 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       .eq("account_id", ctx.accountId)
       .maybeSingle();
     if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    if (!task.deal_id) return NextResponse.json({ contract: null });
+    if (!task.deal_id) return NextResponse.json({ contracts: [] });
 
-    const { data: contract } = await supabaseAdmin()
+    // One deal can have several signed contracts (one per front).
+    const { data: rows } = await supabaseAdmin()
       .from("deal_contracts")
-      .select("razao_social, cnpj, signed_at, terminated_at, termination_effective_date, rendered_content")
+      .select("razao_social, cnpj, signed_at, terminated_at, termination_effective_date, rendered_content, template:contract_templates(name)")
       .eq("deal_id", task.deal_id)
       .eq("account_id", ctx.accountId)
       .eq("status", "signed")
-      .order("signed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!contract) return NextResponse.json({ contract: null });
+      .order("signed_at", { ascending: true });
 
-    return NextResponse.json({
-      contract: {
+    const contracts = (rows ?? []).map((contract) => ({
+        title: ((Array.isArray(contract.template) ? contract.template[0] : contract.template) as { name?: string | null } | null)?.name ?? null,
         razaoSocial: contract.razao_social,
         cnpj: contract.cnpj,
         signedAt: contract.signed_at,
         terminatedAt: contract.terminated_at,
         terminationEffectiveDate: contract.termination_effective_date,
         sections: extractScopeSections(contract.rendered_content as string | null),
-      },
-    });
+      }));
+
+    return NextResponse.json({ contracts });
   } catch (err) {
     return toErrorResponse(err);
   }

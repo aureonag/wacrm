@@ -20,6 +20,27 @@ describe("buildKickoffBriefing", () => {
     expect(s).toContain("Usa WhatsApp Business.");
   });
 
+  it("puts the signed contract title(s) first", () => {
+    const one = buildKickoffBriefing({
+      contact: null,
+      scope: [],
+      hasSignedContract: true,
+      contractTitles: ["Termo de aceite - Tráfego Pago PROMOCIONAL - Lead Generation"],
+    });
+    expect(one.content?.[0]).toMatchObject({ type: "heading" });
+    expect(dump(one.content?.slice(0, 2))).toContain("Contrato assinado");
+    expect(dump(one.content?.slice(0, 2))).toContain("Lead Generation");
+
+    const two = buildKickoffBriefing({
+      contact: null,
+      scope: [],
+      hasSignedContract: true,
+      contractTitles: ["Termo A", "Termo B"],
+    });
+    expect(dump(two.content?.slice(0, 2))).toContain("Contratos assinados");
+    expect(dump(two.content?.slice(0, 2))).toContain("Termo B");
+  });
+
   it("never carries a monetary amount", () => {
     const doc = buildKickoffBriefing({
       contact: { name: "ACME" },
