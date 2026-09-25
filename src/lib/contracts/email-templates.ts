@@ -169,12 +169,26 @@ export function terminationEmailHtml(a: TerminationEmailArgs): string {
       ${a.serviceLines.length ? row("Serviço", a.serviceLines.join("; ")) : ""}
       ${row("Referência", a.contractRef)}
     </table>
-    <div style="margin:0 0 16px;padding:14px 16px;background:${COLORS.primarySoftBg};border:1px solid ${COLORS.primarySoftBorder};border-radius:8px;">
-      <div style="font-size:12px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Data do cancelamento</div>
-      <div style="margin-top:4px;font-size:16px;font-weight:600;color:${COLORS.foreground};">${formatBrDate(a.effectiveDate)}</div>
-      <div style="margin-top:14px;font-size:12px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Aviso prévio de ${NOTICE_DAYS} dias corridos — término do contrato</div>
-      <div style="margin-top:4px;font-size:24px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(addDaysIso(a.effectiveDate, NOTICE_DAYS))}</div>
-    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+      <tr>
+        <td width="38%" valign="top" style="padding:14px;background:${COLORS.background};border:1px solid ${COLORS.cardBorder};border-radius:8px;">
+          <div style="font-size:11px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Cancelamento</div>
+          <div style="margin-top:6px;font-size:18px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(a.effectiveDate)}</div>
+        </td>
+        <td width="24%" align="center" valign="middle" style="padding:0 6px;">
+          <div style="font-size:20px;line-height:20px;font-weight:700;color:${COLORS.primary};">${NOTICE_DAYS}</div>
+          <div style="font-size:10px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">dias corridos</div>
+          <div style="margin-top:2px;font-size:18px;line-height:18px;color:${COLORS.primary};">&#8594;</div>
+        </td>
+        <td width="38%" valign="top" style="padding:14px;background:${COLORS.primarySoftBg};border:2px solid ${COLORS.primary};border-radius:8px;">
+          <div style="font-size:11px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Término do contrato</div>
+          <div style="margin-top:6px;font-size:22px;font-weight:800;color:${COLORS.foreground};">${formatBrDate(addDaysIso(a.effectiveDate, NOTICE_DAYS))}</div>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0 0 16px;font-size:13px;color:${COLORS.muted};line-height:1.6;">
+      O aviso prévio é de <strong style="color:${COLORS.foreground};">${NOTICE_DAYS} dias corridos</strong>, contados a partir da data do cancelamento.
+    </p>
     ${
       a.note
         ? `<p style="margin:0 0 16px;font-size:13px;color:${COLORS.muted};line-height:1.6;"><strong style="color:${COLORS.foreground};">Observações:</strong> ${escapeHtml(a.note)}</p>`
