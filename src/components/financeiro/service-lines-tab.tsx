@@ -286,6 +286,27 @@ export function ServiceLinesTab() {
   }
 
   async function handleDeleteClient(client: FinClient) {
+    // A client that also has values in other years is only removed from THIS year:
+    // deleting the row would erase its history everywhere.
+    const { count: otherYears } = await supabase
+      .from("fin_client_values")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", client.id)
+      .neq("year", year);
+    if ((otherYears ?? 0) > 0) {
+      if (!confirm(`Remover "${client.name}" só de ${year}? Os valores dos outros anos são mantidos.`)) return;
+      const { error: yearError } = await supabase
+        .from("fin_client_values")
+        .delete()
+        .eq("client_id", client.id)
+        .eq("year", year);
+      if (yearError) {
+        toast.error("Falha ao remover o cliente deste ano");
+        return;
+      }
+      setValues((prev) => prev.filter((v) => !(v.client_id === client.id && v.year === year)));
+      return;
+    }
     if (!confirm(`Excluir "${client.name}"? Isso remove o histórico de valores dele.`)) return;
     const { error } = await supabase.from("fin_clients").delete().eq("id", client.id);
     if (error) {
@@ -407,7 +428,14 @@ export function ServiceLinesTab() {
 
   const selectedLine = lines.find((l) => l.id === selectedLineId) ?? null;
   const activeClients = clients.filter((c) => c.status === "active");
-  const endedClients = clients.filter((c) => c.status === "ended");
+  // An ended client stays visible in the years it was billed (values, or the year it ended)
+  // and disappears from the years after that.
+  const endedClients = clients.filter(
+    (c) =>
+      c.status === "ended" &&
+      (values.some((v) => v.client_id === c.id && v.year === year && Number(v.amount) > 0) ||
+        (c.ended_at ? Number(c.ended_at.slice(0, 4)) >= year : false)),
+  );
   // Typed values for this year plus the "até cancelar" projection (active clients keep
   // their last value from the current month on, until they are ended).
   const projection = useMemo(() => projectYear({ clients, values, year }), [clients, values, year]);
