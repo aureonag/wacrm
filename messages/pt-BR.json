@@ -368,6 +368,18 @@
         "colAssignedOpen": "Atribuídas (aberto)",
         "colCompleted": "Concluídas no período",
         "colHours": "Horas no período"
+      },
+      "hours": {
+        "title": "Horas trabalhadas",
+        "description": "Horas registradas no timesheet, por dia. Use as setas para ver semanas e meses anteriores.",
+        "week": "Semana",
+        "month": "Mês",
+        "previous": "Anterior",
+        "next": "Próximo",
+        "today": "Hoje",
+        "total": "Total no período",
+        "hours": "Horas",
+        "empty": "Nenhuma hora registrada neste período."
       }
     },
     "boards": {

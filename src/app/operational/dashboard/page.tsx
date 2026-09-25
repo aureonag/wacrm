@@ -41,6 +41,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { TeamTable } from "@/components/operational-dashboard/team-table";
+import { HoursChart } from "@/components/operational-dashboard/hours-chart";
 
 const ALL = "__all";
 
@@ -255,6 +256,19 @@ export default function OperationalDashboardPage() {
                   value={time.avgCompletionMinutes !== null ? formatMinutes(time.avgCompletionMinutes) : "—"}
                 />
                 <StatTile icon={<Clock3 className="h-3.5 w-3.5" />} label={t("time.totalLogged")} value={formatMinutes(time.totalMinutesLogged)} />
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <Clock3 className="h-4 w-4 text-purple-400" />
+                  {t("hours.title")}
+                </CardTitle>
+                <CardDescription>{t("hours.description")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <HoursChart entries={filteredTimesheet} />
               </CardContent>
             </Card>
 

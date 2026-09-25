@@ -368,6 +368,18 @@
         "colAssignedOpen": "Assigned (open)",
         "colCompleted": "Completed in period",
         "colHours": "Hours in period"
+      },
+      "hours": {
+        "title": "Hours worked",
+        "description": "Hours logged in the timesheet, per day. Use the arrows to see earlier weeks and months.",
+        "week": "Week",
+        "month": "Month",
+        "previous": "Previous",
+        "next": "Next",
+        "today": "Today",
+        "total": "Total in the period",
+        "hours": "Hours",
+        "empty": "No hours logged in this period."
       }
     },
     "boards": {
