@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { EnvironmentSwitcher } from "@/components/layout/environment-switcher";
-import { LayoutDashboard, LayoutGrid, LogOut, Settings, User, X } from "lucide-react";
+import { Building2, LayoutDashboard, LayoutGrid, LogOut, Settings, User, X } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -63,6 +63,7 @@ export function OperationalSidebar({ open = false, onClose }: OperationalSidebar
 
   const isDashboardActive = pathname === "/operational/dashboard";
   const isBoardsActive = pathname.startsWith("/operational/boards");
+  const isClientsActive = pathname.startsWith("/operational/clients");
 
   return (
     <>
@@ -141,6 +142,22 @@ export function OperationalSidebar({ open = false, onClose }: OperationalSidebar
                 >
                   <LayoutGrid className="h-4 w-4" />
                   <span className="flex-1">{tOp("boards")}</span>
+                </Link>
+              </li>
+            )}
+            {canViewBoards && (
+              <li>
+                <Link
+                  href="/operational/clients"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                    isClientsActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Building2 className="h-4 w-4" />
+                  <span className="flex-1">{tOp("clients")}</span>
                 </Link>
               </li>
             )}

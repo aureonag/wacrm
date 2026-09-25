@@ -325,7 +325,8 @@
   "Operational": {
     "sidebar": {
       "dashboard": "Dashboard",
-      "boards": "Task Management"
+      "boards": "Task Management",
+      "clients": "Active clients"
     },
     "dashboard": {
       "title": "Operational Dashboard",
@@ -640,6 +641,17 @@
       "save": "Save",
       "noEntries": "No time logged yet.",
       "toastFailed": "Could not save"
+    },
+    "clients": {
+      "title": "Active clients",
+      "description": "Signed contracts in force, with what was contracted. Click a client to see the scope and responsibilities.",
+      "search": "Search client or tax ID…",
+      "signedAt": "signed on {date}",
+      "openTasks": "{count, plural, =0 {No open tasks} one {1 open task} other {# open tasks}}",
+      "noScope": "The contract has no scope sections.",
+      "empty": "No active clients yet.",
+      "noResults": "No client found.",
+      "error": "Could not load clients."
     }
   },
   "Inbox": {

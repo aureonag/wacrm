@@ -325,7 +325,8 @@
   "Operational": {
     "sidebar": {
       "dashboard": "Dashboard",
-      "boards": "Gestão de Tarefas"
+      "boards": "Gestão de Tarefas",
+      "clients": "Clientes ativos"
     },
     "dashboard": {
       "title": "Dashboard Operacional",
@@ -640,6 +641,17 @@
       "save": "Salvar",
       "noEntries": "Nenhum tempo lançado ainda.",
       "toastFailed": "Não foi possível salvar"
+    },
+    "clients": {
+      "title": "Clientes ativos",
+      "description": "Contratos assinados e em vigor, com o que foi contratado. Clique em um cliente para ver o escopo e as responsabilidades.",
+      "search": "Buscar cliente ou CNPJ…",
+      "signedAt": "assinado em {date}",
+      "openTasks": "{count, plural, =0 {Sem tarefas abertas} one {1 tarefa aberta} other {# tarefas abertas}}",
+      "noScope": "O contrato não traz as seções de escopo.",
+      "empty": "Nenhum cliente ativo ainda.",
+      "noResults": "Nenhum cliente encontrado.",
+      "error": "Não foi possível carregar os clientes."
     }
   },
   "Inbox": {
