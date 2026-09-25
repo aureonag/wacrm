@@ -58,6 +58,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ContactPicker, type PickedContact } from "./contact-picker";
+import { formatTaskCode } from "@/lib/tasks/code";
 import { BriefingEditor } from "./briefing-editor";
 import { CommentThread } from "./comment-thread";
 import { ChecklistPanel } from "./checklist-panel";
@@ -101,6 +103,20 @@ interface TaskDrawerProps {
 
 const PRIORITIES: TaskPriority[] = ["low", "medium", "high"];
 
+/** Unsaved edits to the header fields; only what differs from the saved task is kept. */
+type Draft = Partial<{
+  title: string;
+  stage_id: string;
+  priority: TaskPriority;
+  assignee_id: string | null;
+  sector_id: string | null;
+  contact_id: string | null;
+  start_date: string | null;
+  due_date: string | null;
+  estimated_minutes: number | null;
+  drive_folder_url: string | null;
+}>;
+
 export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }: TaskDrawerProps) {
   const t = useTranslations("Operational.taskDrawer");
   const tPriority = useTranslations("Operational.tasks.card.priority");
@@ -129,7 +145,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [timesheet, setTimesheet] = useState<TimesheetEntry[]>([]);
   const [recurrenceRule, setRecurrenceRule] = useState<TaskRecurrenceRule | null>(null);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
+  const [draft, setDraft] = useState<Draft>({});
+  const [draftContact, setDraftContact] = useState<PickedContact | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
   const [activeTab, setActiveTab] = useState("briefing");
   const [showMoveBoard, setShowMoveBoard] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -218,7 +237,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     }
 
     setTask(loadedTask);
-    setTitle(loadedTask.title);
     setStages(stageRows);
     setComments(comms);
     setChecklist(check);
@@ -236,6 +254,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     if (!open || !taskId) return;
     setLoading(true);
     setActiveTab("briefing");
+    setDraft({});
+    setDraftContact(null);
     let cancelled = false;
     (async () => {
       await reloadAll();
@@ -287,9 +307,52 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     return true;
   }
 
-  async function handleTitleBlur() {
-    if (!task || title.trim() === task.title || !title.trim()) return;
-    await patchTask({ title: title.trim() });
+  const dirty = Object.keys(draft).length > 0;
+  const titleEmpty = "title" in draft && !(draft.title ?? "").trim();
+
+  function field(k: keyof Draft): unknown {
+    if (k in draft) return draft[k];
+    return (task as unknown as Record<string, unknown> | null)?.[k] ?? null;
+  }
+
+  function setField<K extends keyof Draft>(k: K, v: Draft[K]) {
+    setDraft((prev) => {
+      const next = { ...prev };
+      const original = (task as unknown as Record<string, unknown> | null)?.[k] ?? null;
+      if ((v ?? null) === original) delete next[k];
+      else next[k] = v;
+      return next;
+    });
+  }
+
+  const shownContact: PickedContact | null =
+    "contact_id" in draft
+      ? draft.contact_id
+        ? draftContact
+        : null
+      : task?.contact
+        ? { id: task.contact.id, name: task.contact.name || task.contact.phone }
+        : null;
+
+  async function handleSaveChanges(): Promise<boolean> {
+    if (!task || !dirty || titleEmpty || saving) return !dirty;
+    setSaving(true);
+    const payload: Record<string, unknown> = { ...draft };
+    if (typeof payload.title === "string") payload.title = payload.title.trim();
+    const ok = await patchTask(payload);
+    setSaving(false);
+    if (ok) {
+      setDraft({});
+      setDraftContact(null);
+      toast.success(t("toastSaved"));
+    }
+    return !!ok;
+  }
+
+  /** Runs the action now, or after the person decides what to do with unsaved edits. */
+  function leaveGuard(action: () => void) {
+    if (dirty) setPendingLeave(() => action);
+    else action();
   }
 
   async function handleMoveToTop() {
@@ -403,7 +466,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(v) : leaveGuard(() => onOpenChange(false)))}>
       <DialogContent
         showCloseButton={false}
         className="top-0 left-0 flex h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0 sm:max-w-none"
@@ -420,20 +483,24 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   {task.parent_task_id && (
                     <button
                       type="button"
-                      onClick={() => onNavigate(task.parent_task_id!)}
+                      onClick={() => leaveGuard(() => onNavigate(task.parent_task_id!))}
                       className="mb-1 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
                     >
                       <CornerDownRight className="h-3 w-3 rotate-180" />
                       {t("backToParent")}
                     </button>
                   )}
+                  {formatTaskCode(task.task_number) && (
+                    <span className="mb-0.5 inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted-foreground">
+                      {formatTaskCode(task.task_number)}
+                    </span>
+                  )}
                   {canEdit ? (
                     <Input
                       spellCheck
                       lang="pt-BR"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      onBlur={handleTitleBlur}
+                      value={(field("title") as string) ?? ""}
+                      onChange={(e) => setField("title", e.target.value)}
                       className="border-transparent bg-transparent px-0 text-lg font-semibold text-foreground focus:border-border focus:bg-muted focus:px-2"
                     />
                   ) : (
@@ -472,6 +539,16 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                         {tTimesheet("start")}
                       </Button>
                     ))}
+                  {canEdit && (
+                    <Button
+                      size="sm"
+                      onClick={handleSaveChanges}
+                      disabled={!dirty || titleEmpty || saving}
+                      className={dirty ? "" : "opacity-60"}
+                    >
+                      {saving ? t("saving") : t("saveChanges")}
+                    </Button>
+                  )}
                   <button
                     type="button"
                     onClick={() => canEdit && patchTask({ is_urgent: !task.is_urgent })}
@@ -532,7 +609,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   </DropdownMenu>
                   <button
                     type="button"
-                    onClick={() => onOpenChange(false)}
+                    onClick={() => leaveGuard(() => onOpenChange(false))}
                     aria-label={t("close")}
                     className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
@@ -546,39 +623,50 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
             <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-3 sm:px-6 lg:grid-cols-4">
               <FieldSelect
                 label={t("stage")}
-                value={task.stage_id}
-                onChange={(v) => patchTask({ stage_id: v })}
+                value={field("stage_id") as string}
+                onChange={(v) => setField("stage_id", v)}
                 disabled={!canEdit}
                 options={stages.map((s) => ({ value: s.id, label: s.name }))}
               />
               <FieldSelect
                 label={t("priority")}
-                value={task.priority}
-                onChange={(v) => patchTask({ priority: v })}
+                value={field("priority") as string}
+                onChange={(v) => setField("priority", v as TaskPriority)}
                 disabled={!canEdit}
                 options={PRIORITIES.map((p) => ({ value: p, label: tPriority(p) }))}
               />
               <FieldSelect
                 label={t("assignee")}
-                value={task.assignee_id ?? "__none"}
-                onChange={(v) => patchTask({ assignee_id: v === "__none" ? null : v })}
+                value={(field("assignee_id") as string | null) ?? "__none"}
+                onChange={(v) => setField("assignee_id", v === "__none" ? null : v)}
                 disabled={!canEdit}
                 options={[{ value: "__none", label: t("none") }, ...profiles.map((p) => ({ value: p.id, label: p.full_name }))]}
               />
               <FieldSelect
                 label={t("sector")}
-                value={task.sector_id ?? "__none"}
-                onChange={(v) => patchTask({ sector_id: v === "__none" ? null : v })}
+                value={(field("sector_id") as string | null) ?? "__none"}
+                onChange={(v) => setField("sector_id", v === "__none" ? null : v)}
                 disabled={!canEdit}
                 options={[{ value: "__none", label: t("none") }, ...sectors.map((s) => ({ value: s.id, label: s.name }))]}
               />
+              <div className="col-span-2 grid gap-1">
+                <Label className="text-[11px] text-muted-foreground">{t("client")}</Label>
+                <ContactPicker
+                  value={shownContact}
+                  disabled={!canEdit}
+                  onChange={(c) => {
+                    setDraftContact(c);
+                    setField("contact_id", c?.id ?? null);
+                  }}
+                />
+              </div>
               <div className="grid gap-1">
                 <Label className="text-[11px] text-muted-foreground">{t("startDate")}</Label>
                 <Input
                   type="date"
                   disabled={!canEdit}
-                  defaultValue={task.start_date ?? ""}
-                  onBlur={(e) => patchTask({ start_date: e.target.value || null })}
+                  value={(field("start_date") as string | null) ?? ""}
+                  onChange={(e) => setField("start_date", e.target.value || null)}
                   className="h-8 border-border bg-muted text-xs text-foreground"
                 />
               </div>
@@ -587,8 +675,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                 <Input
                   type="date"
                   disabled={!canEdit}
-                  defaultValue={task.due_date ?? ""}
-                  onBlur={(e) => patchTask({ due_date: e.target.value || null })}
+                  value={(field("due_date") as string | null) ?? ""}
+                  onChange={(e) => setField("due_date", e.target.value || null)}
                   className="h-8 border-border bg-muted text-xs text-foreground"
                 />
               </div>
@@ -598,8 +686,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   type="number"
                   min={0}
                   disabled={!canEdit}
-                  defaultValue={task.estimated_minutes ?? ""}
-                  onBlur={(e) => patchTask({ estimated_minutes: e.target.value ? Number(e.target.value) : null })}
+                  value={(field("estimated_minutes") as number | null) ?? ""}
+                  onChange={(e) => setField("estimated_minutes", e.target.value ? Number(e.target.value) : null)}
                   className="h-8 border-border bg-muted text-xs text-foreground"
                 />
               </div>
@@ -625,9 +713,9 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   <Input
                     type="url"
                     disabled={!canEdit}
-                    defaultValue={task.drive_folder_url ?? ""}
+                    value={(field("drive_folder_url") as string | null) ?? ""}
                     placeholder={t("driveFolderPlaceholder")}
-                    onBlur={(e) => patchTask({ drive_folder_url: e.target.value.trim() || null })}
+                    onChange={(e) => setField("drive_folder_url", e.target.value.trim() || null)}
                     className="h-8 flex-1 border-border bg-muted text-xs text-foreground"
                   />
                   {task.drive_folder_url && (
@@ -711,7 +799,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                     subtasks={subtasks}
                     convertCandidates={convertCandidates}
                     canEdit={canEdit}
-                    onOpenSubtask={onNavigate}
+                    onOpenSubtask={(id) => leaveGuard(() => onNavigate(id))}
                     onChanged={async () => {
                       await reloadAll();
                       onChanged();
@@ -739,6 +827,45 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
           </>
         )}
       </DialogContent>
+
+      <Dialog open={pendingLeave !== null} onOpenChange={(v) => !v && setPendingLeave(null)}>
+        <DialogContent className="sm:max-w-sm bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{t("discardTitle")}</DialogTitle>
+          </DialogHeader>
+          <p className="py-2 text-sm text-muted-foreground">{t("discardBody")}</p>
+          <DialogFooter className="border-border bg-popover/50">
+            <Button variant="outline" onClick={() => setPendingLeave(null)} className="border-border bg-transparent text-muted-foreground hover:bg-muted">
+              {t("discardKeep")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const go = pendingLeave;
+                setDraft({});
+                setDraftContact(null);
+                setPendingLeave(null);
+                go?.();
+              }}
+              className="border-red-500/40 text-red-300 hover:bg-red-500/10"
+            >
+              {t("discardConfirm")}
+            </Button>
+            <Button
+              disabled={titleEmpty || saving}
+              onClick={async () => {
+                const go = pendingLeave;
+                if (await handleSaveChanges()) {
+                  setPendingLeave(null);
+                  go?.();
+                }
+              }}
+            >
+              {t("saveAndClose")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showMoveBoard} onOpenChange={setShowMoveBoard}>
         <DialogContent className="sm:max-w-sm bg-popover border-border">

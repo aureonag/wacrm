@@ -387,7 +387,9 @@
       "newTask": "Nova tarefa",
       "manageBoard": "Gerenciar quadro",
       "noStages": "Este quadro ainda não tem etapas.",
-      "toastFailedMove": "Não foi possível mover a tarefa"
+      "toastFailedMove": "Não foi possível mover a tarefa",
+      "searchPlaceholder": "Buscar tarefa, código ou cliente…",
+      "searchCount": "{shown} de {total} tarefas"
     },
     "boardSettings": {
       "manageBoard": "Gerenciar quadro",
@@ -435,7 +437,8 @@
       "deleteConfirm": "Excluir esta tarefa? Essa ação não pode ser desfeita.",
       "toastTitleRequired": "Informe um título para a tarefa",
       "toastFailed": "Não foi possível salvar a tarefa",
-      "toastCreated": "Tarefa criada"
+      "toastCreated": "Tarefa criada",
+      "client": "Cliente (opcional)"
     },
     "tasks": {
       "board": {
@@ -561,7 +564,20 @@
       "toastStageRequirements": "Não é possível mover: falta {items}",
       "stageRequirement_file": "arquivo",
       "stageRequirement_checklist": "checklist completo",
-      "stageRequirement_approval": "aprovação"
+      "stageRequirement_approval": "aprovação",
+      "client": "Cliente",
+      "clientNone": "Sem cliente",
+      "clientClear": "Remover cliente",
+      "clientSearch": "Buscar cliente no CRM…",
+      "clientEmpty": "Nenhum cliente encontrado",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando…",
+      "toastSaved": "Alterações salvas",
+      "discardTitle": "Alterações não salvas",
+      "discardBody": "Você mudou campos desta tarefa e ainda não salvou. O que deseja fazer?",
+      "discardKeep": "Continuar editando",
+      "discardConfirm": "Descartar",
+      "saveAndClose": "Salvar e sair"
     },
     "approvals": {
       "selectRecipient": "Selecione quem vai aprovar",

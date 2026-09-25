@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useCallback, useEffect, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -12,10 +12,12 @@ import { BoardSettings } from "@/components/tasks/board-settings";
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Settings } from "lucide-react";
+import { ArrowLeft, Plus, Search, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { matchesTaskQuery } from "@/lib/tasks/search";
+import { Input } from "@/components/ui/input";
 
 export default function BoardKanbanPage(props: { params: Promise<{ id: string }> }) {
   // useSearchParams (for the Header active-timer's `?task=` deep link)
@@ -48,6 +50,8 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
+  const [query, setQuery] = useState("");
+  const visibleTasks = useMemo(() => tasks.filter((task) => matchesTaskQuery(task, query)), [tasks, query]);
   // Deep-link from the Header's active-timer indicator (`?task=<id>`) —
   // read once as the initial value (not synced via an effect) so the
   // drawer opens on arrival without an extra render/setState pass.
@@ -146,12 +150,29 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full sm:w-80">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="h-9 border-border bg-muted pl-8 text-sm text-foreground"
+          />
+        </div>
+        {query.trim() && (
+          <p className="text-xs text-muted-foreground">
+            {t("searchCount", { shown: visibleTasks.length, total: tasks.length })}
+          </p>
+        )}
+      </div>
+
       {stages.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("noStages")}</p>
       ) : (
         <TaskBoard
           stages={stages}
-          tasks={tasks}
+          tasks={visibleTasks}
           onTaskMoved={canMoveTasks ? handleTaskMoved : () => {}}
           onAddTask={handleAddTask}
           onOpenTask={handleOpenTask}

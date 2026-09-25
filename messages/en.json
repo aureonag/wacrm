@@ -387,7 +387,9 @@
       "newTask": "New task",
       "manageBoard": "Manage board",
       "noStages": "This board has no stages yet.",
-      "toastFailedMove": "Could not move the task"
+      "toastFailedMove": "Could not move the task",
+      "searchPlaceholder": "Search task, code or client…",
+      "searchCount": "{shown} of {total} tasks"
     },
     "boardSettings": {
       "manageBoard": "Manage board",
@@ -435,7 +437,8 @@
       "deleteConfirm": "Delete this task? This action cannot be undone.",
       "toastTitleRequired": "Enter a title for the task",
       "toastFailed": "Could not save the task",
-      "toastCreated": "Task created"
+      "toastCreated": "Task created",
+      "client": "Client (optional)"
     },
     "tasks": {
       "board": {
@@ -561,7 +564,20 @@
       "toastStageRequirements": "Can't move: missing {items}",
       "stageRequirement_file": "file",
       "stageRequirement_checklist": "complete checklist",
-      "stageRequirement_approval": "approval"
+      "stageRequirement_approval": "approval",
+      "client": "Client",
+      "clientNone": "No client",
+      "clientClear": "Remove client",
+      "clientSearch": "Search client in the CRM…",
+      "clientEmpty": "No client found",
+      "saveChanges": "Save changes",
+      "saving": "Saving…",
+      "toastSaved": "Changes saved",
+      "discardTitle": "Unsaved changes",
+      "discardBody": "You changed fields on this task and haven't saved yet. What would you like to do?",
+      "discardKeep": "Keep editing",
+      "discardConfirm": "Discard",
+      "saveAndClose": "Save and leave"
     },
     "approvals": {
       "selectRecipient": "Select who should approve",

@@ -1,7 +1,8 @@
 "use client";
 
 import type { BoardStage, Task } from "@/types";
-import { Calendar, Flag } from "lucide-react";
+import { Calendar, Flag, User } from "lucide-react";
+import { formatTaskCode } from "@/lib/tasks/code";
 import { useTranslations } from "next-intl";
 
 interface TaskCardProps {
@@ -51,6 +52,11 @@ export function TaskCard({ task, stage, isOverlay, onOpen }: TaskCardProps) {
         style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
       />
 
+      {formatTaskCode(task.task_number) && (
+        <p className="mb-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+          {formatTaskCode(task.task_number)}
+        </p>
+      )}
       <div className="flex items-start justify-between gap-2">
         <h4 className="flex-1 text-sm font-semibold leading-snug text-foreground break-words">
           {task.title}
@@ -59,6 +65,13 @@ export function TaskCard({ task, stage, isOverlay, onOpen }: TaskCardProps) {
           className={`h-3.5 w-3.5 shrink-0 ${task.is_urgent ? "fill-red-500 text-red-500" : "text-muted-foreground/40"}`}
         />
       </div>
+
+      {task.contact && (
+        <p className="mt-1.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+          <User className="h-3 w-3 shrink-0" />
+          <span className="truncate">{task.contact.name || task.contact.phone}</span>
+        </p>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${PRIORITY_STYLES[task.priority]}`}>

@@ -1052,6 +1052,8 @@ export interface Task {
   board_id: string;
   stage_id: string;
   parent_task_id?: string | null;
+  /** Sequential per account (migration 089); shown as T-0042. */
+  task_number?: number | null;
   title: string;
   contact_id?: string | null;
   sector_id?: string | null;

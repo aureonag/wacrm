@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { ContactPicker, type PickedContact } from "./contact-picker";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ export function CreateTaskDialog({
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [isUrgent, setIsUrgent] = useState(false);
   const [dueDate, setDueDate] = useState("");
+  const [contact, setContact] = useState<PickedContact | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [saving, setSaving] = useState(false);
@@ -70,6 +72,7 @@ export function CreateTaskDialog({
     setPriority("medium");
     setIsUrgent(false);
     setDueDate("");
+    setContact(null);
   }, [open, defaultStageId, stages]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -109,6 +112,7 @@ export function CreateTaskDialog({
         priority,
         is_urgent: isUrgent,
         due_date: dueDate || null,
+        contact_id: contact?.id ?? null,
       }),
     });
     setSaving(false);
@@ -215,6 +219,11 @@ export function CreateTaskDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label className="text-muted-foreground">{t("client")}</Label>
+            <ContactPicker value={contact} onChange={setContact} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
