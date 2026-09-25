@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDaysIso,
   formatBrDate,
   terminationEmailHtml,
   terminationEmailSubject,
@@ -24,7 +25,10 @@ describe("termination email", () => {
     expect(text).toContain("ACME Comércio LTDA");
     expect(text).toContain("12.345.678/0001-90");
     expect(text).toContain("assinado em 10/03/2026");
-    expect(text).toContain("DATA DE EFEITO DO CANCELAMENTO: 15/11/2026");
+    expect(text).toContain("DATA DO CANCELAMENTO: 15/11/2026");
+    expect(text).toContain("AVISO PRÉVIO: 30 dias corridos");
+    expect(text).toContain("TÉRMINO DO CONTRATO: 15/12/2026");
+    expect(terminationEmailHtml(args)).toContain("15/12/2026");
     expect(text).toContain("Gestão de Tráfego Pago");
     expect(text).toContain("Cliente encerrou a operação.");
   });
@@ -45,6 +49,11 @@ describe("termination email", () => {
     expect(text).not.toContain("OBSERVAÇÕES");
     expect(text).not.toContain("Data da assinatura");
     expect(text).not.toContain("Serviço contratado");
+  });
+
+  it("adds calendar days across month and year ends", () => {
+    expect(addDaysIso("2026-12-15", 30)).toBe("2027-01-14");
+    expect(addDaysIso("2028-02-01", 30)).toBe("2028-03-02");
   });
 
   it("formats dates and the subject", () => {

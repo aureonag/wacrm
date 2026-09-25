@@ -83,7 +83,7 @@ export interface TerminationEmailArgs {
   signedAt: string | null;
   /** Lines of the "Serviço contratado" section (no prices). */
   serviceLines: string[];
-  /** YYYY-MM-DD */
+  /** YYYY-MM-DD — data do cancelamento (início do aviso prévio de 30 dias). */
   effectiveDate: string;
   note?: string | null;
   /** Short reference so both sides can find the contract. */
@@ -96,6 +96,17 @@ function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** Aviso prévio contratual, em dias corridos. */
+export const NOTICE_DAYS = 30;
+
+/** "2026-10-15" + n days -> "2026-11-14" (calendar arithmetic in UTC, no DST drift). */
+export function addDaysIso(iso: string, days: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + days));
+  return d.toISOString().slice(0, 10);
 }
 
 /** "2026-10-15" or an ISO timestamp -> "15/10/2026". */
@@ -124,10 +135,12 @@ export function terminationEmailText(a: TerminationEmailArgs): string {
     ...(a.serviceLines.length ? [`Serviço contratado: ${a.serviceLines.join("; ")}`] : []),
     `Referência: ${a.contractRef}`,
     "",
-    `DATA DE EFEITO DO CANCELAMENTO: ${formatBrDate(a.effectiveDate)}`,
+    `DATA DO CANCELAMENTO: ${formatBrDate(a.effectiveDate)}`,
+    `AVISO PRÉVIO: ${NOTICE_DAYS} dias corridos, contados a partir da data do cancelamento.`,
+    `TÉRMINO DO CONTRATO: ${formatBrDate(addDaysIso(a.effectiveDate, NOTICE_DAYS))}`,
     ...(a.note ? ["", "OBSERVAÇÕES", a.note] : []),
     "",
-    "A partir da data de efeito, os serviços descritos no contrato serão encerrados. Eventuais pendências até essa data seguem as condições do contrato assinado.",
+    "Durante o aviso prévio, os serviços descritos no contrato seguem sendo prestados e as condições do contrato assinado continuam valendo até a data de término.",
     "",
     "Agradecemos a parceria e permanecemos à disposição.",
     "",
@@ -157,8 +170,10 @@ export function terminationEmailHtml(a: TerminationEmailArgs): string {
       ${row("Referência", a.contractRef)}
     </table>
     <div style="margin:0 0 16px;padding:14px 16px;background:${COLORS.primarySoftBg};border:1px solid ${COLORS.primarySoftBorder};border-radius:8px;">
-      <div style="font-size:12px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Data de efeito do cancelamento</div>
-      <div style="margin-top:4px;font-size:20px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(a.effectiveDate)}</div>
+      <div style="font-size:12px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Data do cancelamento</div>
+      <div style="margin-top:4px;font-size:16px;font-weight:600;color:${COLORS.foreground};">${formatBrDate(a.effectiveDate)}</div>
+      <div style="margin-top:14px;font-size:12px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Aviso prévio de ${NOTICE_DAYS} dias corridos — término do contrato</div>
+      <div style="margin-top:4px;font-size:24px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(addDaysIso(a.effectiveDate, NOTICE_DAYS))}</div>
     </div>
     ${
       a.note
@@ -166,7 +181,7 @@ export function terminationEmailHtml(a: TerminationEmailArgs): string {
         : ""
     }
     <p style="margin:0 0 12px;font-size:13px;color:${COLORS.muted};line-height:1.6;">
-      A partir da data de efeito, os serviços descritos no contrato serão encerrados. Eventuais pendências até essa data seguem as condições do contrato assinado.
+      Durante o aviso prévio de ${NOTICE_DAYS} dias corridos, os serviços descritos no contrato seguem sendo prestados e as condições do contrato assinado continuam valendo até a data de término.
     </p>
     <p style="margin:0;font-size:13px;color:${COLORS.muted};line-height:1.6;">Agradecemos a parceria e permanecemos à disposição.</p>
   `;

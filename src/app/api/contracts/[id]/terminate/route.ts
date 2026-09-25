@@ -20,6 +20,8 @@ import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { extractScopeSections } from "@/lib/contracts/scope";
 import { sendEmail } from "@/lib/contracts/email";
 import {
+  NOTICE_DAYS,
+  addDaysIso,
   terminationEmailHtml,
   terminationEmailSubject,
   terminationEmailText,
@@ -66,13 +68,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const { data: result, error } = await supabase.rpc("terminate_signed_contract", {
       p_contract_id: id,
-      p_effective_date: effectiveDate,
+      p_effective_date: addDaysIso(effectiveDate, NOTICE_DAYS), // término = cancelamento + aviso prévio
       p_note: note,
     });
     if (error) {
       console.error("[contracts/terminate] rpc error:", error);
       const message = /before signature/.test(error.message)
-        ? "A data de efeito não pode ser anterior à assinatura do contrato."
+        ? "A data do cancelamento não pode ser anterior à assinatura do contrato."
         : /already terminated/.test(error.message)
           ? "Este contrato já foi cancelado."
           : "Não foi possível cancelar o contrato.";
