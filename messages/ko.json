@@ -1175,12 +1175,6 @@
       "toastReopened": "딜이 재개되었습니다",
       "wonCelebrationTitle": "딜 성사! 🎉",
       "wonCelebrationBody": "\"{title}\" 딜이 성사로 표시되었습니다. 축하합니다!",
-      "wonHandoffTitle": "운영팀으로 핸드오프",
-      "wonHandoffDesc": "이 고객을 담당할 사람을 지정하세요 — 자동으로 생성되는 킥오프 작업에 이 정보가 반영됩니다.",
-      "wonHandoffSectorLabel": "담당 부서",
-      "wonHandoffAssigneeLabel": "주 담당자 (선택 사항)",
-      "wonHandoffSelectPlaceholder": "선택",
-      "wonHandoffNoAssignee": "없음",
       "wonCelebrationClose": "좋아요!",
       "lostReasonTitle": "이 딜은 왜 실패했나요?",
       "lostReasonLabel": "실패 사유",
@@ -1209,7 +1203,9 @@
       "deletingDeal": "삭제 중...",
       "deleteDealBtn": "거래 삭제",
       "toastDealDeleted": "거래가 삭제되었습니다",
-      "toastFailedDeleteDeal": "거래를 삭제하지 못했습니다"
+      "toastFailedDeleteDeal": "거래를 삭제하지 못했습니다",
+      "signedBanner": "계약이 체결되었습니다. 딜을 성사로 표시하려면 마감 시트를 작성하세요.",
+      "signedBannerAction": "시트 작성"
     },
     "linkContact": {
       "title": "연락처 연결",
@@ -1279,6 +1275,25 @@
       "partner": "파트너",
       "automation": "자동화",
       "other": "기타"
+    },
+    "closing": {
+      "title": "마감 시트",
+      "description": "성사를 완료하려면 작성하세요. 이 정보로 운영 부서에 킥오프 작업이 생성됩니다.",
+      "boardLabel": "운영 보드",
+      "selectPlaceholder": "선택",
+      "sectorLabel": "담당 부서",
+      "assigneeLabel": "작업 담당자",
+      "noAssignee": "없음",
+      "scopeTitle": "작업으로 전달되는 범위",
+      "scopeHint": "체결된 계약서에서 가져옵니다. 금액은 운영 부서로 전달되지 않습니다.",
+      "scopeNotFound": "계약서에서 범위를 추출할 수 없습니다. 메모를 사용하세요.",
+      "scopeNoContract": "이 딜에는 체결된 계약이 없습니다. 메모에 범위를 적어 주세요.",
+      "observationsLabel": "운영 부서 메모",
+      "observationsPlaceholder": "이 고객에 대해 팀이 알아야 할 내용…",
+      "cancel": "취소",
+      "submit": "마감 완료",
+      "toastError": "마감을 완료할 수 없습니다",
+      "toastLoadError": "마감 데이터를 불러올 수 없습니다"
     }
   },
   "Contracts": {

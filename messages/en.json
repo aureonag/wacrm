@@ -1175,12 +1175,6 @@
       "toastReopened": "Deal reopened",
       "wonCelebrationTitle": "Deal won! 🎉",
       "wonCelebrationBody": "\"{title}\" was marked as won. Nice work!",
-      "wonHandoffTitle": "Handoff to Operational",
-      "wonHandoffDesc": "Set who takes over this client — this feeds the kickoff task created automatically.",
-      "wonHandoffSectorLabel": "Responsible sector",
-      "wonHandoffAssigneeLabel": "Main assignee (optional)",
-      "wonHandoffSelectPlaceholder": "Select",
-      "wonHandoffNoAssignee": "None",
       "wonCelebrationClose": "Nice!",
       "lostReasonTitle": "Why was this deal lost?",
       "lostReasonLabel": "Lost reason",
@@ -1209,7 +1203,9 @@
       "deletingDeal": "Deleting...",
       "deleteDealBtn": "Delete deal",
       "toastDealDeleted": "Deal deleted",
-      "toastFailedDeleteDeal": "Failed to delete the deal"
+      "toastFailedDeleteDeal": "Failed to delete the deal",
+      "signedBanner": "Contract signed. Fill in the closing sheet to mark the deal as won.",
+      "signedBannerAction": "Fill in sheet"
     },
     "linkContact": {
       "title": "Link contact",
@@ -1279,6 +1275,25 @@
       "partner": "Partner",
       "automation": "Automation",
       "other": "Other"
+    },
+    "closing": {
+      "title": "Closing sheet",
+      "description": "Fill this in to complete the win. The kickoff task is created in Operations with this information.",
+      "boardLabel": "Operations board",
+      "selectPlaceholder": "Select",
+      "sectorLabel": "Responsible sector",
+      "assigneeLabel": "Task owner",
+      "noAssignee": "None",
+      "scopeTitle": "Scope sent to the task",
+      "scopeHint": "Taken from the signed contract. Prices are never sent to Operations.",
+      "scopeNotFound": "Could not extract the scope from the contract. Use the notes.",
+      "scopeNoContract": "This deal has no signed contract. Use the notes to describe the scope.",
+      "observationsLabel": "Notes for Operations",
+      "observationsPlaceholder": "Anything the team should know about this client…",
+      "cancel": "Cancel",
+      "submit": "Complete closing",
+      "toastError": "Could not complete the closing",
+      "toastLoadError": "Could not load the closing data"
     }
   },
   "Contracts": {

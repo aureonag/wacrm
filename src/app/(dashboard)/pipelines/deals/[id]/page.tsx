@@ -49,13 +49,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import {
   AlertTriangle,
   ArrowLeft,
   Check,
@@ -76,6 +69,7 @@ import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 import { formatStepDueDate } from "@/lib/deals/next-step-date";
 import { ContractTab } from "@/components/pipelines/contract-tab";
 import { LinkContactDialog } from "@/components/pipelines/link-contact-dialog";
+import { CloseDealDialog } from "@/components/pipelines/close-deal-dialog";
 
 interface ProspectingCandidateDetail {
   id: string;
@@ -264,7 +258,6 @@ export default function DealDetailPage() {
     status: DealStatus,
     lostReason?: string | null,
     lostReasonNote?: string | null,
-    wonHandoff?: { sectorId: string | null; assigneeId: string | null },
   ) {
     if (!deal) return;
     setStatusAction(status);
@@ -279,13 +272,8 @@ export default function DealDetailPage() {
       patch.lost_reason = lostReason ?? null;
       patch.lost_reason_note = lostReasonNote ?? null;
     }
-    // Captured by the handoff dialog — feeds the automatic Operational
-    // kickoff task (handle_deal_won trigger, migration 070) alongside the
-    // account's configured defaults.
-    if (status === "won" && wonHandoff) {
-      patch.handoff_sector_id = wonHandoff.sectorId;
-      patch.handoff_assignee_id = wonHandoff.assigneeId;
-    }
+    // "Won" never goes through here: it needs the closing sheet, which the
+    // database enforces (migration 085) — see CloseDealDialog.
     const { error } = await supabase.from("deals").update(patch).eq("id", deal.id);
     setStatusAction(null);
     if (error) {
@@ -293,37 +281,23 @@ export default function DealDetailPage() {
       return;
     }
     setDeal({ ...deal, ...patch });
-    if (status === "won") {
-      fireWonConfetti();
-      setWonCelebrationOpen(true);
-    } else {
-      toast.success(status === "lost" ? t("toastMarkedLost") : t("toastReopened"));
-    }
+    toast.success(status === "lost" ? t("toastMarkedLost") : t("toastReopened"));
   }
 
   // ---- Won celebration (confetti + congrats dialog) ----
   const [wonCelebrationOpen, setWonCelebrationOpen] = useState(false);
 
-  // ---- Won handoff dialog (Setor responsável + Responsável principal,
-  // captured right before marking the deal won — feeds the automatic
-  // Operational kickoff task, migration 070) ----
-  const [wonHandoffDialogOpen, setWonHandoffDialogOpen] = useState(false);
-  const [wonHandoffSectorId, setWonHandoffSectorId] = useState<string>("__none");
-  const [wonHandoffAssigneeId, setWonHandoffAssigneeId] = useState<string>("__none");
+  // ---- Closing sheet (ficha de fechamento): the only way to mark a deal
+  // won. Completing it closes the deal and creates the Operacional
+  // kickoff task in one transaction (migration 085). ----
+  const [closingOpen, setClosingOpen] = useState(false);
 
-  function openWonHandoffDialog() {
-    setWonHandoffSectorId("__none");
-    setWonHandoffAssigneeId(deal?.assigned_to ?? "__none");
-    setWonHandoffDialogOpen(true);
-  }
-
-  async function confirmMarkWon() {
-    if (wonHandoffSectorId === "__none") return;
-    await handleStatusChange("won", null, null, {
-      sectorId: wonHandoffSectorId,
-      assigneeId: wonHandoffAssigneeId === "__none" ? null : wonHandoffAssigneeId,
-    });
-    setWonHandoffDialogOpen(false);
+  async function handleDealClosed() {
+    if (!deal) return;
+    setDeal({ ...deal, status: "won" });
+    setActivities(await loadDealActivities(supabase, dealId));
+    fireWonConfetti();
+    setWonCelebrationOpen(true);
   }
 
   // ---- Delete deal (mistaken creation, test data, etc.) ----
@@ -580,7 +554,7 @@ export default function DealDetailPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={openWonHandoffDialog}
+                  onClick={() => setClosingOpen(true)}
                   disabled={!!statusAction}
                   className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:text-emerald-200"
                 >
@@ -619,6 +593,17 @@ export default function DealDetailPage() {
           </div>
         )}
       </div>
+
+      {canEdit &&
+        deal.status === "open" &&
+        stages.find((s) => s.id === deal.stage_id)?.kind === "contract_closed" && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <span>{t("signedBanner")}</span>
+            <Button size="sm" onClick={() => setClosingOpen(true)}>
+              {t("signedBannerAction")}
+            </Button>
+          </div>
+        )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <Tabs defaultValue="overview">
@@ -1365,65 +1350,15 @@ export default function DealDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={wonHandoffDialogOpen} onOpenChange={setWonHandoffDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-popover border-border text-popover-foreground">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">{t("wonHandoffTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <p className="text-sm text-muted-foreground">{t("wonHandoffDesc")}</p>
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground">{t("wonHandoffSectorLabel")}</Label>
-              <Select value={wonHandoffSectorId} onValueChange={(v) => setWonHandoffSectorId(v ?? "__none")}>
-                <SelectTrigger className="bg-muted text-foreground">
-                  <SelectValue>
-                    {sectors.find((s) => s.id === wonHandoffSectorId)?.name ?? t("wonHandoffSelectPlaceholder")}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {sectors.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground">{t("wonHandoffAssigneeLabel")}</Label>
-              <Select value={wonHandoffAssigneeId} onValueChange={(v) => setWonHandoffAssigneeId(v ?? "__none")}>
-                <SelectTrigger className="bg-muted text-foreground">
-                  <SelectValue>
-                    {wonHandoffAssigneeId === "__none"
-                      ? t("wonHandoffNoAssignee")
-                      : (profiles.find((p) => p.id === wonHandoffAssigneeId)?.full_name ?? "")}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">{t("wonHandoffNoAssignee")}</SelectItem>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="bg-popover/50 border-border">
-            <Button
-              variant="outline"
-              onClick={() => setWonHandoffDialogOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              onClick={confirmMarkWon}
-              disabled={wonHandoffSectorId === "__none" || !!statusAction}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {statusAction === "won" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("markAsWon")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CloseDealDialog
+        open={closingOpen}
+        onOpenChange={setClosingOpen}
+        dealId={dealId}
+        sectors={sectors}
+        profiles={profiles}
+        defaultAssigneeId={deal.assigned_to ?? null}
+        onClosed={handleDealClosed}
+      />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-sm bg-popover border-border text-popover-foreground">

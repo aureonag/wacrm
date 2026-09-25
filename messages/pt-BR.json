@@ -1175,12 +1175,6 @@
       "toastReopened": "Negócio reaberto",
       "wonCelebrationTitle": "Negócio ganho! 🎉",
       "wonCelebrationBody": "\"{title}\" foi marcado como ganho. Parabéns pelo fechamento!",
-      "wonHandoffTitle": "Handoff para o Operacional",
-      "wonHandoffDesc": "Defina quem assume esse cliente — essas informações alimentam a tarefa de kickoff criada automaticamente.",
-      "wonHandoffSectorLabel": "Setor responsável",
-      "wonHandoffAssigneeLabel": "Responsável principal (opcional)",
-      "wonHandoffSelectPlaceholder": "Selecione",
-      "wonHandoffNoAssignee": "Nenhum",
       "wonCelebrationClose": "Show!",
       "lostReasonTitle": "Por que este negócio foi perdido?",
       "lostReasonLabel": "Motivo da perda",
@@ -1209,7 +1203,9 @@
       "deletingDeal": "Excluindo...",
       "deleteDealBtn": "Excluir negócio",
       "toastDealDeleted": "Negócio excluído",
-      "toastFailedDeleteDeal": "Falha ao excluir o negócio"
+      "toastFailedDeleteDeal": "Falha ao excluir o negócio",
+      "signedBanner": "Contrato assinado. Preencha a ficha de fechamento para marcar o negócio como ganho.",
+      "signedBannerAction": "Preencher ficha"
     },
     "linkContact": {
       "title": "Vincular contato",
@@ -1279,6 +1275,25 @@
       "partner": "Parceiro",
       "automation": "Automação",
       "other": "Outro"
+    },
+    "closing": {
+      "title": "Ficha de fechamento",
+      "description": "Preencha para concluir o ganho. A tarefa de kickoff será criada no Operacional com estas informações.",
+      "boardLabel": "Quadro do Operacional",
+      "selectPlaceholder": "Selecione",
+      "sectorLabel": "Setor responsável",
+      "assigneeLabel": "Responsável pela tarefa",
+      "noAssignee": "Nenhum",
+      "scopeTitle": "Escopo que vai para a tarefa",
+      "scopeHint": "Extraído do contrato assinado. Valores nunca são enviados ao Operacional.",
+      "scopeNotFound": "Não foi possível extrair o escopo do contrato. Use as observações.",
+      "scopeNoContract": "Este negócio não tem contrato assinado. Use as observações para descrever o escopo.",
+      "observationsLabel": "Observações para o Operacional",
+      "observationsPlaceholder": "Algo que o time precisa saber sobre este cliente…",
+      "cancel": "Cancelar",
+      "submit": "Concluir fechamento",
+      "toastError": "Não foi possível concluir o fechamento",
+      "toastLoadError": "Não foi possível carregar os dados do fechamento"
     }
   },
   "Contracts": {
