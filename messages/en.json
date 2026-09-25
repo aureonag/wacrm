@@ -1174,7 +1174,7 @@
       "toastMarkedLost": "Marked as lost",
       "toastReopened": "Deal reopened",
       "wonCelebrationTitle": "Deal won! 🎉",
-      "wonCelebrationBody": "\"{title}\" was marked as won. Nice work!",
+      "wonCelebrationBody": "\"{title}\" was marked as won. The kickoff task was already created in Operations. Congrats on the close!",
       "wonCelebrationClose": "Nice!",
       "lostReasonTitle": "Why was this deal lost?",
       "lostReasonLabel": "Lost reason",
@@ -1279,7 +1279,7 @@
     },
     "closing": {
       "title": "Closing sheet",
-      "description": "Fill this in to complete the win. The kickoff task is created in Operations with this information.",
+      "description": "When you finish, the deal is marked as won and the kickoff task is created in Operations with this information.",
       "boardLabel": "Operations board",
       "selectPlaceholder": "Select",
       "sectorLabel": "Responsible sector",
@@ -1292,9 +1292,14 @@
       "observationsLabel": "Notes for Operations",
       "observationsPlaceholder": "Anything the team should know about this client…",
       "cancel": "Cancel",
-      "submit": "Complete closing",
+      "submit": "Finish and mark as won",
       "toastError": "Could not complete the closing",
-      "toastLoadError": "Could not load the closing data"
+      "toastLoadError": "Could not load the closing data",
+      "titleKickoff": "Schedule kickoff",
+      "descriptionKickoff": "The deal is already won. When you finish, the kickoff task is created in Operations with this information.",
+      "submitKickoff": "Create kickoff task",
+      "requiredHint": "Choose the board and the sector to continue.",
+      "scopeSummary": "View scope ({count, plural, one {# section} other {# sections}})"
     }
   },
   "Contracts": {

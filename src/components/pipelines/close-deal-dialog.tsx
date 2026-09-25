@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Profile, Sector } from "@/types";
 import type { ScopeSection } from "@/lib/contracts/scope";
@@ -31,10 +31,26 @@ interface CloseDealDialogProps {
   sectors: Sector[];
   profiles: Profile[];
   defaultAssigneeId: string | null;
+  /** True when the deal is already won (signed contract) and only the kickoff is being scheduled. */
+  alreadyWon: boolean;
   onClosed: () => void;
 }
 
 const NONE = "__none";
+
+function normalizeName(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+/** "Criação" board -> "Criação" sector, "Social Media" board -> "Social" sector, ... */
+function suggestSectorId(boardName: string, sectors: Sector[]): string | null {
+  const board = normalizeName(boardName);
+  const match = sectors.find((s) => {
+    const sector = normalizeName(s.name);
+    return sector === board || board.includes(sector) || sector.includes(board);
+  });
+  return match?.id ?? null;
+}
 
 export function CloseDealDialog({
   open,
@@ -43,6 +59,7 @@ export function CloseDealDialog({
   sectors,
   profiles,
   defaultAssigneeId,
+  alreadyWon,
   onClosed,
 }: CloseDealDialogProps) {
   const t = useTranslations("Pipelines.closing");
@@ -124,16 +141,29 @@ export function CloseDealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg bg-popover border-border text-popover-foreground">
         <DialogHeader>
-          <DialogTitle className="text-popover-foreground">{t("title")}</DialogTitle>
+          <DialogTitle className="text-popover-foreground">{alreadyWon ? t("titleKickoff") : t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="max-h-[65vh] space-y-4 overflow-y-auto py-2 pr-1">
-          <p className="text-sm text-muted-foreground">{t("description")}</p>
+          <p className="text-sm text-muted-foreground">{alreadyWon ? t("descriptionKickoff") : t("description")}</p>
 
           <div className="space-y-1.5">
-            <Label className="text-muted-foreground">{t("boardLabel")}</Label>
-            <Select value={boardId} onValueChange={(v) => setBoardId(v ?? NONE)}>
-              <SelectTrigger className="bg-muted text-foreground">
+            <Label className="text-muted-foreground">
+              {t("boardLabel")} <span className="text-red-400">*</span>
+            </Label>
+            <Select
+              value={boardId}
+              onValueChange={(v) => {
+                const next = v ?? NONE;
+                setBoardId(next);
+                if (sectorId === NONE) {
+                  const name = boards.find((b) => b.id === next)?.name;
+                  const suggested = name ? suggestSectorId(name, sectors) : null;
+                  if (suggested) setSectorId(suggested);
+                }
+              }}
+            >
+              <SelectTrigger className="w-full bg-muted text-foreground">
                 <SelectValue>{boards.find((b) => b.id === boardId)?.name ?? t("selectPlaceholder")}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -146,11 +176,13 @@ export function CloseDealDialog({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground">{t("sectorLabel")}</Label>
+              <Label className="text-muted-foreground">
+                {t("sectorLabel")} <span className="text-red-400">*</span>
+              </Label>
               <Select value={sectorId} onValueChange={(v) => setSectorId(v ?? NONE)}>
-                <SelectTrigger className="bg-muted text-foreground">
+                <SelectTrigger className="w-full bg-muted text-foreground">
                   <SelectValue>{sectors.find((s) => s.id === sectorId)?.name ?? t("selectPlaceholder")}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -165,7 +197,7 @@ export function CloseDealDialog({
             <div className="space-y-1.5">
               <Label className="text-muted-foreground">{t("assigneeLabel")}</Label>
               <Select value={assigneeId} onValueChange={(v) => setAssigneeId(v ?? NONE)}>
-                <SelectTrigger className="bg-muted text-foreground">
+                <SelectTrigger className="w-full bg-muted text-foreground">
                   <SelectValue>
                     {assigneeId === NONE
                       ? t("noAssignee")
@@ -186,11 +218,17 @@ export function CloseDealDialog({
 
           <div className="space-y-1.5">
             <Label className="text-muted-foreground">{t("scopeTitle")}</Label>
-            <div className="rounded-lg border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : scope.length > 0 ? (
-                <div className="max-h-40 space-y-2 overflow-y-auto">
+            {loading ? (
+              <div className="rounded-lg border border-border bg-muted/50 p-3">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : scope.length > 0 ? (
+              <details className="group rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm text-foreground">
+                  <span>{t("scopeSummary", { count: scope.length })}</span>
+                  <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="space-y-2 border-t border-border px-3 py-2">
                   {scope.map((section) => (
                     <div key={section.key}>
                       <div className="font-semibold text-foreground">{SCOPE_TITLES[section.key]}</div>
@@ -202,11 +240,13 @@ export function CloseDealDialog({
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p>{hasSignedContract ? t("scopeNotFound") : t("scopeNoContract")}</p>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">{t("scopeHint")}</p>
+              </details>
+            ) : (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                {hasSignedContract ? t("scopeNotFound") : t("scopeNoContract")}
+              </div>
+            )}
+            {scope.length > 0 && <p className="text-xs text-muted-foreground">{t("scopeHint")}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -222,7 +262,10 @@ export function CloseDealDialog({
           </div>
         </div>
 
-        <DialogFooter className="bg-popover/50 border-border">
+        <DialogFooter className="bg-popover/50 border-border sm:items-center">
+          {!loading && (boardId === NONE || sectorId === NONE) && (
+            <p className="mr-auto text-xs text-muted-foreground">{t("requiredHint")}</p>
+          )}
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
@@ -236,7 +279,13 @@ export function CloseDealDialog({
             disabled={!canSubmit}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("submit")}
+            {submitting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : alreadyWon ? (
+              t("submitKickoff")
+            ) : (
+              t("submit")
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1174,7 +1174,7 @@
       "toastMarkedLost": "실패로 표시했습니다",
       "toastReopened": "딜이 재개되었습니다",
       "wonCelebrationTitle": "딜 성사! 🎉",
-      "wonCelebrationBody": "\"{title}\" 딜이 성사로 표시되었습니다. 축하합니다!",
+      "wonCelebrationBody": "\"{title}\" 딜이 성사로 표시되었습니다. 운영 부서에 킥오프 작업이 이미 생성되었습니다. 축하합니다!",
       "wonCelebrationClose": "좋아요!",
       "lostReasonTitle": "이 딜은 왜 실패했나요?",
       "lostReasonLabel": "실패 사유",
@@ -1279,7 +1279,7 @@
     },
     "closing": {
       "title": "마감 시트",
-      "description": "성사를 완료하려면 작성하세요. 이 정보로 운영 부서에 킥오프 작업이 생성됩니다.",
+      "description": "완료하면 딜이 성사로 표시되고 이 정보로 운영 부서에 킥오프 작업이 생성됩니다.",
       "boardLabel": "운영 보드",
       "selectPlaceholder": "선택",
       "sectorLabel": "담당 부서",
@@ -1292,9 +1292,14 @@
       "observationsLabel": "운영 부서 메모",
       "observationsPlaceholder": "이 고객에 대해 팀이 알아야 할 내용…",
       "cancel": "취소",
-      "submit": "마감 완료",
+      "submit": "완료 및 성사로 표시",
       "toastError": "마감을 완료할 수 없습니다",
-      "toastLoadError": "마감 데이터를 불러올 수 없습니다"
+      "toastLoadError": "마감 데이터를 불러올 수 없습니다",
+      "titleKickoff": "킥오프 예약",
+      "descriptionKickoff": "딜은 이미 성사되었습니다. 완료하면 이 정보로 운영 부서에 킥오프 작업이 생성됩니다.",
+      "submitKickoff": "킥오프 작업 만들기",
+      "requiredHint": "보드와 부서를 선택해 계속하세요.",
+      "scopeSummary": "범위 보기 ({count}개 섹션)"
     }
   },
   "Contracts": {

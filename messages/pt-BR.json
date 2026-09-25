@@ -1174,7 +1174,7 @@
       "toastMarkedLost": "Marcado como perdido",
       "toastReopened": "Negócio reaberto",
       "wonCelebrationTitle": "Negócio ganho! 🎉",
-      "wonCelebrationBody": "\"{title}\" foi marcado como ganho. Parabéns pelo fechamento!",
+      "wonCelebrationBody": "\"{title}\" foi marcado como ganho. A tarefa de kickoff já foi criada no Operacional. Parabéns pelo fechamento!",
       "wonCelebrationClose": "Show!",
       "lostReasonTitle": "Por que este negócio foi perdido?",
       "lostReasonLabel": "Motivo da perda",
@@ -1279,7 +1279,7 @@
     },
     "closing": {
       "title": "Ficha de fechamento",
-      "description": "Preencha para concluir o ganho. A tarefa de kickoff será criada no Operacional com estas informações.",
+      "description": "Ao concluir, o negócio vira ganho e a tarefa de kickoff é criada no Operacional com estas informações.",
       "boardLabel": "Quadro do Operacional",
       "selectPlaceholder": "Selecione",
       "sectorLabel": "Setor responsável",
@@ -1292,9 +1292,14 @@
       "observationsLabel": "Observações para o Operacional",
       "observationsPlaceholder": "Algo que o time precisa saber sobre este cliente…",
       "cancel": "Cancelar",
-      "submit": "Concluir fechamento",
+      "submit": "Concluir e marcar como ganho",
       "toastError": "Não foi possível concluir o fechamento",
-      "toastLoadError": "Não foi possível carregar os dados do fechamento"
+      "toastLoadError": "Não foi possível carregar os dados do fechamento",
+      "titleKickoff": "Agendar kickoff",
+      "descriptionKickoff": "O negócio já está ganho. Ao concluir, a tarefa de kickoff é criada no Operacional com estas informações.",
+      "submitKickoff": "Criar tarefa de kickoff",
+      "requiredHint": "Escolha o quadro e o setor para continuar.",
+      "scopeSummary": "Ver escopo ({count, plural, one {# seção} other {# seções}})"
     }
   },
   "Contracts": {

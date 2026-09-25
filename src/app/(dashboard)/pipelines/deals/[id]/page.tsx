@@ -1362,6 +1362,7 @@ export default function DealDetailPage() {
         sectors={sectors}
         profiles={profiles}
         defaultAssigneeId={deal.assigned_to ?? null}
+        alreadyWon={deal.status === "won"}
         onClosed={handleDealClosed}
       />
 
