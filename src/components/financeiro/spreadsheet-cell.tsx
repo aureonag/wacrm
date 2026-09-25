@@ -31,10 +31,13 @@ export function MonthCell({
   value,
   resetKey,
   onSave,
+  projected = false,
 }: {
   value: number | undefined;
   resetKey: string;
   onSave: (raw: string) => void;
+  /** Value is a projection ("até cancelar"), not something typed — shown lighter. */
+  projected?: boolean;
 }) {
   return (
     <input
@@ -55,7 +58,10 @@ export function MonthCell({
         }
       }}
       placeholder="—"
-      className="h-8 w-[84px] rounded-md border border-transparent bg-transparent px-1.5 text-right text-xs text-foreground outline-none hover:border-border focus:border-primary focus:bg-muted"
+      title={projected ? "Projeção: repete o último valor até o cliente cancelar. Digite para fixar um valor." : undefined}
+      className={`h-8 w-[84px] rounded-md border border-transparent bg-transparent px-1.5 text-right text-xs outline-none hover:border-border focus:border-primary focus:bg-muted ${
+        projected ? "italic text-muted-foreground/60" : "text-foreground"
+      }`}
     />
   );
 }

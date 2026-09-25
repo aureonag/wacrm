@@ -25,6 +25,8 @@ export interface FinClient {
   started_at: string | null
   ended_at: string | null
   sort_order: number
+  /** Contract runs "until cancelled": the grid projects future months (migration 087). */
+  recurring: boolean
   /** Which team member runs this account — distinct from
    *  `fin_team_allocations`, which tracks a person's monthly *cost* to a
    *  line regardless of whether they run a specific client (e.g. an art

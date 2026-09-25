@@ -16,11 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Repeat, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { getYearOptions } from "@/lib/finance/period";
 import { MONTH_NAMES_PT } from "@/lib/finance/types";
 import { MonthCell, DescriptionCell } from "@/components/financeiro/spreadsheet-cell";
+import { projectYear } from "@/lib/finance/projection";
 import type {
   FinServiceLine,
   FinClient,
@@ -119,7 +120,7 @@ export function ServiceLinesTab() {
           "client_id",
           cs.map((c) => c.id),
         )
-        .eq("year", year);
+        .lte("year", year); // earlier years too: the last known value feeds the projection
       setValues((valueRows as FinClientValue[] | null) ?? []);
     } else {
       setValues([]);
@@ -265,7 +266,23 @@ export function ServiceLinesTab() {
       toast.error("Falha ao atualizar status");
       return;
     }
-    setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, status: nextStatus } : c)));
+    const endedAt = nextStatus === "ended" ? new Date().toISOString().slice(0, 10) : null;
+    setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, status: nextStatus, ended_at: endedAt } : c)));
+  }
+
+  async function handleToggleRecurring(client: FinClient) {
+    const next = !client.recurring;
+    const { error } = await supabase.from("fin_clients").update({ recurring: next }).eq("id", client.id);
+    if (error) {
+      toast.error("Falha ao atualizar recorrência");
+      return;
+    }
+    setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, recurring: next } : c)));
+    toast.success(
+      next
+        ? "Cliente recorrente: os meses seguem até você encerrar o cliente."
+        : "Cliente pontual: os meses futuros não são mais projetados.",
+    );
   }
 
   async function handleDeleteClient(client: FinClient) {
@@ -294,7 +311,10 @@ export function ServiceLinesTab() {
       return;
     }
     const row = data as FinClientValue;
-    setValues((prev) => [...prev.filter((v) => !(v.client_id === clientId && v.month === month)), row]);
+    setValues((prev) => [
+      ...prev.filter((v) => !(v.client_id === clientId && v.year === year && v.month === month)),
+      row,
+    ]);
   }
 
   function handleAddAllocationRow() {
@@ -388,11 +408,16 @@ export function ServiceLinesTab() {
   const selectedLine = lines.find((l) => l.id === selectedLineId) ?? null;
   const activeClients = clients.filter((c) => c.status === "active");
   const endedClients = clients.filter((c) => c.status === "ended");
+  // Typed values for this year plus the "até cancelar" projection (active clients keep
+  // their last value from the current month on, until they are ended).
+  const projection = useMemo(() => projectYear({ clients, values, year }), [clients, values, year]);
   const valueByClientMonth = useMemo(() => {
     const map = new Map<string, number>();
-    for (const v of values) map.set(`${v.client_id}:${v.month}`, v.amount);
+    for (const [key, cell] of projection) map.set(key, cell.amount);
     return map;
-  }, [values]);
+  }, [projection]);
+  const isProjected = (clientId: string, month: number) => projection.get(`${clientId}:${month}`)?.projected ?? false;
+  const hasProjection = useMemo(() => [...projection.values()].some((c) => c.projected), [projection]);
 
   // Groups active clients by who runs the account (fin_clients.responsible_team_member_id),
   // preserving each client's own sort_order so the groups fall out naturally in the
@@ -440,7 +465,7 @@ export function ServiceLinesTab() {
     return map;
   }, [allocations]);
 
-  const yearRevenue = values.reduce((sum, v) => sum + v.amount, 0);
+  const yearRevenue = [...valueByClientMonth.values()].reduce((sum, v) => sum + v, 0);
   const yearCost = allocations.reduce((sum, a) => sum + a.amount, 0);
 
   return (
@@ -588,6 +613,7 @@ export function ServiceLinesTab() {
                                     value={valueByClientMonth.get(`${client.id}:${m}`)}
                                     resetKey={`${client.id}-${year}-${m}-${valueByClientMonth.get(`${client.id}:${m}`) ?? "e"}`}
                                     onSave={(raw) => handleSaveClientValue(client.id, m, raw)}
+                                    projected={isProjected(client.id, m)}
                                   />
                                 </TableCell>
                               ))}
@@ -605,6 +631,19 @@ export function ServiceLinesTab() {
                                     </option>
                                   ))}
                                 </select>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => handleToggleRecurring(client)}
+                                  title={
+                                    client.recurring
+                                      ? "Recorrente: projeta os meses até o cliente cancelar. Clique para tornar pontual."
+                                      : "Pontual: não projeta meses futuros. Clique para marcar como recorrente."
+                                  }
+                                  className={client.recurring ? "text-primary" : "text-muted-foreground/50 hover:text-foreground"}
+                                >
+                                  <Repeat className="size-4" />
+                                </Button>
                                 <Button variant="ghost" size="icon-sm" onClick={() => handleToggleClientStatus(client)} title="Encerrar cliente">
                                   <Badge variant="secondary" className="cursor-pointer">
                                     Encerrar
@@ -672,6 +711,15 @@ export function ServiceLinesTab() {
                     ))}
                   </TableBody>
                 </Table>
+              )}
+
+              {hasProjection && (
+                <p className="text-xs text-muted-foreground">
+                  Valores em cinza e itálico são <strong className="font-semibold">projeção</strong> dos clientes
+                  recorrentes (ícone <Repeat className="inline size-3.5 align-text-bottom text-primary" />): o contrato segue
+                  até o cliente cancelar, então o último valor se repete. Digite num mês para fixar um valor, ou
+                  encerre o cliente para parar a projeção.
+                </p>
               )}
 
               <div className="flex flex-wrap items-center gap-2 pt-2">

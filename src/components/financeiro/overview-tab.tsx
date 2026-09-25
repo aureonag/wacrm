@@ -17,6 +17,7 @@ import { formatCurrency, formatCompactNumber } from '@/lib/currency';
 import { getYearOptions } from '@/lib/finance/period';
 import { MONTH_NAMES_PT } from '@/lib/finance/types';
 import type { FinServiceLine } from '@/lib/finance/types';
+import { projectYear, type ProjectionValue } from '@/lib/finance/projection';
 import { BarChart } from '@/components/tremor/bar-chart';
 
 const selectClass =
@@ -71,7 +72,7 @@ export function OverviewTab() {
         .select('id, name')
         .order('sort_order')
         .order('name'),
-      supabase.from('fin_clients').select('id, service_line_id'),
+      supabase.from('fin_clients').select('id, service_line_id, status, ended_at, recurring'),
       supabase
         .from('fin_team_allocations')
         .select('service_line_id, month, amount')
@@ -82,7 +83,8 @@ export function OverviewTab() {
     const lines =
       (linesRes.data as Pick<FinServiceLine, 'id' | 'name'>[] | null) ?? [];
     const clients =
-      (clientsRes.data as { id: string; service_line_id: string }[] | null) ??
+      (clientsRes.data as
+        { id: string; service_line_id: string; status: string; ended_at: string | null; recurring: boolean }[] | null) ??
       [];
     const clientIds = clients.map((c) => c.id);
 
@@ -90,11 +92,11 @@ export function OverviewTab() {
       clientIds.length > 0
         ? await supabase
             .from('fin_client_values')
-            .select('client_id, month, amount')
-            .eq('year', year)
+            .select('client_id, year, month, amount')
+            .lte('year', year) // earlier years too: the last known value feeds the projection
             .in('client_id', clientIds)
         : {
-            data: [] as { client_id: string; month: number; amount: number }[],
+            data: [] as ProjectionValue[],
           };
 
     const clientToLine = new Map(clients.map((c) => [c.id, c.service_line_id]));
@@ -113,11 +115,17 @@ export function OverviewTab() {
       lineMonthCost.set(line.id, Array(13).fill(0));
     }
 
-    for (const v of (valueRows as
-      { client_id: string; month: number; amount: number }[] | null) ?? []) {
-      const lineId = clientToLine.get(v.client_id);
+    // Typed values plus the "até cancelar" projection (same rule as Linhas de serviço).
+    const yearValues = projectYear({
+      clients,
+      values: (valueRows as ProjectionValue[] | null) ?? [],
+      year,
+    });
+    for (const [key, cell] of yearValues) {
+      const [clientId, monthStr] = key.split(':');
+      const lineId = clientToLine.get(clientId);
       if (!lineId || !lineMonthRevenue.has(lineId)) continue;
-      lineMonthRevenue.get(lineId)![v.month] += Number(v.amount) || 0;
+      lineMonthRevenue.get(lineId)![Number(monthStr)] += cell.amount;
     }
     for (const a of allocations) {
       if (!lineMonthCost.has(a.service_line_id)) continue;
