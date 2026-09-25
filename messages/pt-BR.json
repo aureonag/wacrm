@@ -577,7 +577,18 @@
       "discardBody": "Você mudou campos desta tarefa e ainda não salvou. O que deseja fazer?",
       "discardKeep": "Continuar editando",
       "discardConfirm": "Descartar",
-      "saveAndClose": "Salvar e sair"
+      "saveAndClose": "Salvar e sair",
+      "tabContract": "Contrato",
+      "contractCard": {
+        "loading": "Carregando contrato…",
+        "error": "Não foi possível carregar o contrato.",
+        "none": "Esta tarefa não tem contrato assinado vinculado.",
+        "cnpj": "CNPJ",
+        "signedAt": "Assinado em",
+        "terminated": "Contrato cancelado",
+        "endsOn": "termina em {date}",
+        "noScope": "O contrato não traz as seções de escopo (serviço contratado, o que está incluso e responsabilidades)."
+      }
     },
     "approvals": {
       "selectRecipient": "Selecione quem vai aprovar",

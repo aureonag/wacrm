@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ContactPicker, type PickedContact } from "./contact-picker";
+import { TaskContractCard } from "./task-contract-card";
 import { formatTaskCode } from "@/lib/tasks/code";
 import { BriefingEditor } from "./briefing-editor";
 import { CommentThread } from "./comment-thread";
@@ -754,6 +755,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="flex-1 px-4 pb-6 sm:px-6">
               <TabsList variant="line">
                 <TabsTrigger value="briefing">{t("tabBriefing")}</TabsTrigger>
+                {task.deal_id && <TabsTrigger value="contract">{t("tabContract")}</TabsTrigger>}
                 <TabsTrigger value="comments">{t("tabComments", { count: comments.length })}</TabsTrigger>
                 <TabsTrigger value="checklist">{t("tabChecklist", { count: checklist.length })}</TabsTrigger>
                 <TabsTrigger value="approvals">{t("tabApprovals", { count: approvals.length })}</TabsTrigger>
@@ -768,6 +770,11 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   onSave={(json) => patchTask({ briefing: json })}
                 />
               </TabsContent>
+              {task.deal_id && (
+                <TabsContent value="contract" className="pt-3">
+                  <TaskContractCard taskId={task.id} />
+                </TabsContent>
+              )}
               <TabsContent value="comments" className="pt-3">
                 <CommentThread
                   taskId={task.id}

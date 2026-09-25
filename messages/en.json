@@ -577,7 +577,18 @@
       "discardBody": "You changed fields on this task and haven't saved yet. What would you like to do?",
       "discardKeep": "Keep editing",
       "discardConfirm": "Discard",
-      "saveAndClose": "Save and leave"
+      "saveAndClose": "Save and leave",
+      "tabContract": "Contract",
+      "contractCard": {
+        "loading": "Loading contract…",
+        "error": "Could not load the contract.",
+        "none": "This task has no signed contract linked.",
+        "cnpj": "Tax ID (CNPJ)",
+        "signedAt": "Signed on",
+        "terminated": "Contract cancelled",
+        "endsOn": "ends on {date}",
+        "noScope": "The contract has no scope sections (contracted service, what is included and responsibilities)."
+      }
     },
     "approvals": {
       "selectRecipient": "Select who should approve",
