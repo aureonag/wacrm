@@ -1,23 +1,26 @@
 -- ============================================================
 -- 085_deal_closing_sheet.sql — Ficha de fechamento (Fase 1)
 --
--- Regra de negocio: um negocio so vira "ganho" depois que o vendedor
--- preenche a ficha de fechamento. Ao concluir a ficha, tudo acontece
--- de uma vez, numa unica transacao (RPC close_deal_with_sheet):
+-- Regra de negocio: no fechamento MANUAL, o negocio so vira "ganho"
+-- depois que o vendedor preenche a ficha de fechamento. Na ASSINATURA
+-- do contrato o negocio continua virando ganho sozinho, mas fica com
+-- closing_pending=true e um botao "Agendar kickoff" na tela, que abre
+-- a mesma ficha. Ao concluir a ficha, tudo acontece de uma vez, numa
+-- unica transacao (RPC close_deal_with_sheet):
 --   - a ficha e gravada;
---   - o negocio vira 'won';
+--   - o negocio vira 'won' (se ainda estava aberto);
 --   - nasce a tarefa de kickoff no quadro escolhido (sem NENHUM valor
 --     monetario no briefing — o Operacional nao ve valor de contrato);
 --   - o responsavel pela tarefa e os donos da conta sao notificados.
 --
 -- Design notes
 --   - A trava e no banco (trigger BEFORE UPDATE OF status em deals),
---     nao so na tela: qualquer caminho que tente marcar 'won' sem ficha
---     recebe erro. Por isso handle_contract_signed() (054) e reescrita
---     aqui — ela marcava o negocio como 'won' sozinha na assinatura, o
---     que agora seria barrado (e derrubaria a gravacao da assinatura).
---     Agora a assinatura so move o negocio para "Contrato fechado" e
---     avisa o vendedor para preencher a ficha.
+--     nao so na tela: marcar 'won' sem ficha recebe erro. A unica
+--     excecao e a assinatura do contrato: handle_contract_signed() (054)
+--     liga a flag de transacao app.allow_win so durante o seu UPDATE, e
+--     marca deals.closing_pending=true para a tela oferecer "Agendar
+--     kickoff". Negocios ja ganhos antes desta migracao ficam com
+--     closing_pending=false e nao recebem o aviso.
 --   - handle_deal_won() (070) deixa de criar a tarefa de kickoff: quem
 --     cria e a RPC, que conhece quadro/observacoes/escopo escolhidos na
 --     ficha. O trigger continua so notificando o responsavel do negocio.
@@ -50,6 +53,9 @@ DROP POLICY IF EXISTS deal_closing_sheets_select ON deal_closing_sheets;
 CREATE POLICY deal_closing_sheets_select ON deal_closing_sheets FOR SELECT
   USING (is_account_member(account_id));
 
+-- ---- deals.closing_pending: ganho por assinatura aguardando o kickoff ----
+ALTER TABLE deals ADD COLUMN IF NOT EXISTS closing_pending boolean NOT NULL DEFAULT false;
+
 -- ---- trava: sem ficha nao vira ganho -----------------------------------
 CREATE OR REPLACE FUNCTION require_closing_sheet_before_won()
 RETURNS TRIGGER
@@ -58,6 +64,7 @@ AS $$
 BEGIN
   IF NEW.status = 'won'
      AND OLD.status IS DISTINCT FROM 'won'
+     AND COALESCE(current_setting('app.allow_win', true), '') <> 'on'
      AND NOT EXISTS (SELECT 1 FROM deal_closing_sheets WHERE deal_id = NEW.id) THEN
     RAISE EXCEPTION 'A ficha de fechamento precisa ser preenchida antes de marcar o negocio como ganho'
       USING ERRCODE = 'P0001';
@@ -72,7 +79,7 @@ CREATE TRIGGER require_closing_sheet_before_won
   FOR EACH ROW
   EXECUTE FUNCTION require_closing_sheet_before_won();
 
--- ---- assinatura do contrato: nao marca mais como ganho -----------------
+-- ---- assinatura do contrato: continua marcando ganho, mas pendente ------
 CREATE OR REPLACE FUNCTION public.handle_contract_signed()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -100,7 +107,9 @@ BEGIN
   IF v_stage_id IS NULL THEN
     RAISE WARNING 'handle_contract_signed: no "Contrato fechado" stage found for pipeline %, deal % left in place', v_deal.pipeline_id, v_deal.id;
   ELSE
-    UPDATE deals SET stage_id = v_stage_id WHERE id = v_deal.id;
+    PERFORM set_config('app.allow_win', 'on', true);
+    UPDATE deals SET status = 'won', stage_id = v_stage_id, closing_pending = true WHERE id = v_deal.id;
+    PERFORM set_config('app.allow_win', 'off', true);
 
     INSERT INTO deal_activities (deal_id, account_id, user_id, type, title, detail)
     VALUES (
@@ -109,7 +118,7 @@ BEGIN
       NULL,
       'contract_signed',
       'Contrato assinado',
-      'Negócio movido automaticamente para "Contrato fechado". Preencha a ficha de fechamento para marcá-lo como Ganho.'
+      'Negócio movido automaticamente para "Contrato fechado" e marcado como Ganho. Agende o kickoff para passar o cliente ao Operacional e ao Financeiro.'
     );
   END IF;
 
@@ -129,7 +138,7 @@ BEGIN
       v_deal.id,
       NEW.id,
       'Contrato assinado',
-      'O contrato de "' || v_deal.title || '" foi assinado. Preencha a ficha de fechamento para concluir o ganho.'
+      'O contrato de "' || v_deal.title || '" foi assinado. Agende o kickoff para passar o cliente ao Operacional e ao Financeiro.'
     );
   END IF;
 
@@ -204,8 +213,11 @@ BEGIN
   IF NOT is_account_member(v_deal.account_id, 'agent') THEN
     RAISE EXCEPTION 'forbidden';
   END IF;
-  IF v_deal.status <> 'open' THEN
+  IF v_deal.status NOT IN ('open', 'won') THEN
     RAISE EXCEPTION 'deal is not open';
+  END IF;
+  IF EXISTS (SELECT 1 FROM deal_closing_sheets WHERE deal_id = v_deal.id) THEN
+    RAISE EXCEPTION 'deal already closed';
   END IF;
   IF p_sector_id IS NULL THEN
     RAISE EXCEPTION 'sector is required';
@@ -258,8 +270,11 @@ BEGIN
     NULLIF(btrim(COALESCE(p_observations, '')), ''), v_task_id, auth.uid()
   );
 
+  -- A ficha ja existe, entao a trava deixa passar. Se o negocio ja era
+  -- ganho (assinatura do contrato), so limpa a pendencia.
   UPDATE deals
   SET status = 'won',
+      closing_pending = false,
       handoff_sector_id = p_sector_id,
       handoff_assignee_id = p_assignee_id
   WHERE id = v_deal.id;

@@ -7,7 +7,9 @@
 //         the contract scope that will go to the task (no prices).
 // POST -> completes the closing sheet: builds the kickoff briefing and
 //         calls close_deal_with_sheet (migration 085), which marks the
-//         deal won and creates the task atomically.
+//         deal won (if still open) and creates the task atomically. A
+//         deal already won by contract signature is accepted too — that
+//         is the "Agendar kickoff" path.
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -90,7 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .eq("account_id", accountId)
       .maybeSingle();
     if (!deal) return NextResponse.json({ error: "Deal not found" }, { status: 404 });
-    if (deal.status !== "open") {
+    if (deal.status !== "open" && deal.status !== "won") {
       return NextResponse.json({ error: "Este negócio já foi encerrado" }, { status: 409 });
     }
 

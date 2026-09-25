@@ -294,10 +294,17 @@ export default function DealDetailPage() {
 
   async function handleDealClosed() {
     if (!deal) return;
-    setDeal({ ...deal, status: "won" });
+    // A deal already won by contract signature only needs its kickoff
+    // scheduled — no second celebration.
+    const wasOpen = deal.status === "open";
+    setDeal({ ...deal, status: "won", closing_pending: false });
     setActivities(await loadDealActivities(supabase, dealId));
-    fireWonConfetti();
-    setWonCelebrationOpen(true);
+    if (wasOpen) {
+      fireWonConfetti();
+      setWonCelebrationOpen(true);
+    } else {
+      toast.success(t("kickoffScheduled"));
+    }
   }
 
   // ---- Delete deal (mistaken creation, test data, etc.) ----
@@ -594,16 +601,14 @@ export default function DealDetailPage() {
         )}
       </div>
 
-      {canEdit &&
-        deal.status === "open" &&
-        stages.find((s) => s.id === deal.stage_id)?.kind === "contract_closed" && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            <span>{t("signedBanner")}</span>
-            <Button size="sm" onClick={() => setClosingOpen(true)}>
-              {t("signedBannerAction")}
-            </Button>
-          </div>
-        )}
+      {canEdit && deal.status === "won" && deal.closing_pending && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <span>{t("signedBanner")}</span>
+          <Button size="sm" onClick={() => setClosingOpen(true)}>
+            {t("signedBannerAction")}
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <Tabs defaultValue="overview">

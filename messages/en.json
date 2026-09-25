@@ -1204,8 +1204,9 @@
       "deleteDealBtn": "Delete deal",
       "toastDealDeleted": "Deal deleted",
       "toastFailedDeleteDeal": "Failed to delete the deal",
-      "signedBanner": "Contract signed. Fill in the closing sheet to mark the deal as won.",
-      "signedBannerAction": "Fill in sheet"
+      "signedBanner": "Contract signed and deal won. Schedule the kickoff to hand the client over to Operations.",
+      "signedBannerAction": "Schedule kickoff",
+      "kickoffScheduled": "Kickoff scheduled: the task was created in Operations."
     },
     "linkContact": {
       "title": "Link contact",

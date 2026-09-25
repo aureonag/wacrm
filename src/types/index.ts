@@ -666,6 +666,8 @@ export interface Deal {
   contact_id: string | null;
   conversation_id?: string;
   assigned_to?: string | null;
+  /** Won by contract signature but the closing sheet (kickoff) is not filled in yet — migration 085. */
+  closing_pending?: boolean;
   title: string;
   value: number;
   currency?: string;

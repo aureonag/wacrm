@@ -1204,8 +1204,9 @@
       "deleteDealBtn": "Excluir negócio",
       "toastDealDeleted": "Negócio excluído",
       "toastFailedDeleteDeal": "Falha ao excluir o negócio",
-      "signedBanner": "Contrato assinado. Preencha a ficha de fechamento para marcar o negócio como ganho.",
-      "signedBannerAction": "Preencher ficha"
+      "signedBanner": "Contrato assinado e negócio ganho. Agende o kickoff para passar o cliente ao Operacional.",
+      "signedBannerAction": "Agendar kickoff",
+      "kickoffScheduled": "Kickoff agendado: a tarefa foi criada no Operacional."
     },
     "linkContact": {
       "title": "Vincular contato",

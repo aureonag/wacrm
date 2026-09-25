@@ -1204,8 +1204,9 @@
       "deleteDealBtn": "거래 삭제",
       "toastDealDeleted": "거래가 삭제되었습니다",
       "toastFailedDeleteDeal": "거래를 삭제하지 못했습니다",
-      "signedBanner": "계약이 체결되었습니다. 딜을 성사로 표시하려면 마감 시트를 작성하세요.",
-      "signedBannerAction": "시트 작성"
+      "signedBanner": "계약이 체결되어 딜이 성사되었습니다. 킥오프를 예약하여 고객을 운영 부서로 전달하세요.",
+      "signedBannerAction": "킥오프 예약",
+      "kickoffScheduled": "킥오프가 예약되었습니다. 운영 부서에 작업이 생성되었습니다."
     },
     "linkContact": {
       "title": "연락처 연결",
