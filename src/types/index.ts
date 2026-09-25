@@ -274,7 +274,8 @@ export type NotificationType =
   | 'approval_approved'
   | 'approval_rejected'
   | 'deal_won'
-  | 'kickoff_task_created';
+  | 'kickoff_task_created'
+  | 'task_updated';
 
 export interface Notification {
   id: string;

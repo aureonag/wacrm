@@ -28,6 +28,7 @@ import {
   ShieldX,
   Trophy,
   UserPlus,
+  Pencil,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
   approval_rejected: ShieldX,
   deal_won: Trophy,
   kickoff_task_created: Rocket,
+  task_updated: Pencil,
 };
 
 export default function NotificationsPage() {
