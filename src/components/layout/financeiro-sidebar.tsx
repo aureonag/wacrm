@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { EnvironmentSwitcher } from "@/components/layout/environment-switcher";
-import { LayoutDashboard, ListTree, LogOut, Receipt, Settings, User, UserRound, X } from "lucide-react";
+import { HandCoins, LayoutDashboard, ListTree, LogOut, Receipt, Settings, User, UserRound, X } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -39,6 +39,7 @@ const navItems = [
   { href: "/financeiro/dashboard", labelKey: "overview", icon: LayoutDashboard },
   { href: "/financeiro/linhas", labelKey: "lines", icon: ListTree },
   { href: "/financeiro/despesas", labelKey: "expenses", icon: Receipt },
+  { href: "/financeiro/comissoes", labelKey: "commissions", icon: HandCoins },
   { href: "/financeiro/equipe", labelKey: "team", icon: UserRound },
 ];
 
