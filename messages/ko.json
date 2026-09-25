@@ -451,7 +451,18 @@
       "toastTitleRequired": "작업 제목을 입력하세요",
       "toastFailed": "작업을 저장할 수 없습니다",
       "toastCreated": "작업이 생성되었습니다",
-      "client": "고객 (선택)"
+      "client": "고객 (선택)",
+      "template": "템플릿 (선택)",
+      "aiLabel": "AI로 채우기",
+      "aiPlaceholder": "예: 제품 사진과 WhatsApp 문의 유도가 들어간 매장 어버이날 게시물",
+      "aiHint": "AI가 제목, 브리핑, 체크리스트를 제안합니다. 만들기 전에 검토하세요.",
+      "aiButton": "채우기",
+      "aiFilled": "제안이 채워졌습니다. 만들기 전에 검토하세요.",
+      "aiFailed": "제안을 생성할 수 없습니다. 다시 시도하거나 직접 입력하세요.",
+      "aiNotConfigured": "AI 에이전트에서 AI가 아직 설정되지 않았습니다.",
+      "briefing": "브리핑",
+      "checklist": "체크리스트",
+      "checklistHint": "한 줄에 한 항목."
     },
     "tasks": {
       "board": {

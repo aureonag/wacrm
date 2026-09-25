@@ -451,7 +451,18 @@
       "toastTitleRequired": "Informe um título para a tarefa",
       "toastFailed": "Não foi possível salvar a tarefa",
       "toastCreated": "Tarefa criada",
-      "client": "Cliente (opcional)"
+      "client": "Cliente (opcional)",
+      "template": "Modelo (opcional)",
+      "aiLabel": "Preencher com IA",
+      "aiPlaceholder": "Ex.: post de Dia das Mães para a loja, com foto do produto e chamada para o WhatsApp",
+      "aiHint": "A IA sugere título, briefing e checklist. Você revisa antes de criar.",
+      "aiButton": "Preencher",
+      "aiFilled": "Sugestão preenchida. Revise antes de criar.",
+      "aiFailed": "Não foi possível gerar a sugestão. Tente de novo ou preencha manualmente.",
+      "aiNotConfigured": "A IA ainda não está configurada em Agentes de IA.",
+      "briefing": "Briefing",
+      "checklist": "Checklist",
+      "checklistHint": "Um item por linha."
     },
     "tasks": {
       "board": {

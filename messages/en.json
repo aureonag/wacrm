@@ -451,7 +451,18 @@
       "toastTitleRequired": "Enter a title for the task",
       "toastFailed": "Could not save the task",
       "toastCreated": "Task created",
-      "client": "Client (optional)"
+      "client": "Client (optional)",
+      "template": "Template (optional)",
+      "aiLabel": "Fill with AI",
+      "aiPlaceholder": "E.g. Mother's Day post for the store, with the product photo and a WhatsApp call to action",
+      "aiHint": "The AI suggests a title, briefing and checklist. You review before creating.",
+      "aiButton": "Fill",
+      "aiFilled": "Suggestion filled in. Review before creating.",
+      "aiFailed": "Could not generate the suggestion. Try again or fill it in manually.",
+      "aiNotConfigured": "AI is not configured yet under AI Agents.",
+      "briefing": "Briefing",
+      "checklist": "Checklist",
+      "checklistHint": "One item per line."
     },
     "tasks": {
       "board": {

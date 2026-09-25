@@ -30,6 +30,8 @@ export async function POST(request: Request) {
           start_date?: unknown;
           due_date?: unknown;
           estimated_minutes?: unknown;
+          briefing?: unknown;
+          checklist?: unknown;
         }
       | null;
 
@@ -88,6 +90,7 @@ export async function POST(request: Request) {
         start_date: typeof body?.start_date === "string" ? body.start_date : null,
         due_date: typeof body?.due_date === "string" ? body.due_date : null,
         estimated_minutes: typeof body?.estimated_minutes === "number" ? body.estimated_minutes : null,
+        briefing: body?.briefing && typeof body.briefing === "object" && !Array.isArray(body.briefing) ? body.briefing : null,
         created_by: ctx.userId,
         position: count ?? 0,
       })
@@ -97,6 +100,21 @@ export async function POST(request: Request) {
     if (error) {
       console.error("[POST /api/operational/tasks] insert error:", error);
       return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+    }
+
+    // Optional starting checklist (from a template / AI draft).
+    const checklist = Array.isArray(body?.checklist)
+      ? body.checklist
+          .filter((c): c is string => typeof c === "string")
+          .map((c) => c.trim().slice(0, 300))
+          .filter(Boolean)
+          .slice(0, 30)
+      : [];
+    if (checklist.length > 0) {
+      const { error: checklistError } = await ctx.supabase.from("task_checklist_items").insert(
+        checklist.map((label, i) => ({ task_id: data.id, account_id: ctx.accountId, label, position: i })),
+      );
+      if (checklistError) console.error("[POST /api/operational/tasks] checklist insert error:", checklistError);
     }
 
     return NextResponse.json({ id: data.id }, { status: 201 });

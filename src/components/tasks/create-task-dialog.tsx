@@ -25,6 +25,15 @@ import {
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ContactPicker, type PickedContact } from "./contact-picker";
+import { Sparkles, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  TASK_TEMPLATES,
+  checklistFromText,
+  templateBriefingText,
+  textToBriefing,
+  type TaskTemplate,
+} from "@/lib/tasks/templates";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -61,6 +70,12 @@ export function CreateTaskDialog({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [saving, setSaving] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
+  const [briefingText, setBriefingText] = useState("");
+  const [checklistText, setChecklistText] = useState("");
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -73,6 +88,11 @@ export function CreateTaskDialog({
     setIsUrgent(false);
     setDueDate("");
     setContact(null);
+    setTemplateId(null);
+    setEstimatedMinutes(null);
+    setBriefingText("");
+    setChecklistText("");
+    setAiDescription("");
   }, [open, defaultStageId, stages]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -94,6 +114,49 @@ export function CreateTaskDialog({
     };
   }, [open, accountId, supabase]);
 
+  function applyTemplate(tpl: TaskTemplate | null) {
+    setTemplateId(tpl?.id ?? null);
+    if (!tpl) {
+      setEstimatedMinutes(null);
+      setBriefingText("");
+      setChecklistText("");
+      return;
+    }
+    setPriority(tpl.priority);
+    setEstimatedMinutes(tpl.estimatedMinutes);
+    setBriefingText(templateBriefingText(tpl));
+    setChecklistText(tpl.checklist.join("\n"));
+    setTitle((prev) => (prev.trim() ? prev : tpl.titlePrefix));
+  }
+
+  async function handleAiFill() {
+    if (!aiDescription.trim() || aiBusy) return;
+    setAiBusy(true);
+    try {
+      const res = await fetch("/api/operational/tasks/ai-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: aiDescription, template_id: templateId, contact_id: contact?.id ?? null }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { draft?: { title: string; briefing: string; checklist: string[] }; error?: string }
+        | null;
+      if (!res.ok || !data?.draft) {
+        toast.error(data?.error === "ai_not_configured" ? t("aiNotConfigured") : t("aiFailed"));
+        return;
+      }
+      const d = data.draft;
+      if (d.title) setTitle(d.title);
+      if (d.briefing) setBriefingText(d.briefing);
+      if (d.checklist.length) setChecklistText(d.checklist.join("\n"));
+      toast.success(t("aiFilled"));
+    } catch {
+      toast.error(t("aiFailed"));
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
   async function handleCreate() {
     if (!title.trim()) {
       toast.error(t("toastTitleRequired"));
@@ -113,6 +176,9 @@ export function CreateTaskDialog({
         is_urgent: isUrgent,
         due_date: dueDate || null,
         contact_id: contact?.id ?? null,
+        estimated_minutes: estimatedMinutes,
+        briefing: briefingText.trim() ? textToBriefing(briefingText) : null,
+        checklist: checklistFromText(checklistText),
       }),
     });
     setSaving(false);
@@ -129,12 +195,54 @@ export function CreateTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-popover border-border">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl bg-popover border-border">
         <DialogHeader>
           <DialogTitle className="text-popover-foreground">{t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          <div className="grid gap-2">
+            <Label className="text-muted-foreground">{t("template")}</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {TASK_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => applyTemplate(templateId === tpl.id ? null : tpl)}
+                  className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                    templateId === tpl.id
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-2 rounded-lg border border-border bg-muted/40 p-3">
+            <Label className="flex items-center gap-1.5 text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              {t("aiLabel")}
+            </Label>
+            <Textarea
+              spellCheck
+              lang="pt-BR"
+              value={aiDescription}
+              onChange={(e) => setAiDescription(e.target.value)}
+              placeholder={t("aiPlaceholder")}
+              className="min-h-16 border-border bg-background text-sm text-foreground"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-muted-foreground">{t("aiHint")}</p>
+              <Button size="sm" variant="outline" onClick={handleAiFill} disabled={!aiDescription.trim() || aiBusy}>
+                {aiBusy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+                {t("aiButton")}
+              </Button>
+            </div>
+          </div>
+
           <div className="grid gap-2">
             <Label className="text-muted-foreground">{t("taskTitle")}</Label>
             <Input
@@ -225,6 +333,32 @@ export function CreateTaskDialog({
             <Label className="text-muted-foreground">{t("client")}</Label>
             <ContactPicker value={contact} onChange={setContact} />
           </div>
+
+          {(templateId || briefingText || checklistText) && (
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <Label className="text-muted-foreground">{t("briefing")}</Label>
+                <Textarea
+                  spellCheck
+                  lang="pt-BR"
+                  value={briefingText}
+                  onChange={(e) => setBriefingText(e.target.value)}
+                  className="min-h-36 border-border bg-muted font-mono text-xs text-foreground"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-muted-foreground">{t("checklist")}</Label>
+                <Textarea
+                  spellCheck
+                  lang="pt-BR"
+                  value={checklistText}
+                  onChange={(e) => setChecklistText(e.target.value)}
+                  className="min-h-24 border-border bg-muted text-xs text-foreground"
+                />
+                <p className="text-[11px] text-muted-foreground">{t("checklistHint")}</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
