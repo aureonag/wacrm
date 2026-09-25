@@ -1299,7 +1299,42 @@
       "descriptionKickoff": "딜은 이미 성사되었습니다. 완료하면 이 정보로 운영 부서에 킥오프 작업이 생성됩니다.",
       "submitKickoff": "킥오프 작업 만들기",
       "requiredHint": "보드와 부서를 선택해 계속하세요.",
-      "scopeSummary": "범위 보기 ({count}개 섹션)"
+      "scopeSummary": "범위 보기 ({count}개 섹션)",
+      "stepOf": "{total}단계 중 {n}단계",
+      "stepOperational": "운영",
+      "stepFinance": "청구",
+      "descriptionWithFinance": "킥오프 작업을 보낼 곳을 선택하세요. 다음 단계에서 청구 정보를 입력하며, 그 후에 딜이 성사로 표시됩니다.",
+      "back": "뒤로",
+      "next": "계속",
+      "finance": {
+        "intro": "이 정보로 재무에 고객이 생성되고 수수료가 기록됩니다. 운영팀에는 금액이 표시되지 않습니다.",
+        "clientCode": "코드",
+        "clientName": "고객명",
+        "serviceLine": "서비스 라인",
+        "select": "선택",
+        "monthlyValue": "월 금액 (R$)",
+        "promoToggle": "처음 몇 달은 할인 (프로모션)",
+        "promoMonths": "할인 개월 수",
+        "promoAmount": "프로모션 월 금액 (R$)",
+        "firstPayment": "첫 결제일",
+        "firstPaymentHint": "금액은 이 날짜의 달부터 재무에 반영되며, 수수료는 이 날 지급됩니다.",
+        "commissionTitle": "수수료",
+        "commissionHint": "고객이 낸 첫 월 요금 기준: {base}. 아래 사람들에게 나눕니다.",
+        "person": "사람 선택",
+        "removePerson": "삭제",
+        "addPerson": "사람 추가",
+        "percentTotal": "합계: {total}%",
+        "noCommission": "이번 마감에는 수수료가 없습니다.",
+        "errors": {
+          "invalid_date": "첫 결제일을 입력하세요.",
+          "no_items": "기록할 월 서비스가 없습니다.",
+          "invalid_item": "고객명, 서비스 라인, 각 서비스 금액을 입력하세요.",
+          "invalid_promo": "프로모션을 확인하세요: 1~11개월과 올바른 금액.",
+          "invalid_commission": "수수료 대상자를 확인하세요: 중복 없이 비율 입력.",
+          "commission_sum": "수수료 비율의 합이 100%여야 합니다."
+        },
+        "commissionHintEmpty": "고객이 낸 첫 월 요금 기준이며 아래 사람들에게 나눕니다. 날짜와 금액을 입력하면 금액이 표시됩니다."
+      }
     }
   },
   "Contracts": {

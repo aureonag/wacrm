@@ -29,7 +29,17 @@
 --     so a RPC (SECURITY DEFINER) grava. Leitura para membros da conta.
 --   - O montador do briefing (com o escopo extraido do contrato) roda no
 --     servidor (TypeScript) e chega aqui pronto em p_briefing.
---   - A Fase 2 acrescenta as colunas de faturamento a esta mesma ficha.
+--   - Faturamento (Fase 2): a ficha do vendedor tambem carrega os dados
+--     financeiros (linha de servico, valor, promocao, primeiro pagamento,
+--     comissoes). Como as tabelas fin_* sao SO do dono (080), quem grava
+--     nelas e a propria RPC (SECURITY DEFINER), na mesma transacao: cria
+--     um fin_client por servico mensal (nunca soma com cliente existente),
+--     os valores mes a mes ate dezembro do ano do primeiro pagamento, as
+--     comissoes (fin_commissions) e soma cada comissao na despesa
+--     "Comissao <nome>" do mes. Os valores NAO ficam na ficha
+--     (deal_closing_sheets e legivel por todos os membros, inclusive o
+--     Operacional): o snapshot vai para deal_closing_finance, so do dono.
+--   - A projecao dos meses seguintes ("ate cancelar") e a Fase 3.
 --
 -- Idempotent — safe to run multiple times.
 -- ============================================================
@@ -53,6 +63,56 @@ ALTER TABLE deal_closing_sheets ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS deal_closing_sheets_select ON deal_closing_sheets;
 CREATE POLICY deal_closing_sheets_select ON deal_closing_sheets FOR SELECT
   USING (is_account_member(account_id));
+
+-- ---- Financeiro: rastreio do negocio nos clientes + comissoes -------------
+ALTER TABLE fin_clients ADD COLUMN IF NOT EXISTS deal_id uuid REFERENCES deals(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_fin_clients_deal ON fin_clients(deal_id);
+
+-- Snapshot dos dados financeiros declarados na ficha. Owner-only: o
+-- Operacional le deal_closing_sheets e nao pode ver valores.
+CREATE TABLE IF NOT EXISTS deal_closing_finance (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id  uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  sheet_id    uuid NOT NULL UNIQUE REFERENCES deal_closing_sheets(id) ON DELETE CASCADE,
+  payload     jsonb NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE deal_closing_finance ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS deal_closing_finance_owner ON deal_closing_finance;
+CREATE POLICY deal_closing_finance_owner ON deal_closing_finance FOR ALL
+  USING (is_account_member(account_id, 'owner'))
+  WITH CHECK (is_account_member(account_id, 'owner'));
+
+-- Uma linha por pessoa que recebe comissao de um fechamento. O vencimento
+-- e o dia do primeiro pagamento do cliente (politica: a comissao e paga no
+-- dia em que o cliente paga a primeira mensalidade).
+CREATE TABLE IF NOT EXISTS fin_commissions (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id     uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  deal_id        uuid REFERENCES deals(id) ON DELETE SET NULL,
+  profile_id     uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  recipient_name text NOT NULL,
+  client_label   text NOT NULL,
+  pct            numeric(5,2) NOT NULL,
+  base_amount    numeric(12,2) NOT NULL,
+  amount         numeric(12,2) NOT NULL,
+  due_date       date NOT NULL,
+  created_at     timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_fin_commissions_due ON fin_commissions(account_id, due_date);
+ALTER TABLE fin_commissions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fin_commissions_owner ON fin_commissions;
+CREATE POLICY fin_commissions_owner ON fin_commissions FOR ALL
+  USING (is_account_member(account_id, 'owner'))
+  WITH CHECK (is_account_member(account_id, 'owner'));
+
+-- "Hospedagem / Site" passa a se chamar "Criacao" (pedido do dono).
+UPDATE fin_service_lines SET name = 'Criação'
+WHERE name = 'Hospedagem / Site'
+  AND NOT EXISTS (
+    SELECT 1 FROM fin_service_lines other
+    WHERE other.account_id = fin_service_lines.account_id AND other.name = 'Criação'
+  );
 
 -- ---- deals.closing_pending: ganho por assinatura aguardando o kickoff ----
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS closing_pending boolean NOT NULL DEFAULT false;
@@ -165,7 +225,8 @@ CREATE OR REPLACE FUNCTION close_deal_with_sheet(
   p_assignee_id  uuid,
   p_observations text,
   p_briefing     jsonb,
-  p_checklist    text[]
+  p_checklist    text[],
+  p_finance      jsonb DEFAULT NULL
 ) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -179,6 +240,21 @@ DECLARE
   v_assignee_user_id uuid;
   v_assigned_user_id uuid;
   v_owner       record;
+  v_sheet_id    uuid;
+  v_first_date  date;
+  v_item        jsonb;
+  v_entry       jsonb;
+  v_comm        jsonb;
+  v_client_id   uuid;
+  v_sort        int;
+  v_line_id     uuid;
+  v_client_label text;
+  v_base        numeric(12,2) := 0;
+  v_comm_sum    numeric(12,2) := 0;
+  v_recipient   text;
+  v_cat_id      uuid;
+  v_profile_id  uuid;
+  v_amount      numeric(12,2);
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'not authenticated';
@@ -246,7 +322,90 @@ BEGIN
   ) VALUES (
     v_deal.account_id, v_deal.id, p_board_id, p_sector_id, p_assignee_id,
     NULLIF(btrim(COALESCE(p_observations, '')), ''), v_task_id, auth.uid()
-  );
+  )
+  RETURNING id INTO v_sheet_id;
+
+  -- ---- Financeiro (so quando ha servico mensal) --------------------------
+  IF p_finance IS NOT NULL AND jsonb_array_length(COALESCE(p_finance->'items', '[]'::jsonb)) > 0 THEN
+    v_first_date := (p_finance->>'first_payment_date')::date;
+    IF v_first_date IS NULL THEN
+      RAISE EXCEPTION 'first payment date is required';
+    END IF;
+
+    FOR v_item IN SELECT * FROM jsonb_array_elements(p_finance->'items') LOOP
+      v_line_id := (v_item->>'service_line_id')::uuid;
+      IF NOT EXISTS (SELECT 1 FROM fin_service_lines WHERE id = v_line_id AND account_id = v_deal.account_id) THEN
+        RAISE EXCEPTION 'invalid service line';
+      END IF;
+      IF COALESCE((v_item->>'amount')::numeric, 0) <= 0 OR btrim(COALESCE(v_item->>'name', '')) = '' THEN
+        RAISE EXCEPTION 'invalid finance item';
+      END IF;
+
+      SELECT COALESCE(MAX(sort_order), -1) + 1 INTO v_sort FROM fin_clients WHERE service_line_id = v_line_id;
+
+      INSERT INTO fin_clients (account_id, service_line_id, code, name, status, started_at, sort_order, deal_id)
+      VALUES (
+        v_deal.account_id, v_line_id, NULLIF(btrim(COALESCE(v_item->>'code', '')), ''),
+        btrim(v_item->>'name'), 'active', v_first_date, v_sort, v_deal.id
+      )
+      RETURNING id INTO v_client_id;
+
+      FOR v_entry IN SELECT * FROM jsonb_array_elements(v_item->'schedule') LOOP
+        IF (v_entry->>'month')::int NOT BETWEEN 1 AND 12 THEN
+          RAISE EXCEPTION 'invalid schedule month';
+        END IF;
+        INSERT INTO fin_client_values (account_id, client_id, year, month, amount)
+        VALUES (
+          v_deal.account_id, v_client_id, (v_entry->>'year')::int, (v_entry->>'month')::int,
+          (v_entry->>'amount')::numeric
+        );
+      END LOOP;
+
+      -- primeiro mes = base da comissao (soma de todos os servicos mensais)
+      v_base := v_base + COALESCE((v_item->'schedule'->0->>'amount')::numeric, 0);
+    END LOOP;
+
+    v_client_label := COALESCE(NULLIF(btrim(p_finance->>'client_label'), ''), v_deal.title);
+
+    FOR v_comm IN SELECT * FROM jsonb_array_elements(COALESCE(p_finance->'commissions', '[]'::jsonb)) LOOP
+      v_profile_id := (v_comm->>'profile_id')::uuid;
+      v_amount := (v_comm->>'amount')::numeric;
+      SELECT full_name INTO v_recipient FROM profiles WHERE id = v_profile_id AND account_id = v_deal.account_id;
+      IF v_recipient IS NULL THEN
+        RAISE EXCEPTION 'invalid commission recipient';
+      END IF;
+      v_comm_sum := v_comm_sum + v_amount;
+
+      INSERT INTO fin_commissions (
+        account_id, deal_id, profile_id, recipient_name, client_label, pct, base_amount, amount, due_date
+      ) VALUES (
+        v_deal.account_id, v_deal.id, v_profile_id, v_recipient, v_client_label,
+        (v_comm->>'pct')::numeric, v_base, v_amount, v_first_date
+      );
+
+      -- soma a comissao na despesa "Comissao <primeiro nome>" do mes do pagamento
+      INSERT INTO fin_expense_categories (account_id, name, is_recurring)
+      VALUES (v_deal.account_id, 'Comissão ' || split_part(btrim(v_recipient), ' ', 1), true)
+      ON CONFLICT (account_id, name) DO NOTHING;
+      SELECT id INTO v_cat_id FROM fin_expense_categories
+      WHERE account_id = v_deal.account_id AND name = 'Comissão ' || split_part(btrim(v_recipient), ' ', 1);
+
+      INSERT INTO fin_expenses (account_id, category_id, year, month, amount, created_by)
+      VALUES (
+        v_deal.account_id, v_cat_id, EXTRACT(YEAR FROM v_first_date)::int, EXTRACT(MONTH FROM v_first_date)::int,
+        v_amount, auth.uid()
+      )
+      ON CONFLICT (category_id, year, month) DO UPDATE SET amount = fin_expenses.amount + EXCLUDED.amount;
+    END LOOP;
+
+    IF jsonb_array_length(COALESCE(p_finance->'commissions', '[]'::jsonb)) > 0
+       AND abs(v_comm_sum - v_base) > 0.02 THEN
+      RAISE EXCEPTION 'commission total does not match the first payment';
+    END IF;
+
+    INSERT INTO deal_closing_finance (account_id, sheet_id, payload)
+    VALUES (v_deal.account_id, v_sheet_id, p_finance);
+  END IF;
 
   -- A ficha ja existe, entao a trava deixa passar. Se o negocio ja era
   -- ganho (assinatura do contrato), so limpa a pendencia.
@@ -291,5 +450,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION close_deal_with_sheet(uuid, uuid, uuid, uuid, text, jsonb, text[]) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION close_deal_with_sheet(uuid, uuid, uuid, uuid, text, jsonb, text[]) TO authenticated;
+REVOKE ALL ON FUNCTION close_deal_with_sheet(uuid, uuid, uuid, uuid, text, jsonb, text[], jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION close_deal_with_sheet(uuid, uuid, uuid, uuid, text, jsonb, text[], jsonb) TO authenticated;

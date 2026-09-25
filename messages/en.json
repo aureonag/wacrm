@@ -1299,7 +1299,42 @@
       "descriptionKickoff": "The deal is already won. When you finish, the kickoff task is created in Operations with this information.",
       "submitKickoff": "Create kickoff task",
       "requiredHint": "Choose the board and the sector to continue.",
-      "scopeSummary": "View scope ({count, plural, one {# section} other {# sections}})"
+      "scopeSummary": "View scope ({count, plural, one {# section} other {# sections}})",
+      "stepOf": "Step {n} of {total}",
+      "stepOperational": "Operations",
+      "stepFinance": "Billing",
+      "descriptionWithFinance": "Choose where the kickoff task goes. Next you enter the billing details, and only then is the deal marked as won.",
+      "back": "Back",
+      "next": "Continue",
+      "finance": {
+        "intro": "This creates the client in Finance and records the commission. The Operations team does not see amounts.",
+        "clientCode": "Code",
+        "clientName": "Client name",
+        "serviceLine": "Service line",
+        "select": "Select",
+        "monthlyValue": "Monthly value (R$)",
+        "promoToggle": "The first months are discounted (promotion)",
+        "promoMonths": "Discounted months",
+        "promoAmount": "Promotional monthly value (R$)",
+        "firstPayment": "First payment date",
+        "firstPaymentHint": "Amounts enter Finance from this date's month, and the commission is due on this day.",
+        "commissionTitle": "Commission",
+        "commissionHint": "On the first monthly fee the client pays: {base}. Split among the people below.",
+        "person": "Choose a person",
+        "removePerson": "Remove",
+        "addPerson": "Add person",
+        "percentTotal": "Total: {total}%",
+        "noCommission": "No commission on this closing.",
+        "errors": {
+          "invalid_date": "Enter the first payment date.",
+          "no_items": "There is no monthly service to record.",
+          "invalid_item": "Fill in the client name, service line and value of each service.",
+          "invalid_promo": "Check the promotion: 1 to 11 months and a valid value.",
+          "invalid_commission": "Check the commission people: no repeats, and a percentage each.",
+          "commission_sum": "The commission percentages must add up to 100%."
+        },
+        "commissionHintEmpty": "On the first monthly fee the client pays, split among the people below. The amount shows once you fill in the date and values."
+      }
     }
   },
   "Contracts": {

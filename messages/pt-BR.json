@@ -1299,7 +1299,42 @@
       "descriptionKickoff": "O negócio já está ganho. Ao concluir, a tarefa de kickoff é criada no Operacional com estas informações.",
       "submitKickoff": "Criar tarefa de kickoff",
       "requiredHint": "Escolha o quadro e o setor para continuar.",
-      "scopeSummary": "Ver escopo ({count, plural, one {# seção} other {# seções}})"
+      "scopeSummary": "Ver escopo ({count, plural, one {# seção} other {# seções}})",
+      "stepOf": "Passo {n} de {total}",
+      "stepOperational": "Operacional",
+      "stepFinance": "Faturamento",
+      "descriptionWithFinance": "Escolha para onde vai a tarefa de kickoff. No próximo passo você informa o faturamento, e só depois o negócio vira ganho.",
+      "back": "Voltar",
+      "next": "Continuar",
+      "finance": {
+        "intro": "Estas informações criam o cliente no Financeiro e lançam a comissão. O time do Operacional não vê valores.",
+        "clientCode": "Código",
+        "clientName": "Nome do cliente",
+        "serviceLine": "Linha de serviço",
+        "select": "Selecione",
+        "monthlyValue": "Valor mensal (R$)",
+        "promoToggle": "Os primeiros meses têm desconto (promoção)",
+        "promoMonths": "Meses com desconto",
+        "promoAmount": "Valor mensal promocional (R$)",
+        "firstPayment": "Data do primeiro pagamento",
+        "firstPaymentHint": "Os valores entram no Financeiro a partir do mês desta data, e a comissão vence neste dia.",
+        "commissionTitle": "Comissão",
+        "commissionHint": "Sobre a primeira mensalidade paga pelo cliente: {base}. Dividida entre as pessoas abaixo.",
+        "person": "Escolha a pessoa",
+        "removePerson": "Remover",
+        "addPerson": "Adicionar pessoa",
+        "percentTotal": "Total: {total}%",
+        "noCommission": "Sem comissão neste fechamento.",
+        "errors": {
+          "invalid_date": "Informe a data do primeiro pagamento.",
+          "no_items": "Não há serviço mensal para lançar.",
+          "invalid_item": "Preencha o nome do cliente, a linha de serviço e o valor de cada serviço.",
+          "invalid_promo": "Confira a promoção: de 1 a 11 meses e um valor válido.",
+          "invalid_commission": "Confira as pessoas da comissão: sem repetir e com porcentagem.",
+          "commission_sum": "As porcentagens da comissão precisam somar 100%."
+        },
+        "commissionHintEmpty": "Sobre a primeira mensalidade paga pelo cliente, dividida entre as pessoas abaixo. O valor aparece depois que você preencher a data e os valores."
+      }
     }
   },
   "Contracts": {
