@@ -52,18 +52,19 @@ function getTransporter() {
 
 export interface SendEmailArgs {
   to: string;
+  cc?: string[];
   subject: string;
   text: string;
   html?: string;
 }
 
-export async function sendEmail({ to, subject, text, html }: SendEmailArgs): Promise<void> {
+export async function sendEmail({ to, cc, subject, text, html }: SendEmailArgs): Promise<void> {
   if (!isEmailConfigured()) {
     throw new ContractEmailError("Email sending is not configured (CONTRACT_SMTP_* env vars missing).");
   }
   const from = process.env.CONTRACT_EMAIL_FROM || process.env.CONTRACT_SMTP_USER;
   try {
-    await getTransporter().sendMail({ from, to, subject, text, html });
+    await getTransporter().sendMail({ from, to, cc: cc && cc.length > 0 ? cc : undefined, subject, text, html });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown SMTP error";
     throw new ContractEmailError(`Failed to send email: ${message}`);

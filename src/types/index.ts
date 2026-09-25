@@ -585,6 +585,12 @@ export interface DealContract {
   signed_at?: string | null;
   signed_ip?: string | null;
   signed_user_agent?: string | null;
+  /** Set when a SIGNED contract was cancelled (migration 088); the status stays 'signed'. */
+  terminated_at?: string | null;
+  terminated_by?: string | null;
+  /** YYYY-MM-DD */
+  termination_effective_date?: string | null;
+  termination_note?: string | null;
   created_by?: string | null;
   sent_at?: string | null;
   expires_at?: string | null;
@@ -600,7 +606,10 @@ export type DealContractEventType =
   | 'declined'
   | 'expired'
   | 'cancelled'
-  | 'webhook_received';
+  | 'webhook_received'
+  | 'terminated'
+  | 'termination_email_sent'
+  | 'termination_email_failed';
 
 export interface DealContractEvent {
   id: string;

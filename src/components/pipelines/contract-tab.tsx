@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ContractDocument } from "@/components/contracts/contract-document";
+import { TerminateContractDialog } from "@/components/pipelines/terminate-contract-dialog";
 import {
   Select,
   SelectContent,
@@ -105,6 +106,7 @@ function emptyForm(contact?: Contact): FormState {
 
 export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTabProps) {
   const t = useTranslations("Contracts.tab");
+  const tTerminate = useTranslations("Contracts.terminate");
   const supabase = createClient();
 
   const [contracts, setContracts] = useState<DealContract[]>([]);
@@ -116,6 +118,7 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
   const [resultLink, setResultLink] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [terminateTarget, setTerminateTarget] = useState<DealContract | null>(null);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -316,12 +319,37 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                         {t("signedAt", { date: formatSignedAt(contract.signed_at) })}
                       </p>
                     )}
+                    {contract.terminated_at && (
+                      <p className="text-xs font-medium text-red-400">
+                        {tTerminate("terminatedOn", {
+                          date: new Date(contract.terminated_at).toLocaleDateString("pt-BR"),
+                          effective: contract.termination_effective_date
+                            ? contract.termination_effective_date.split("-").reverse().join("/")
+                            : "—",
+                        })}
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <span className={cn("inline-flex items-center gap-1 text-xs font-medium", meta.className)}>
-                      <Icon className="h-3.5 w-3.5" />
-                      {t(`status.${contract.status}`)}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 text-xs font-medium",
+                        contract.terminated_at ? "text-red-400" : meta.className,
+                      )}
+                    >
+                      {contract.terminated_at ? <Ban className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                      {contract.terminated_at ? tTerminate("badge") : t(`status.${contract.status}`)}
                     </span>
+                    {canEdit && contract.status === "signed" && !contract.terminated_at && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTerminateTarget(contract)}
+                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
+                      >
+                        {tTerminate("button")}
+                      </Button>
+                    )}
                     {canEdit &&
                       contract.signing_method === "virtual" &&
                       ["sent", "viewed", "expired"].includes(contract.status) && (
@@ -363,6 +391,13 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
           </ul>
         )}
       </div>
+
+      <TerminateContractDialog
+        open={terminateTarget !== null}
+        onOpenChange={(v) => !v && setTerminateTarget(null)}
+        contract={terminateTarget}
+        onTerminated={load}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-2xl max-h-[85vh] overflow-y-auto">

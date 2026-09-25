@@ -69,3 +69,106 @@ export function otpCodeEmailHtml(args: { code: string; contractTitle?: string })
   `;
   return emailShell(body);
 }
+
+// ------------------------------------------------------------
+// Cancelamento de contrato assinado (minuta enviada ao cliente).
+// Nunca inclui valores: so identifica o contrato e a data de efeito.
+// ------------------------------------------------------------
+
+export interface TerminationEmailArgs {
+  razaoSocial: string;
+  cnpj: string;
+  representante: string;
+  /** ISO timestamp of the signature, when known. */
+  signedAt: string | null;
+  /** Lines of the "Serviço contratado" section (no prices). */
+  serviceLines: string[];
+  /** YYYY-MM-DD */
+  effectiveDate: string;
+  note?: string | null;
+  /** Short reference so both sides can find the contract. */
+  contractRef: string;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** "2026-10-15" or an ISO timestamp -> "15/10/2026". */
+export function formatBrDate(value: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : value;
+}
+
+export function terminationEmailSubject(razaoSocial: string): string {
+  return `Comunicado de cancelamento de contrato — ${razaoSocial}`;
+}
+
+export function terminationEmailText(a: TerminationEmailArgs): string {
+  const lines = [
+    `Prezado(a) ${a.representante},`,
+    "",
+    `Comunicamos o cancelamento do contrato de prestação de serviços firmado entre ${a.razaoSocial} e a Aureon Publicidade Ltda.${
+      a.signedAt ? `, assinado em ${formatBrDate(a.signedAt)}` : ""
+    }.`,
+    "",
+    "DADOS DO CONTRATO",
+    `Contratante: ${a.razaoSocial}`,
+    `CNPJ: ${a.cnpj}`,
+    `Representante legal: ${a.representante}`,
+    ...(a.signedAt ? [`Data da assinatura: ${formatBrDate(a.signedAt)}`] : []),
+    ...(a.serviceLines.length ? [`Serviço contratado: ${a.serviceLines.join("; ")}`] : []),
+    `Referência: ${a.contractRef}`,
+    "",
+    `DATA DE EFEITO DO CANCELAMENTO: ${formatBrDate(a.effectiveDate)}`,
+    ...(a.note ? ["", "OBSERVAÇÕES", a.note] : []),
+    "",
+    "A partir da data de efeito, os serviços descritos no contrato serão encerrados. Eventuais pendências até essa data seguem as condições do contrato assinado.",
+    "",
+    "Agradecemos a parceria e permanecemos à disposição.",
+    "",
+    "Aureon Publicidade",
+  ];
+  return lines.join("\n");
+}
+
+export function terminationEmailHtml(a: TerminationEmailArgs): string {
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;font-size:13px;color:${COLORS.muted};white-space:nowrap;vertical-align:top;">${label}</td><td style="padding:4px 0;font-size:13px;color:${COLORS.foreground};">${escapeHtml(value)}</td></tr>`;
+  const body = `
+    <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">Comunicado de cancelamento</h1>
+    <p style="margin:0 0 16px;font-size:14px;color:${COLORS.muted};line-height:1.6;">
+      Prezado(a) <strong style="color:${COLORS.foreground};">${escapeHtml(a.representante)}</strong>, comunicamos o
+      cancelamento do contrato de prestação de serviços firmado entre
+      <strong style="color:${COLORS.foreground};">${escapeHtml(a.razaoSocial)}</strong> e a Aureon Publicidade Ltda.${
+        a.signedAt ? `, assinado em ${formatBrDate(a.signedAt)}` : ""
+      }.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;width:100%;">
+      ${row("Contratante", a.razaoSocial)}
+      ${row("CNPJ", a.cnpj)}
+      ${row("Representante", a.representante)}
+      ${a.signedAt ? row("Assinado em", formatBrDate(a.signedAt)) : ""}
+      ${a.serviceLines.length ? row("Serviço", a.serviceLines.join("; ")) : ""}
+      ${row("Referência", a.contractRef)}
+    </table>
+    <div style="margin:0 0 16px;padding:14px 16px;background:${COLORS.primarySoftBg};border:1px solid ${COLORS.primarySoftBorder};border-radius:8px;">
+      <div style="font-size:12px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Data de efeito do cancelamento</div>
+      <div style="margin-top:4px;font-size:20px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(a.effectiveDate)}</div>
+    </div>
+    ${
+      a.note
+        ? `<p style="margin:0 0 16px;font-size:13px;color:${COLORS.muted};line-height:1.6;"><strong style="color:${COLORS.foreground};">Observações:</strong> ${escapeHtml(a.note)}</p>`
+        : ""
+    }
+    <p style="margin:0 0 12px;font-size:13px;color:${COLORS.muted};line-height:1.6;">
+      A partir da data de efeito, os serviços descritos no contrato serão encerrados. Eventuais pendências até essa data seguem as condições do contrato assinado.
+    </p>
+    <p style="margin:0;font-size:13px;color:${COLORS.muted};line-height:1.6;">Agradecemos a parceria e permanecemos à disposição.</p>
+  `;
+  return emailShell(body);
+}
