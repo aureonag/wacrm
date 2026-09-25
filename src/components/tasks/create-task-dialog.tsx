@@ -25,7 +25,8 @@ import {
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ContactPicker, type PickedContact } from "./contact-picker";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { draftTaskFromDescription } from "@/lib/tasks/internal-agent";
 import { Textarea } from "@/components/ui/textarea";
 import {
   TASK_TEMPLATES,
@@ -75,7 +76,6 @@ export function CreateTaskDialog({
   const [briefingText, setBriefingText] = useState("");
   const [checklistText, setChecklistText] = useState("");
   const [aiDescription, setAiDescription] = useState("");
-  const [aiBusy, setAiBusy] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -129,32 +129,18 @@ export function CreateTaskDialog({
     setTitle((prev) => (prev.trim() ? prev : tpl.titlePrefix));
   }
 
-  async function handleAiFill() {
-    if (!aiDescription.trim() || aiBusy) return;
-    setAiBusy(true);
-    try {
-      const res = await fetch("/api/operational/tasks/ai-draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: aiDescription, template_id: templateId, contact_id: contact?.id ?? null }),
-      });
-      const data = (await res.json().catch(() => null)) as
-        | { draft?: { title: string; briefing: string; checklist: string[] }; error?: string }
-        | null;
-      if (!res.ok || !data?.draft) {
-        toast.error(data?.error === "ai_not_configured" ? t("aiNotConfigured") : t("aiFailed"));
-        return;
-      }
-      const d = data.draft;
-      if (d.title) setTitle(d.title);
-      if (d.briefing) setBriefingText(d.briefing);
-      if (d.checklist.length) setChecklistText(d.checklist.join("\n"));
-      toast.success(t("aiFilled"));
-    } catch {
-      toast.error(t("aiFailed"));
-    } finally {
-      setAiBusy(false);
-    }
+  /** Internal assistant: runs entirely in the browser, no external service. */
+  function handleAssistantFill() {
+    if (!aiDescription.trim()) return;
+    const d = draftTaskFromDescription(aiDescription, { templateId, clientName: contact?.name ?? null });
+    setTemplateId(d.templateId);
+    setTitle(d.title);
+    setBriefingText(d.briefing);
+    setChecklistText(d.checklist.join("\n"));
+    setPriority(d.priority);
+    setEstimatedMinutes(d.estimatedMinutes);
+    if (d.dueDate) setDueDate(d.dueDate);
+    toast.success(t("aiFilled"));
   }
 
   async function handleCreate() {
@@ -236,8 +222,8 @@ export function CreateTaskDialog({
             />
             <div className="flex items-center justify-between gap-2">
               <p className="text-[11px] text-muted-foreground">{t("aiHint")}</p>
-              <Button size="sm" variant="outline" onClick={handleAiFill} disabled={!aiDescription.trim() || aiBusy}>
-                {aiBusy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+              <Button size="sm" variant="outline" onClick={handleAssistantFill} disabled={!aiDescription.trim()}>
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                 {t("aiButton")}
               </Button>
             </div>

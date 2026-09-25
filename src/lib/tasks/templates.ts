@@ -1,11 +1,10 @@
 // ============================================================
-// Task templates + AI autofill for the "Nova tarefa" dialog.
+// Task templates for the "Nova tarefa" dialog.
 //
 // A template is only a starting point (priority, estimate, briefing
 // skeleton and checklist) that the person can edit before creating the
-// task. The AI step reuses the account's own key (Agentes de IA) to turn
-// a one-line description into a title, a filled briefing and a checklist.
-// Nothing monetary is ever part of a template or of the AI prompt.
+// task. The internal assistant (internal-agent.ts) builds on these.
+// Nothing monetary is ever part of a template.
 // ============================================================
 
 import type { JSONContent } from "@tiptap/react";
@@ -133,55 +132,4 @@ export function checklistFromText(text: string): string[] {
     .map((l) => l.replace(/^[-*•\d.)\s]+/, "").trim())
     .filter(Boolean)
     .slice(0, 30);
-}
-
-export const AI_DRAFT_SYSTEM_PROMPT = [
-  "Você ajuda uma agência de marketing a abrir tarefas para a equipe de Operacional (criação, mídia e social media).",
-  "Responda SOMENTE com um JSON válido, sem texto antes ou depois e sem cercas de código, neste formato:",
-  '{"title": string, "briefing": string, "checklist": string[]}',
-  '- "title": título curto e claro da tarefa, em português.',
-  '- "briefing": texto em português usando o modelo de seções informado; cada seção começa com uma linha "## Nome da seção" seguida de frases curtas ou linhas iniciadas por "- ". Preencha só com o que dá para inferir da descrição; onde faltar informação, escreva "A definir".',
-  '- "checklist": de 3 a 8 passos práticos, na ordem em que devem acontecer.',
-  "Nunca invente valores em dinheiro, preços, prazos ou dados do cliente que não estejam na descrição. Não fale de valores.",
-].join("\n");
-
-export function buildAiDraftUserMessage(args: {
-  template: TaskTemplate | null;
-  description: string;
-  clientName?: string | null;
-}): string {
-  const parts: string[] = [];
-  if (args.template) {
-    parts.push(`Tipo de tarefa: ${args.template.label}`);
-    parts.push(`Seções do briefing: ${args.template.sections.join("; ")}`);
-    parts.push(`Passos de referência para o checklist: ${args.template.checklist.join("; ")}`);
-  }
-  if (args.clientName) parts.push(`Cliente: ${args.clientName}`);
-  parts.push(`Descrição do pedido: ${args.description}`);
-  return parts.join("\n");
-}
-
-export interface AiDraft {
-  title: string;
-  briefing: string;
-  checklist: string[];
-}
-
-/** Pulls the JSON object out of the model's reply (tolerates code fences / stray text). */
-export function parseAiDraft(raw: string): AiDraft | null {
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
-  try {
-    const obj = JSON.parse(raw.slice(start, end + 1)) as Record<string, unknown>;
-    const title = typeof obj.title === "string" ? obj.title.trim() : "";
-    const briefing = typeof obj.briefing === "string" ? obj.briefing.trim() : "";
-    const checklist = Array.isArray(obj.checklist)
-      ? obj.checklist.filter((c): c is string => typeof c === "string").map((c) => c.trim()).filter(Boolean).slice(0, 30)
-      : [];
-    if (!title && !briefing && checklist.length === 0) return null;
-    return { title: title.slice(0, 200), briefing, checklist };
-  } catch {
-    return null;
-  }
 }
