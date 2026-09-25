@@ -1206,7 +1206,9 @@
       "toastFailedDeleteDeal": "거래를 삭제하지 못했습니다",
       "signedBanner": "계약이 체결되어 딜이 성사되었습니다. 킥오프를 예약하여 고객을 운영 부서로 전달하세요.",
       "signedBannerAction": "킥오프 예약",
-      "kickoffScheduled": "킥오프가 예약되었습니다. 운영 부서에 작업이 생성되었습니다."
+      "kickoffScheduled": "킥오프가 예약되었습니다. 운영 부서에 작업이 생성되었습니다.",
+      "wonBadge": "성사",
+      "lostBadge": "실패"
     },
     "linkContact": {
       "title": "연락처 연결",

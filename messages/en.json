@@ -1206,7 +1206,9 @@
       "toastFailedDeleteDeal": "Failed to delete the deal",
       "signedBanner": "Contract signed and deal won. Schedule the kickoff to hand the client over to Operations.",
       "signedBannerAction": "Schedule kickoff",
-      "kickoffScheduled": "Kickoff scheduled: the task was created in Operations."
+      "kickoffScheduled": "Kickoff scheduled: the task was created in Operations.",
+      "wonBadge": "Won",
+      "lostBadge": "Lost"
     },
     "linkContact": {
       "title": "Link contact",

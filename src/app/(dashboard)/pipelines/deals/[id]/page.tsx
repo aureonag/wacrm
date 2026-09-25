@@ -544,13 +544,13 @@ export default function DealDetailPage() {
           {deal.status === "won" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
               <Check className="h-3 w-3" />
-              {t("markAsWon")}
+              {t("wonBadge")}
             </span>
           )}
           {deal.status === "lost" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-400">
               <X className="h-3 w-3" />
-              {t("markAsLost")}
+              {t("lostBadge")}
             </span>
           )}
         </div>

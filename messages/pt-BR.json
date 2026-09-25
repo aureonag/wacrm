@@ -1206,7 +1206,9 @@
       "toastFailedDeleteDeal": "Falha ao excluir o negócio",
       "signedBanner": "Contrato assinado e negócio ganho. Agende o kickoff para passar o cliente ao Operacional.",
       "signedBannerAction": "Agendar kickoff",
-      "kickoffScheduled": "Kickoff agendado: a tarefa foi criada no Operacional."
+      "kickoffScheduled": "Kickoff agendado: a tarefa foi criada no Operacional.",
+      "wonBadge": "Ganho",
+      "lostBadge": "Perdido"
     },
     "linkContact": {
       "title": "Vincular contato",

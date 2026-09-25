@@ -196,7 +196,7 @@ export function ClosingFinanceStep({ state, onChange, serviceLines, profiles }: 
                 </span>
               </div>
               <span className="hidden w-28 shrink-0 text-right text-xs text-muted-foreground sm:block">
-                {shares[index] ? formatCurrency(shares[index].amount, "BRL") : ""}
+                {shares[index] && base > 0 ? formatCurrency(shares[index].amount, "BRL") : ""}
               </span>
               <Button
                 type="button"
