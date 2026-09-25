@@ -233,6 +233,7 @@ export default function PipelinesPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(OWNER_FILTER_STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- restore a persisted preference once on mount
       if (stored) setOwnerFilter(stored);
     } catch {
       // Persistence is best-effort; ignore storage failures.
