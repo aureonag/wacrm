@@ -171,18 +171,18 @@ export function terminationEmailHtml(a: TerminationEmailArgs): string {
     </table>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
       <tr>
-        <td width="38%" valign="top" style="padding:14px;background:${COLORS.background};border:1px solid ${COLORS.cardBorder};border-radius:8px;">
+        <td width="38%" align="center" valign="middle" style="padding:16px 8px;text-align:center;background:${COLORS.background};border:1px solid ${COLORS.cardBorder};border-radius:8px;">
           <div style="font-size:11px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Cancelamento</div>
-          <div style="margin-top:6px;font-size:18px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(a.effectiveDate)}</div>
+          <div style="margin-top:6px;font-size:20px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(a.effectiveDate)}</div>
         </td>
         <td width="24%" align="center" valign="middle" style="padding:0 6px;">
           <div style="font-size:20px;line-height:20px;font-weight:700;color:${COLORS.primary};">${NOTICE_DAYS}</div>
           <div style="font-size:10px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">dias corridos</div>
           <div style="margin-top:2px;font-size:18px;line-height:18px;color:${COLORS.primary};">&#8594;</div>
         </td>
-        <td width="38%" valign="top" style="padding:14px;background:${COLORS.primarySoftBg};border:2px solid ${COLORS.primary};border-radius:8px;">
+        <td width="38%" align="center" valign="middle" style="padding:16px 8px;text-align:center;background:${COLORS.primarySoftBg};border:2px solid ${COLORS.primary};border-radius:8px;">
           <div style="font-size:11px;color:${COLORS.muted};text-transform:uppercase;letter-spacing:1px;">Término do contrato</div>
-          <div style="margin-top:6px;font-size:22px;font-weight:800;color:${COLORS.foreground};">${formatBrDate(addDaysIso(a.effectiveDate, NOTICE_DAYS))}</div>
+          <div style="margin-top:6px;font-size:20px;font-weight:700;color:${COLORS.foreground};">${formatBrDate(addDaysIso(a.effectiveDate, NOTICE_DAYS))}</div>
         </td>
       </tr>
     </table>
