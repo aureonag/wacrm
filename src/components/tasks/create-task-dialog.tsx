@@ -135,6 +135,8 @@ export function CreateTaskDialog({
             <Label className="text-muted-foreground">{t("taskTitle")}</Label>
             <Input
               autoFocus
+              spellCheck
+              lang="pt-BR"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("taskTitlePlaceholder")}

@@ -429,6 +429,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   )}
                   {canEdit ? (
                     <Input
+                      spellCheck
+                      lang="pt-BR"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       onBlur={handleTitleBlur}

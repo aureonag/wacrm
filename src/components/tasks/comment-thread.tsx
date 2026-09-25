@@ -124,6 +124,8 @@ export function CommentThread({ taskId, comments, currentUserId, canComment, onC
             </div>
           )}
           <Textarea
+            spellCheck
+            lang="pt-BR"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder={t("placeholder")}

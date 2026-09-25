@@ -107,6 +107,8 @@ export function ChecklistPanel({ taskId, items, canEdit, onChanged }: ChecklistP
       {canEdit && (
         <div className="mt-3 flex items-center gap-2">
           <Input
+            spellCheck
+            lang="pt-BR"
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder={t("placeholder")}

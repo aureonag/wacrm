@@ -31,6 +31,8 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
     editable,
     editorProps: {
       attributes: {
+        spellcheck: "true",
+        lang: "pt-BR",
         // No @tailwindcss/typography plugin in this project — style the
         // handful of element types StarterKit actually produces directly,
         // rather than pulling in a whole prose plugin for one editor.

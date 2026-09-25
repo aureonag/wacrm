@@ -443,9 +443,9 @@
       },
       "card": {
         "priority": {
-          "low": "Baixa",
-          "medium": "Média",
-          "high": "Alta"
+          "low": "P3",
+          "medium": "P2",
+          "high": "P1"
         }
       }
     },

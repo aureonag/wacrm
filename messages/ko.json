@@ -443,9 +443,9 @@
       },
       "card": {
         "priority": {
-          "low": "낮음",
-          "medium": "보통",
-          "high": "높음"
+          "low": "P3",
+          "medium": "P2",
+          "high": "P1"
         }
       }
     },
