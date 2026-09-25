@@ -1,5 +1,5 @@
 -- ============================================================
--- 085_deal_closing_sheet.sql — Ficha de fechamento (Fase 1)
+-- 085_deal_closing_sheet.sql — Ficha de fechamento (Fase 1, parte compativel)
 --
 -- Regra de negocio: no fechamento MANUAL, o negocio so vira "ganho"
 -- depois que o vendedor preenche a ficha de fechamento. Na ASSINATURA
@@ -14,11 +14,12 @@
 --   - o responsavel pela tarefa e os donos da conta sao notificados.
 --
 -- Design notes
---   - A trava e no banco (trigger BEFORE UPDATE OF status em deals),
---     nao so na tela: marcar 'won' sem ficha recebe erro. A unica
---     excecao e a assinatura do contrato: handle_contract_signed() (054)
---     liga a flag de transacao app.allow_win so durante o seu UPDATE, e
---     marca deals.closing_pending=true para a tela oferecer "Agendar
+--   - Esta migracao e compativel com o codigo anterior ao deploy: nada
+--     aqui impede o botao antigo de "Marcar como ganho". A TRAVA (banco
+--     recusa ganho sem ficha) fica na 086, aplicada junto do deploy.
+--     handle_contract_signed() (054) liga a flag de transacao
+--     app.allow_win so durante o seu UPDATE (a trava da 086 a respeita)
+--     e marca deals.closing_pending=true para a tela oferecer "Agendar
 --     kickoff". Negocios ja ganhos antes desta migracao ficam com
 --     closing_pending=false e nao recebem o aviso.
 --   - handle_deal_won() (070) deixa de criar a tarefa de kickoff: quem
@@ -55,29 +56,6 @@ CREATE POLICY deal_closing_sheets_select ON deal_closing_sheets FOR SELECT
 
 -- ---- deals.closing_pending: ganho por assinatura aguardando o kickoff ----
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS closing_pending boolean NOT NULL DEFAULT false;
-
--- ---- trava: sem ficha nao vira ganho -----------------------------------
-CREATE OR REPLACE FUNCTION require_closing_sheet_before_won()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  IF NEW.status = 'won'
-     AND OLD.status IS DISTINCT FROM 'won'
-     AND COALESCE(current_setting('app.allow_win', true), '') <> 'on'
-     AND NOT EXISTS (SELECT 1 FROM deal_closing_sheets WHERE deal_id = NEW.id) THEN
-    RAISE EXCEPTION 'A ficha de fechamento precisa ser preenchida antes de marcar o negocio como ganho'
-      USING ERRCODE = 'P0001';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS require_closing_sheet_before_won ON deals;
-CREATE TRIGGER require_closing_sheet_before_won
-  BEFORE UPDATE OF status ON deals
-  FOR EACH ROW
-  EXECUTE FUNCTION require_closing_sheet_before_won();
 
 -- ---- assinatura do contrato: continua marcando ganho, mas pendente ------
 CREATE OR REPLACE FUNCTION public.handle_contract_signed()
