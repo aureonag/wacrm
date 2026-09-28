@@ -13,8 +13,16 @@ import { HEARTBEAT_MS, IDLE_AFTER_MS, type StoredPresence } from "@/lib/presence
  * roughly every HEARTBEAT_MS.
  *
  * The client only ever reports 'online' or 'away':
- *   - 'away'   when the tab is hidden, or no user input for IDLE_AFTER_MS
+ *   - 'away'   when there has been no user input for IDLE_AFTER_MS
  *   - 'online' otherwise
+ * Deliberately NOT based on `document.hidden`/tab focus: people
+ * routinely keep the CRM open in one tab/monitor while working in
+ * WhatsApp, e-mail, etc. — with a foreground-only rule almost nobody
+ * ever reads as "online" (issue reported by Allan 2026-09-28, verified
+ * live: a real session flipped online -> away within ~60s of merely
+ * switching windows). Idle-only matches how chat apps like Slack do
+ * it: still "active" for a while after you look away, "away" only
+ * after a real stretch of inactivity.
  * It keeps heartbeating while away (so the row stays fresh, i.e. not
  * offline). When the tab closes the beats simply stop and viewers derive
  * 'offline' from staleness — no unreliable unload write needed.
@@ -43,7 +51,6 @@ export function PresenceHeartbeat() {
     };
 
     const currentStatus = (): StoredPresence => {
-      if (typeof document !== "undefined" && document.hidden) return "away";
       if (Date.now() - lastActivityRef.current > IDLE_AFTER_MS) return "away";
       return "online";
     };
