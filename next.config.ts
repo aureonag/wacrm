@@ -71,24 +71,12 @@ const nextConfig: NextConfig = {
 
   /**
    * Route @xyflow/react's pre-built stylesheet around our own
-   * PostCSS/Tailwind pipeline.
-   *
-   * `flow-canvas.tsx` does `import '@xyflow/react/dist/style.css'` —
-   * a plain, already-compiled vendor stylesheet with no Tailwind
-   * directives, so running it through `@tailwindcss/postcss` was
-   * never necessary. On Hostinger's build machine (not reproducible
-   * locally) that PostCSS pass on this exact file crashed Turbopack's
-   * loader subprocess every time production `next build` tried to
-   * chunk it for the edge middleware bundle:
-   *   Error [TurbopackInternalError]: [project]/node_modules/
-   *   @xyflow/react/dist/style.css [app-client] (css) — "node process
-   *   exited before we could connect to it" (4/4 build attempts,
-   *   2026-09-29, unaffected by raising NODE_OPTIONS'
-   *   --max-old-space-size).
-   * `type: "css"` makes Turbopack treat the file as plain CSS
-   * directly, skipping the PostCSS/webpack-loader bridge that panics.
-   * Content is unaffected — there is nothing here for Tailwind to
-   * transform.
+   * PostCSS/Tailwind pipeline (`type: "css"` skips the PostCSS/
+   * webpack-loader bridge Turbopack normally runs every .css file
+   * through). Harmless either way, since the file has no Tailwind
+   * directives, but kept for whenever production builds go back to
+   * Turbopack; see the 2026-09-29 note in AGENTS.md for why `next
+   * build` runs with --webpack right now instead.
    */
   turbopack: {
     rules: {
