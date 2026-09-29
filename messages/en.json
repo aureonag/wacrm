@@ -1269,7 +1269,11 @@
       "signedBannerAction": "Schedule kickoff",
       "kickoffScheduled": "Kickoff scheduled: the task was created in Operations.",
       "wonBadge": "Won",
-      "lostBadge": "Lost"
+      "lostBadge": "Lost",
+      "editComment": "Edit comment",
+      "saveEditComment": "Save",
+      "cancelEditComment": "Cancel",
+      "commentEdited": "edited"
     },
     "linkContact": {
       "title": "Link contact",
@@ -1485,7 +1489,8 @@
       "toastLinkCopied": "Link copied",
       "copyLinkRowButton": "Copy signing link",
       "toastLinkRegenerated": "New link generated, but couldn't copy automatically",
-      "toastFailedRegenerate": "Failed to generate a new link"
+      "toastFailedRegenerate": "Failed to generate a new link",
+      "lastViewedAt": "Last viewed on {date}"
     },
     "public": {
       "loading": "Verifying contract...",

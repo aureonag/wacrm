@@ -13,9 +13,23 @@
 //   - A 'sent' contract past its `expires_at` flips to 'expired'.
 //   - A 'sent' contract being viewed for the first time flips to
 //     'viewed' (status alone; the deal_contract_events row records it).
+//   - EVERY open while status is 'sent' or 'viewed' logs a fresh
+//     'viewed' event (not just the first) — the Contrato tab reads the
+//     latest one as "last viewed at", always updated to the most
+//     recent open (Allan, 2026-09-29).
+//
+// These event inserts run inside `after()`, not as a bare "void
+// promise" — verified live that a fire-and-forget call here never
+// actually reaches the DB (zero 'viewed'/'expired' rows ever recorded
+// in production): this Next.js version can tear down the request
+// context right after the response is sent, so an un-awaited promise
+// started during the handler has no guarantee of finishing. `after()`
+// is the documented way to run work that truly outlives the response
+// (node_modules/next/dist/docs/.../after.md).
 // ============================================================
 
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { hashContractToken } from "@/lib/contracts/tokens";
 import { maskEmail } from "@/lib/contracts/otp";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
@@ -57,15 +71,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
   if (status === "sent" && contract.expires_at && new Date(contract.expires_at) <= new Date()) {
     status = "expired";
     await admin.from("deal_contracts").update({ status: "expired" }).eq("id", contract.id).eq("status", "sent");
-    void admin
-      .from("deal_contract_events")
-      .insert({ contract_id: contract.id, account_id: contract.account_id, event_type: "expired" });
-  } else if (status === "sent") {
-    status = "viewed";
-    await admin.from("deal_contracts").update({ status: "viewed" }).eq("id", contract.id).eq("status", "sent");
-    void admin
-      .from("deal_contract_events")
-      .insert({ contract_id: contract.id, account_id: contract.account_id, event_type: "viewed" });
+    after(async () => {
+      const { error } = await admin
+        .from("deal_contract_events")
+        .insert({ contract_id: contract.id, account_id: contract.account_id, event_type: "expired" });
+      if (error) console.error("[contracts/peek] failed to log 'expired' event:", error.message);
+    });
+  } else if (status === "sent" || status === "viewed") {
+    if (status === "sent") {
+      status = "viewed";
+      await admin.from("deal_contracts").update({ status: "viewed" }).eq("id", contract.id).eq("status", "sent");
+    }
+    // Logged on every open (not only the first) so "last viewed at" always
+    // reflects the most recent one.
+    after(async () => {
+      const { error } = await admin
+        .from("deal_contract_events")
+        .insert({ contract_id: contract.id, account_id: contract.account_id, event_type: "viewed" });
+      if (error) console.error("[contracts/peek] failed to log 'viewed' event:", error.message);
+    });
   }
 
   return NextResponse.json({

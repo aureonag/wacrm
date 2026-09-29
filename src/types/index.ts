@@ -640,6 +640,8 @@ export interface DealComment {
   user_id?: string | null;
   body: string;
   created_at: string;
+  /** Set by the update trigger the first time the comment is edited (migration 092). */
+  updated_at?: string | null;
   /** Hydrated by the detail page so the comment list can show an author name. */
   author?: Profile;
 }

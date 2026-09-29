@@ -1269,7 +1269,11 @@
       "signedBannerAction": "Agendar kickoff",
       "kickoffScheduled": "Kickoff agendado: a tarefa foi criada no Operacional.",
       "wonBadge": "Ganho",
-      "lostBadge": "Perdido"
+      "lostBadge": "Perdido",
+      "editComment": "Editar comentário",
+      "saveEditComment": "Salvar",
+      "cancelEditComment": "Cancelar",
+      "commentEdited": "editado"
     },
     "linkContact": {
       "title": "Vincular contato",
@@ -1485,7 +1489,8 @@
       "toastLinkCopied": "Link copiado",
       "copyLinkRowButton": "Copiar link de assinatura",
       "toastLinkRegenerated": "Novo link gerado, mas não consegui copiar automaticamente",
-      "toastFailedRegenerate": "Falha ao gerar um novo link"
+      "toastFailedRegenerate": "Falha ao gerar um novo link",
+      "lastViewedAt": "Última visualização em {date}"
     },
     "public": {
       "loading": "Verificando contrato...",

@@ -61,6 +61,7 @@ import {
   ExternalLink,
   PartyPopper,
   UserPlus,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
@@ -69,6 +70,7 @@ import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 import { formatStepDueDate } from "@/lib/deals/next-step-date";
 import { ContractTab } from "@/components/pipelines/contract-tab";
 import { LinkContactDialog } from "@/components/pipelines/link-contact-dialog";
+import { LinkifiedText } from "@/components/ui/linkified-text";
 import { CloseDealDialog } from "@/components/pipelines/close-deal-dialog";
 
 interface ProspectingCandidateDetail {
@@ -433,6 +435,9 @@ export default function DealDetailPage() {
   // ---- Comments ----
   const [commentDraft, setCommentDraft] = useState("");
   const [postingComment, setPostingComment] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentBody, setEditingCommentBody] = useState("");
+  const [savingCommentEdit, setSavingCommentEdit] = useState(false);
 
   async function handleAddComment() {
     if (!deal || !accountId || !user || !commentDraft.trim()) return;
@@ -449,6 +454,35 @@ export default function DealDetailPage() {
     }
     setComments([{ ...(data as DealComment) }, ...comments]);
     setCommentDraft("");
+  }
+
+  function startEditComment(comment: DealComment) {
+    setEditingCommentId(comment.id);
+    setEditingCommentBody(comment.body);
+  }
+
+  function cancelEditComment() {
+    setEditingCommentId(null);
+    setEditingCommentBody("");
+  }
+
+  async function handleSaveCommentEdit(commentId: string) {
+    const body = editingCommentBody.trim();
+    if (!body) return;
+    setSavingCommentEdit(true);
+    const { data, error } = await supabase
+      .from("deal_comments")
+      .update({ body })
+      .eq("id", commentId)
+      .select()
+      .single();
+    setSavingCommentEdit(false);
+    if (error || !data) {
+      toast.error(t("toastFailedSave"));
+      return;
+    }
+    setComments(comments.map((c) => (c.id === commentId ? { ...c, ...(data as DealComment) } : c)));
+    cancelEditComment();
   }
 
   // ---- Next steps ----
@@ -875,17 +909,59 @@ export default function DealDetailPage() {
                 {comments.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t("noComments")}</p>
                 ) : (
-                  comments.map((c) => (
-                    <div key={c.id} className="rounded-lg bg-muted/50 p-2.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium text-foreground">
-                          {c.author?.full_name || c.author?.email || "—"}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">{relativeTime(c.created_at, tActivityFeed)}</span>
+                  comments.map((c) => {
+                    const isEditing = editingCommentId === c.id;
+                    const canEditThisComment = canEdit && c.user_id === user?.id;
+                    return (
+                      <div key={c.id} className="rounded-lg bg-muted/50 p-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-foreground">
+                            {c.author?.full_name || c.author?.email || "—"}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-muted-foreground">
+                              {relativeTime(c.created_at, tActivityFeed)}
+                              {c.updated_at && ` · ${t("commentEdited")}`}
+                            </span>
+                            {canEditThisComment && !isEditing && (
+                              <button
+                                type="button"
+                                onClick={() => startEditComment(c)}
+                                aria-label={t("editComment")}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {isEditing ? (
+                          <div className="mt-1.5 space-y-2">
+                            <Textarea
+                              autoFocus
+                              value={editingCommentBody}
+                              onChange={(e) => setEditingCommentBody(e.target.value)}
+                              className="min-h-[60px] border-border bg-background text-sm text-foreground"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={cancelEditComment} disabled={savingCommentEdit}>
+                                {t("cancelEditComment")}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveCommentEdit(c.id)}
+                                disabled={!editingCommentBody.trim() || savingCommentEdit}
+                              >
+                                {savingCommentEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("saveEditComment")}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <LinkifiedText text={c.body} className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground" />
+                        )}
                       </div>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{c.body}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

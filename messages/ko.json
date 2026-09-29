@@ -1269,7 +1269,11 @@
       "signedBannerAction": "킥오프 예약",
       "kickoffScheduled": "킥오프가 예약되었습니다. 운영 부서에 작업이 생성되었습니다.",
       "wonBadge": "성사",
-      "lostBadge": "실패"
+      "lostBadge": "실패",
+      "editComment": "댓글 수정",
+      "saveEditComment": "저장",
+      "cancelEditComment": "취소",
+      "commentEdited": "수정됨"
     },
     "linkContact": {
       "title": "연락처 연결",
@@ -1485,7 +1489,8 @@
       "toastLinkCopied": "링크가 복사되었습니다",
       "copyLinkRowButton": "서명 링크 복사",
       "toastLinkRegenerated": "새 링크가 생성되었지만 자동으로 복사하지 못했습니다",
-      "toastFailedRegenerate": "새 링크 생성에 실패했습니다"
+      "toastFailedRegenerate": "새 링크 생성에 실패했습니다",
+      "lastViewedAt": "마지막 열람: {date}"
     },
     "public": {
       "loading": "계약서를 확인하는 중...",

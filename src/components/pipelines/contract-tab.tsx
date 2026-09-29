@@ -110,6 +110,7 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
   const supabase = createClient();
 
   const [contracts, setContracts] = useState<DealContract[]>([]);
+  const [lastViewedByContract, setLastViewedByContract] = useState<Record<string, string>>({});
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -131,8 +132,32 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
         .order("created_at", { ascending: false }),
       supabase.from("contract_templates").select("*").eq("is_active", true).order("name"),
     ]);
-    setContracts((contractRows as DealContract[] | null) ?? []);
+    const contracts = (contractRows as DealContract[] | null) ?? [];
+    setContracts(contracts);
     setTemplates((templateRows as ContractTemplate[] | null) ?? []);
+
+    // "Última visualização" — o cliente pode abrir o link várias vezes; cada
+    // abertura grava um evento 'viewed' (rota .../peek), aqui so pegamos o
+    // mais recente por contrato.
+    if (contracts.length > 0) {
+      const { data: viewEvents } = await supabase
+        .from("deal_contract_events")
+        .select("contract_id, created_at")
+        .in(
+          "contract_id",
+          contracts.map((c) => c.id),
+        )
+        .eq("event_type", "viewed")
+        .order("created_at", { ascending: false });
+      const latest: Record<string, string> = {};
+      for (const e of (viewEvents ?? []) as { contract_id: string; created_at: string }[]) {
+        if (!latest[e.contract_id]) latest[e.contract_id] = e.created_at;
+      }
+      setLastViewedByContract(latest);
+    } else {
+      setLastViewedByContract({});
+    }
+
     setLoading(false);
   }, [supabase, accountId, dealId]);
 
@@ -317,6 +342,11 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                     {contract.status === "signed" && contract.signed_at && (
                       <p className="text-xs font-medium text-emerald-400">
                         {t("signedAt", { date: formatSignedAt(contract.signed_at) })}
+                      </p>
+                    )}
+                    {lastViewedByContract[contract.id] && !contract.terminated_at && contract.status !== "signed" && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("lastViewedAt", { date: formatSignedAt(lastViewedByContract[contract.id]) })}
                       </p>
                     )}
                     {contract.terminated_at && (
