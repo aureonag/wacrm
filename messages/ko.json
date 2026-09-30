@@ -99,7 +99,8 @@
       "operational": "운영",
       "financeiro": "재무",
       "chat": "채팅"
-    }
+    },
+    "materiais": "자료"
   },
   "Financeiro": {
     "sidebar": {

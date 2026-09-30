@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useHasEnvironmentAccess } from "@/hooks/use-permissions";
-import { OperationalSidebar } from "@/components/layout/operational-sidebar";
+import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
@@ -51,7 +51,7 @@ function OperationalShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <PresenceHeartbeat />
-      <OperationalSidebar open={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

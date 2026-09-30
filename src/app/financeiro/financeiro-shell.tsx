@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
-import { FinanceiroSidebar } from "@/components/layout/financeiro-sidebar";
+import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
@@ -52,7 +52,7 @@ function FinanceiroShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <PresenceHeartbeat />
-      <FinanceiroSidebar open={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

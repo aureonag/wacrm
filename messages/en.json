@@ -99,7 +99,8 @@
       "operational": "Operational",
       "financeiro": "Finance",
       "chat": "Chat"
-    }
+    },
+    "materiais": "Materials"
   },
   "Financeiro": {
     "sidebar": {
