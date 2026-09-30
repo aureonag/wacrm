@@ -1496,7 +1496,15 @@
       "viewDialogTitle": "Contract — {name}",
       "viewNeutralNote": "Internal preview — does not count as opened by the client.",
       "downloadSignedButton": "Download signed contract",
-      "toastFailedDownload": "Failed to download the signed contract"
+      "toastFailedDownload": "Failed to download the signed contract",
+      "sendSignedButton": "Email signed contract",
+      "sendSignedDialogTitle": "Send signed contract",
+      "sendSignedEmailLabel": "Recipient email",
+      "sendSignedEmailHint": "Pre-filled with the client's registered email — change it to send to a different address instead.",
+      "sendSignedConfirm": "Send",
+      "sendSignedSending": "Sending...",
+      "toastSignedSent": "Signed contract sent to {email}",
+      "toastFailedSendSigned": "Failed to send the signed contract"
     },
     "public": {
       "loading": "Verifying contract...",

@@ -124,6 +124,9 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
   const [terminateTarget, setTerminateTarget] = useState<DealContract | null>(null);
   const [viewingContract, setViewingContract] = useState<DealContract | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [sendEmailTarget, setSendEmailTarget] = useState<DealContract | null>(null);
+  const [sendEmailInput, setSendEmailInput] = useState("");
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -282,19 +285,37 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
   }
 
   async function handleDownloadSigned(contract: DealContract) {
-    if (!contract.signed_pdf_path) return;
     setDownloadingId(contract.id);
     try {
-      const { data, error } = await supabase.storage
-        .from("contracts")
-        .createSignedUrl(contract.signed_pdf_path, 120);
-      if (error || !data) {
-        toast.error(t("toastFailedDownload"));
+      const res = await fetch(`/api/contracts/${contract.id}/signed-pdf`, { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.url) {
+        toast.error(json?.error ?? t("toastFailedDownload"));
         return;
       }
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      window.open(json.url, "_blank", "noopener,noreferrer");
     } finally {
       setDownloadingId(null);
+    }
+  }
+
+  async function handleSendSignedCopy(contract: DealContract, email: string) {
+    setSendingEmailId(contract.id);
+    try {
+      const res = await fetch(`/api/contracts/${contract.id}/send-signed-copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() || undefined }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(json?.error ?? t("toastFailedSendSigned"));
+        return;
+      }
+      toast.success(t("toastSignedSent", { email: json.to }));
+      setSendEmailTarget(null);
+    } finally {
+      setSendingEmailId(null);
     }
   }
 
@@ -412,7 +433,7 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                         <FileText className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    {contract.status === "signed" && contract.signed_pdf_path && (
+                    {contract.status === "signed" && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -426,6 +447,20 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                         ) : (
                           <Download className="h-3.5 w-3.5" />
                         )}
+                      </Button>
+                    )}
+                    {contract.status === "signed" && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => {
+                          setSendEmailInput(contract.client_email);
+                          setSendEmailTarget(contract);
+                        }}
+                        title={t("sendSignedButton")}
+                        className="text-muted-foreground hover:text-primary"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
                       </Button>
                     )}
                     {canEdit &&
@@ -499,6 +534,40 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {t("close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={sendEmailTarget !== null} onOpenChange={(v) => !v && setSendEmailTarget(null)}>
+        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{t("sendSignedDialogTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground">{t("sendSignedEmailLabel")}</Label>
+            <Input
+              type="email"
+              value={sendEmailInput}
+              onChange={(e) => setSendEmailInput(e.target.value)}
+              className="bg-muted text-foreground"
+            />
+            <p className="text-xs text-muted-foreground">{t("sendSignedEmailHint")}</p>
+          </div>
+          <DialogFooter className="border-border bg-popover/50">
+            <Button
+              variant="outline"
+              onClick={() => setSendEmailTarget(null)}
+              className="border-border bg-transparent text-muted-foreground hover:bg-muted"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={() => sendEmailTarget && handleSendSignedCopy(sendEmailTarget, sendEmailInput)}
+              disabled={!sendEmailInput.trim() || sendingEmailId === sendEmailTarget?.id}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {sendingEmailId === sendEmailTarget?.id ? t("sendSignedSending") : t("sendSignedConfirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

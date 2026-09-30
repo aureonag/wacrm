@@ -1496,7 +1496,15 @@
       "viewDialogTitle": "Contrato — {name}",
       "viewNeutralNote": "Visualização interna — não conta como aberto pelo cliente.",
       "downloadSignedButton": "Baixar contrato assinado",
-      "toastFailedDownload": "Falha ao baixar o contrato assinado"
+      "toastFailedDownload": "Falha ao baixar o contrato assinado",
+      "sendSignedButton": "Enviar contrato assinado por e-mail",
+      "sendSignedDialogTitle": "Enviar contrato assinado",
+      "sendSignedEmailLabel": "E-mail de destino",
+      "sendSignedEmailHint": "Já vem preenchido com o e-mail cadastrado do cliente — pode trocar por outro se quiser enviar para um endereço diferente.",
+      "sendSignedConfirm": "Enviar",
+      "sendSignedSending": "Enviando...",
+      "toastSignedSent": "Contrato assinado enviado para {email}",
+      "toastFailedSendSigned": "Falha ao enviar o contrato assinado"
     },
     "public": {
       "loading": "Verificando contrato...",

@@ -26,7 +26,7 @@ import { hashContractToken } from "@/lib/contracts/tokens";
 import { hashOtp, OTP_MAX_ATTEMPTS } from "@/lib/contracts/otp";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
-import { generateSignedContractPdf } from "@/lib/contracts/pdf";
+import { ensureSignedContractPdf } from "@/lib/contracts/signed-pdf-storage";
 import { sendEmail, isEmailConfigured } from "@/lib/contracts/email";
 import {
   signedContractEmailSubject,
@@ -149,34 +149,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     const refCode = contract.id.slice(0, 8).toUpperCase();
     let pdfBuffer: Buffer;
     try {
-      pdfBuffer = await generateSignedContractPdf({
-        refCode,
-        razaoSocial: full.razao_social,
-        cnpj: full.cnpj,
-        endereco: full.endereco,
-        nomeRepresentante: full.nome_representante,
-        cpfRepresentante: full.cpf_representante,
-        renderedContent: full.rendered_content,
-        signedAt,
-        signedIp: ip !== "unknown" ? ip : null,
-      });
+      const pdf = await ensureSignedContractPdf(admin, contract.id);
+      if (!pdf) {
+        console.error("[contracts/verify-and-accept] ensureSignedContractPdf returned null right after signing");
+        return;
+      }
+      pdfBuffer = pdf.buffer;
     } catch (err) {
-      console.error("[contracts/verify-and-accept] PDF generation failed:", err);
+      console.error("[contracts/verify-and-accept] PDF generation/upload failed:", err);
       return;
-    }
-
-    const storagePath = `account-${contract.account_id}/${full.deal_id}/${contract.id}-signed.pdf`;
-    const { error: uploadError } = await admin.storage
-      .from("contracts")
-      .upload(storagePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
-    if (uploadError) {
-      console.error("[contracts/verify-and-accept] PDF upload failed:", uploadError.message);
-    } else {
-      const { error: pathError } = await admin
-        .from("deal_contracts")
-        .update({ signed_pdf_path: storagePath })
-        .eq("id", contract.id);
-      if (pathError) console.error("[contracts/verify-and-accept] failed to save signed_pdf_path:", pathError.message);
     }
 
     if (!isEmailConfigured()) {
