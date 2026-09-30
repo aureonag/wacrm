@@ -47,6 +47,36 @@ export function toTitleCase(text: string): string {
     .join(" ");
 }
 
+/**
+ * Some real templates were authored/pasted with literal Markdown syntax
+ * ("## CONTRATANTE", "**Serviço:**") even though this format has no
+ * Markdown rendering step of its own — templating.ts's own doc comment
+ * says plain text was the deliberate choice so a future PDF renderer
+ * "doesn't have to map arbitrary markup". Two concrete breakages this
+ * caused on a real Tráfego Pago contract (Allan, 2026-09-30):
+ *   - A leading "#"/"##" survives into the stored heading text (a
+ *     leading "#" isn't a lowercase letter, so isHeadingLine() below
+ *     still accepts the line as a heading) — anything comparing
+ *     headings by exact value then silently stops matching, e.g. the
+ *     CONTRATANTE/CONTRATADA hide-and-replace-with-cards logic in
+ *     contract-document.tsx and pdf.tsx, showing that section twice.
+ *   - "**Label:** value" lines were misread as list items by
+ *     isListBlock() below (it only checked for a leading "-"/"*", not
+ *     that a real marker is followed by a space) — the "RESUMO" table
+ *     never got a chance to parse them, and the literal asterisks
+ *     leaked into the rendered text either way.
+ * Rather than reimplement Markdown bold/heading rendering in three
+ * different places (PDF, on-screen paragraphs, on-screen summary
+ * table), this strips the markers as noise — plain clean text stays
+ * the one supported format, exactly as templating.ts intends.
+ */
+function cleanMarkdownArtifacts(line: string): string {
+  return line
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .trim();
+}
+
 function isHeadingLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed || trimmed.length > 70) return false;
@@ -64,8 +94,13 @@ function toneFor(heading: string): ContractSectionTone {
   return "default";
 }
 
+// Requires the marker to be followed by a space so a real list item
+// ("- foo", "* foo") isn't confused with a Markdown-bold line ("**foo**",
+// no space after the asterisks) — that ambiguity was swallowing whole
+// "Resumo" sections into a bogus one-item-per-line list instead of the
+// label/value table parseSummaryRows expects (Allan, 2026-09-30).
 function isListBlock(lines: string[]): boolean {
-  return lines.length > 0 && lines.every((line) => line.startsWith("-") || line.startsWith("*"));
+  return lines.length > 0 && lines.every((line) => line.startsWith("- ") || line.startsWith("* "));
 }
 
 function makeBlock(lines: string[]): ContractSectionBlock {
@@ -81,7 +116,7 @@ export function parseContractSections(content: string): ParsedContract {
     .map((block) =>
       block
         .split("\n")
-        .map((line) => line.trim())
+        .map((line) => cleanMarkdownArtifacts(line))
         .filter((line) => line.length > 0),
     )
     .filter((block) => block.length > 0);
@@ -89,7 +124,7 @@ export function parseContractSections(content: string): ParsedContract {
   let title: string | null = null;
   let startIndex = 0;
   if (rawBlocks.length > 0 && rawBlocks[0].length === 1 && isHeadingLine(rawBlocks[0][0])) {
-    title = rawBlocks[0][0];
+    title = cleanMarkdownArtifacts(rawBlocks[0][0]);
     startIndex = 1;
   }
 
@@ -101,7 +136,7 @@ export function parseContractSections(content: string): ParsedContract {
     const block = rawBlocks[i];
     if (isHeadingLine(block[0])) {
       if (current) sections.push(current);
-      const heading = block[0];
+      const heading = cleanMarkdownArtifacts(block[0]);
       const rest = block.slice(1);
       current = { heading, tone: toneFor(heading), blocks: rest.length ? [makeBlock(rest)] : [] };
     } else if (current) {

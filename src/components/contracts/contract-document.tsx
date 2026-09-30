@@ -24,10 +24,23 @@ import {
   toTitleCase,
   type ContractSectionTone,
 } from "@/lib/contracts/render-sections";
+import { AUREON_PARTY } from "@/lib/contracts/aureon-party";
 
 type DocumentTheme = "app" | "paper";
 
 const PARTY_HEADINGS = new Set(["contratante", "contratada"]);
+
+// Also drops a section literally headed with Aureon's own party name: at
+// least one real template writes the CONTRATADA block as a heading with
+// no body ("## CONTRATADA" alone) followed by "**AUREON PUBLICIDADE
+// LTDA**" as its own paragraph — after markdown cleanup that line has no
+// lowercase letters and no colon, so isHeadingLine() (render-sections.ts)
+// mistakes it for a second heading and it survives as a stray section
+// (Allan, 2026-09-30).
+function isPartySection(heading: string): boolean {
+  const normalized = heading.trim().toLowerCase();
+  return PARTY_HEADINGS.has(normalized) || normalized === AUREON_PARTY.name.toLowerCase();
+}
 
 interface ThemeClasses {
   title: string;
@@ -170,7 +183,7 @@ export function ContractDocument({
 }: ContractDocumentProps) {
   const parsed = parseContractSections(content);
   const sections = hideParties
-    ? parsed.sections.filter((s) => !PARTY_HEADINGS.has(s.heading.trim().toLowerCase()))
+    ? parsed.sections.filter((s) => !isPartySection(s.heading))
     : parsed.sections;
   const t = THEMES[theme];
 
