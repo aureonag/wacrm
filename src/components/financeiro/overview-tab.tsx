@@ -41,9 +41,20 @@ interface LineRow {
   marginPct: number | null;
 }
 
+interface ClientStats {
+  activeCount: number;
+  cancelledInYear: number;
+  churnPct: number | null;
+}
+
 function pct(n: number | null): string {
   if (n === null || !Number.isFinite(n)) return '—';
   return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+}
+
+function churnPctLabel(n: number | null): string {
+  if (n === null || !Number.isFinite(n)) return '—';
+  return `${n.toFixed(1)}%`;
 }
 
 /**
@@ -61,6 +72,11 @@ export function OverviewTab() {
   const [loading, setLoading] = useState(true);
   const [months, setMonths] = useState<MonthRow[]>([]);
   const [lineRows, setLineRows] = useState<LineRow[]>([]);
+  const [clientStats, setClientStats] = useState<ClientStats>({
+    activeCount: 0,
+    cancelledInYear: 0,
+    churnPct: null,
+  });
 
   const fetchData = useCallback(async () => {
     if (!accountId) return;
@@ -72,7 +88,7 @@ export function OverviewTab() {
         .select('id, name')
         .order('sort_order')
         .order('name'),
-      supabase.from('fin_clients').select('id, service_line_id, status, ended_at, recurring'),
+      supabase.from('fin_clients').select('id, service_line_id, status, started_at, ended_at, recurring'),
       supabase
         .from('fin_team_allocations')
         .select('service_line_id, month, amount')
@@ -84,9 +100,35 @@ export function OverviewTab() {
       (linesRes.data as Pick<FinServiceLine, 'id' | 'name'>[] | null) ?? [];
     const clients =
       (clientsRes.data as
-        { id: string; service_line_id: string; status: string; ended_at: string | null; recurring: boolean }[] | null) ??
+        {
+          id: string;
+          service_line_id: string;
+          status: string;
+          started_at: string | null;
+          ended_at: string | null;
+          recurring: boolean;
+        }[] | null) ??
       [];
     const clientIds = clients.map((c) => c.id);
+
+    // Cancelamentos/churn do ano selecionado — "ativos no início do ano" é
+    // quem já tinha começado antes de 1º de jan e ainda não tinha encerrado
+    // até lá; churn% é sobre essa base, não sobre o total de clientes atual
+    // (que inclui gente que começou DEPOIS do início do ano).
+    const yearStart = `${year}-01-01`;
+    const activeAtYearStart = clients.filter((c) => {
+      const startedBeforeYear = !c.started_at || c.started_at < yearStart;
+      const notYetEnded = !c.ended_at || c.ended_at >= yearStart;
+      return startedBeforeYear && notYetEnded;
+    }).length;
+    const cancelledInYear = clients.filter(
+      (c) => c.status === 'ended' && c.ended_at && c.ended_at.slice(0, 4) === String(year),
+    ).length;
+    setClientStats({
+      activeCount: clients.filter((c) => c.status === 'active').length,
+      cancelledInYear,
+      churnPct: activeAtYearStart > 0 ? (cancelledInYear / activeAtYearStart) * 100 : null,
+    });
 
     const { data: valueRows } =
       clientIds.length > 0
@@ -192,6 +234,14 @@ export function OverviewTab() {
   const totalExpenses = months.reduce((s, m) => s + m.expenses, 0);
   const totalProfit = months.reduce((s, m) => s + m.profit, 0);
 
+  // "Quanto a gente cresceu do começo do ano até o mês vigente" — em um ano
+  // passado não existe "mês vigente", então cai no ano fechado (dezembro).
+  const now = new Date();
+  const referenceMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  const januaryRevenue = months.find((m) => m.month === 1)?.revenue ?? 0;
+  const referenceRevenue = months.find((m) => m.month === referenceMonth)?.revenue ?? 0;
+  const yearGrowthPct = januaryRevenue > 0 ? ((referenceRevenue - januaryRevenue) / januaryRevenue) * 100 : null;
+
   const monthChartData = months.map((row) => ({
     month: MONTH_NAMES_PT[row.month - 1].slice(0, 3),
     Faturamento: row.revenue,
@@ -264,6 +314,47 @@ export function OverviewTab() {
               className={`mt-1 text-lg font-semibold ${totalProfit >= 0 ? 'text-foreground' : 'text-destructive'}`}
             >
               {formatCurrency(totalProfit, 'BRL')}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-muted-foreground text-xs">Clientes ativos</p>
+            <p className="text-foreground mt-1 text-lg font-semibold">
+              {clientStats.activeCount}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-muted-foreground text-xs">Cancelamentos no ano</p>
+            <p className="text-foreground mt-1 text-lg font-semibold">
+              {clientStats.cancelledInYear}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-muted-foreground text-xs">Churn no ano</p>
+            <p className="text-foreground mt-1 text-lg font-semibold">
+              {churnPctLabel(clientStats.churnPct)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-muted-foreground text-xs">
+              Crescimento no ano (jan. → {MONTH_NAMES_PT[referenceMonth - 1].slice(0, 3)})
+            </p>
+            <p
+              className={`mt-1 text-lg font-semibold ${
+                yearGrowthPct !== null && yearGrowthPct < 0 ? 'text-destructive' : 'text-foreground'
+              }`}
+            >
+              {pct(yearGrowthPct)}
             </p>
           </CardContent>
         </Card>
