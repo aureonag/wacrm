@@ -111,18 +111,27 @@ export function OverviewTab() {
       [];
     const clientIds = clients.map((c) => c.id);
 
-    // Cancelamentos/churn do ano selecionado — "ativos no início do ano" é
-    // quem já tinha começado antes de 1º de jan e ainda não tinha encerrado
-    // até lá; churn% é sobre essa base, não sobre o total de clientes atual
+    // Cancelamentos/churn do ano selecionado — só conta cliente recorrente
+    // (recurring: true). Um cliente pontual (ex.: linha Criação — landing
+    // page, banner, um projeto de entrega única) encerrar não é churn: ele
+    // nunca foi receita recorrente que a gente "perdeu", é só o projeto
+    // tendo acabado (Allan, 2026-09-30). "Ativos no início do ano" é quem
+    // já tinha começado antes de 1º de jan e ainda não tinha encerrado até
+    // lá; churn% é sobre essa base, não sobre o total de clientes atual
     // (que inclui gente que começou DEPOIS do início do ano).
     const yearStart = `${year}-01-01`;
     const activeAtYearStart = clients.filter((c) => {
+      if (!c.recurring) return false;
       const startedBeforeYear = !c.started_at || c.started_at < yearStart;
       const notYetEnded = !c.ended_at || c.ended_at >= yearStart;
       return startedBeforeYear && notYetEnded;
     }).length;
     const cancelledInYear = clients.filter(
-      (c) => c.status === 'ended' && c.ended_at && c.ended_at.slice(0, 4) === String(year),
+      (c) =>
+        c.status === 'ended' &&
+        c.recurring &&
+        c.ended_at &&
+        c.ended_at.slice(0, 4) === String(year),
     ).length;
     setClientStats({
       activeCount: clients.filter((c) => c.status === 'active').length,
@@ -330,7 +339,7 @@ export function OverviewTab() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-muted-foreground text-xs">Cancelamentos no ano</p>
+            <p className="text-muted-foreground text-xs">Encerrados no ano</p>
             <p className="text-foreground mt-1 text-lg font-semibold">
               {clientStats.cancelledInYear}
             </p>
