@@ -38,6 +38,7 @@ import {
   Clock,
   Eye,
   FileText,
+  Download,
   CheckCircle2,
   XCircle,
   Ban,
@@ -122,6 +123,7 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
   const [copyingId, setCopyingId] = useState<string | null>(null);
   const [terminateTarget, setTerminateTarget] = useState<DealContract | null>(null);
   const [viewingContract, setViewingContract] = useState<DealContract | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -279,6 +281,23 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
     }
   }
 
+  async function handleDownloadSigned(contract: DealContract) {
+    if (!contract.signed_pdf_path) return;
+    setDownloadingId(contract.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from("contracts")
+        .createSignedUrl(contract.signed_pdf_path, 120);
+      if (error || !data) {
+        toast.error(t("toastFailedDownload"));
+        return;
+      }
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
   async function copyLink() {
     if (!resultLink) return;
     try {
@@ -391,6 +410,22 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                         className="text-muted-foreground hover:text-primary"
                       >
                         <FileText className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    {contract.status === "signed" && contract.signed_pdf_path && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={downloadingId === contract.id}
+                        onClick={() => handleDownloadSigned(contract)}
+                        title={t("downloadSignedButton")}
+                        className="text-muted-foreground hover:text-primary"
+                      >
+                        {downloadingId === contract.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
                       </Button>
                     )}
                     {canEdit &&

@@ -1494,7 +1494,9 @@
       "lastViewedAt": "Última visualização em {date}",
       "viewInternalButton": "Visualizar contrato",
       "viewDialogTitle": "Contrato — {name}",
-      "viewNeutralNote": "Visualização interna — não conta como aberto pelo cliente."
+      "viewNeutralNote": "Visualização interna — não conta como aberto pelo cliente.",
+      "downloadSignedButton": "Baixar contrato assinado",
+      "toastFailedDownload": "Falha ao baixar o contrato assinado"
     },
     "public": {
       "loading": "Verificando contrato...",

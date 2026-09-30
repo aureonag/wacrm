@@ -1494,7 +1494,9 @@
       "lastViewedAt": "마지막 열람: {date}",
       "viewInternalButton": "계약서 보기",
       "viewDialogTitle": "계약서 — {name}",
-      "viewNeutralNote": "내부 미리보기 — 고객이 열람한 것으로 기록되지 않습니다."
+      "viewNeutralNote": "내부 미리보기 — 고객이 열람한 것으로 기록되지 않습니다.",
+      "downloadSignedButton": "서명된 계약서 다운로드",
+      "toastFailedDownload": "서명된 계약서 다운로드에 실패했습니다"
     },
     "public": {
       "loading": "계약서를 확인하는 중...",

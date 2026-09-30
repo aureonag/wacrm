@@ -8,13 +8,33 @@
 // 054) — moving the deal to "Contrato fechado", marking it Ganho, and
 // notifying the owner — same as the Clicksign webhook will do in M4,
 // with zero duplicated logic between the two paths.
+//
+// After the status update succeeds, `after()` (next/server) generates
+// the signed PDF, stores it in the `contracts` bucket
+// (signed_pdf_path), and emails a copy to the client and to the
+// deal's responsible salesperson (Allan, 2026-09-30) — all best-effort
+// and never blocking the client's "signed!" response. Wrapped in
+// after() rather than a bare unawaited promise: a fire-and-forget
+// insert on this exact route (the 'signed' event below) was already
+// found to silently never complete in production before — see the
+// 2026-09-29 note on /api/contracts/public/[token]/peek.
 // ============================================================
 
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { hashContractToken } from "@/lib/contracts/tokens";
 import { hashOtp, OTP_MAX_ATTEMPTS } from "@/lib/contracts/otp";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { generateSignedContractPdf } from "@/lib/contracts/pdf";
+import { sendEmail, isEmailConfigured } from "@/lib/contracts/email";
+import {
+  signedContractEmailSubject,
+  signedContractClientEmailText,
+  signedContractClientEmailHtml,
+  signedContractSalespersonEmailText,
+  signedContractSalespersonEmailHtml,
+} from "@/lib/contracts/email-templates";
 
 function getClientIp(request: Request): string {
   const xff = request.headers.get("x-forwarded-for");
@@ -22,6 +42,17 @@ function getClientIp(request: Request): string {
   const xri = request.headers.get("x-real-ip");
   if (xri) return xri.trim();
   return "unknown";
+}
+
+function getBaseUrl(request: Request): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  if (forwardedHost) return `${forwardedProto || "https"}://${forwardedHost}`;
+  const host = request.headers.get("host");
+  if (host) return `${request.headers.get("x-forwarded-proto") || "https"}://${host}`;
+  return "http://localhost:3000";
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -81,11 +112,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   }
 
   const userAgent = request.headers.get("user-agent") || null;
+  const signedAt = new Date().toISOString();
   const { error: updateError } = await admin
     .from("deal_contracts")
     .update({
       status: "signed",
-      signed_at: new Date().toISOString(),
+      signed_at: signedAt,
       signed_ip: ip,
       signed_user_agent: userAgent,
     })
@@ -96,9 +128,105 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     return NextResponse.json({ error: "Não foi possível confirmar o aceite. Tente novamente." }, { status: 500 });
   }
 
-  void admin
-    .from("deal_contract_events")
-    .insert({ contract_id: contract.id, account_id: contract.account_id, event_type: "signed" });
+  const baseUrl = getBaseUrl(request);
+
+  after(async () => {
+    const { error: eventError } = await admin
+      .from("deal_contract_events")
+      .insert({ contract_id: contract.id, account_id: contract.account_id, event_type: "signed" });
+    if (eventError) console.error("[contracts/verify-and-accept] failed to log 'signed' event:", eventError.message);
+
+    const { data: full } = await admin
+      .from("deal_contracts")
+      .select("deal_id, razao_social, cnpj, endereco, nome_representante, cpf_representante, client_email, rendered_content")
+      .eq("id", contract.id)
+      .maybeSingle();
+    if (!full || !full.rendered_content) {
+      console.error("[contracts/verify-and-accept] missing contract data, skipping PDF/email");
+      return;
+    }
+
+    const refCode = contract.id.slice(0, 8).toUpperCase();
+    let pdfBuffer: Buffer;
+    try {
+      pdfBuffer = await generateSignedContractPdf({
+        refCode,
+        razaoSocial: full.razao_social,
+        cnpj: full.cnpj,
+        endereco: full.endereco,
+        nomeRepresentante: full.nome_representante,
+        cpfRepresentante: full.cpf_representante,
+        renderedContent: full.rendered_content,
+        signedAt,
+        signedIp: ip !== "unknown" ? ip : null,
+      });
+    } catch (err) {
+      console.error("[contracts/verify-and-accept] PDF generation failed:", err);
+      return;
+    }
+
+    const storagePath = `account-${contract.account_id}/${full.deal_id}/${contract.id}-signed.pdf`;
+    const { error: uploadError } = await admin.storage
+      .from("contracts")
+      .upload(storagePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
+    if (uploadError) {
+      console.error("[contracts/verify-and-accept] PDF upload failed:", uploadError.message);
+    } else {
+      const { error: pathError } = await admin
+        .from("deal_contracts")
+        .update({ signed_pdf_path: storagePath })
+        .eq("id", contract.id);
+      if (pathError) console.error("[contracts/verify-and-accept] failed to save signed_pdf_path:", pathError.message);
+    }
+
+    if (!isEmailConfigured()) {
+      console.error("[contracts/verify-and-accept] email not configured, skipping signed-contract emails");
+      return;
+    }
+
+    const emailArgs = {
+      razaoSocial: full.razao_social,
+      cnpj: full.cnpj,
+      representante: full.nome_representante,
+      signedAt,
+      contractRef: refCode,
+    };
+    const attachments = [
+      { filename: `contrato-assinado-${refCode}.pdf`, content: pdfBuffer, contentType: "application/pdf" },
+    ];
+
+    try {
+      await sendEmail({
+        to: full.client_email,
+        subject: signedContractEmailSubject(full.razao_social),
+        text: signedContractClientEmailText(emailArgs),
+        html: signedContractClientEmailHtml(emailArgs),
+        attachments,
+      });
+    } catch (err) {
+      console.error("[contracts/verify-and-accept] client email failed:", err);
+    }
+
+    const { data: deal } = await admin.from("deals").select("assigned_to").eq("id", full.deal_id).maybeSingle();
+    const assigneeId = deal?.assigned_to;
+    if (assigneeId) {
+      const { data: assignee } = await admin.from("profiles").select("email").eq("id", assigneeId).maybeSingle();
+      if (assignee?.email) {
+        const dealUrl = `${baseUrl}/pipelines/deals/${full.deal_id}`;
+        try {
+          await sendEmail({
+            to: assignee.email,
+            subject: signedContractEmailSubject(full.razao_social),
+            text: signedContractSalespersonEmailText({ ...emailArgs, dealUrl }),
+            html: signedContractSalespersonEmailHtml({ ...emailArgs, dealUrl }),
+            attachments,
+          });
+        } catch (err) {
+          console.error("[contracts/verify-and-accept] salesperson email failed:", err);
+        }
+      }
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }

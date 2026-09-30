@@ -1494,7 +1494,9 @@
       "lastViewedAt": "Last viewed on {date}",
       "viewInternalButton": "View contract",
       "viewDialogTitle": "Contract — {name}",
-      "viewNeutralNote": "Internal preview — does not count as opened by the client."
+      "viewNeutralNote": "Internal preview — does not count as opened by the client.",
+      "downloadSignedButton": "Download signed contract",
+      "toastFailedDownload": "Failed to download the signed contract"
     },
     "public": {
       "loading": "Verifying contract...",

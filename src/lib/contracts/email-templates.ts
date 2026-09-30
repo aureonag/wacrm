@@ -54,6 +54,87 @@ function emailShell(bodyHtml: string): string {
 </html>`;
 }
 
+// ------------------------------------------------------------
+// Contrato assinado — cópia para o cliente e aviso para o responsável
+// pelo negócio (Allan, 2026-09-30). Ambos levam o PDF assinado como
+// anexo (montado por quem chama sendEmail, não aqui); estas funções só
+// cuidam do texto/HTML do corpo.
+// ------------------------------------------------------------
+
+export interface SignedContractEmailArgs {
+  razaoSocial: string;
+  cnpj: string;
+  representante: string;
+  /** ISO timestamp. */
+  signedAt: string;
+  contractRef: string;
+}
+
+export function signedContractEmailSubject(razaoSocial: string): string {
+  return `Contrato assinado — ${razaoSocial}`;
+}
+
+export function signedContractClientEmailText(a: SignedContractEmailArgs): string {
+  return [
+    `Prezado(a) ${a.representante},`,
+    "",
+    `Confirmamos a assinatura do contrato de prestação de serviços entre ${a.razaoSocial} e a Aureon Publicidade Ltda., em ${formatBrDate(a.signedAt)}.`,
+    "",
+    `Segue em anexo uma cópia assinada, para seus arquivos. Referência: ${a.contractRef}.`,
+    "",
+    "Agradecemos a confiança — qualquer dúvida, estamos à disposição.",
+    "",
+    "Aureon Publicidade",
+  ].join("\n");
+}
+
+export function signedContractClientEmailHtml(a: SignedContractEmailArgs): string {
+  const body = `
+    <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">Contrato assinado</h1>
+    <p style="margin:0 0 16px;font-size:14px;color:${COLORS.muted};line-height:1.6;">
+      Prezado(a) <strong style="color:${COLORS.foreground};">${escapeHtml(a.representante)}</strong>, confirmamos a
+      assinatura do contrato de prestação de serviços entre
+      <strong style="color:${COLORS.foreground};">${escapeHtml(a.razaoSocial)}</strong> e a Aureon Publicidade Ltda.,
+      em ${formatBrDate(a.signedAt)}.
+    </p>
+    <p style="margin:0 0 16px;font-size:13px;color:${COLORS.muted};line-height:1.6;">
+      Segue em anexo uma cópia assinada, para seus arquivos. Referência: ${escapeHtml(a.contractRef)}.
+    </p>
+    <p style="margin:0;font-size:13px;color:${COLORS.muted};line-height:1.6;">Agradecemos a confiança — qualquer dúvida, estamos à disposição.</p>
+  `;
+  return emailShell(body);
+}
+
+export interface SignedContractSalespersonEmailArgs extends SignedContractEmailArgs {
+  dealUrl: string;
+}
+
+export function signedContractSalespersonEmailText(a: SignedContractSalespersonEmailArgs): string {
+  return [
+    `O contrato de ${a.razaoSocial} foi assinado em ${formatBrDate(a.signedAt)}.`,
+    "",
+    `Referência: ${a.contractRef}`,
+    `Negócio: ${a.dealUrl}`,
+    "",
+    "Uma cópia assinada em PDF segue em anexo.",
+  ].join("\n");
+}
+
+export function signedContractSalespersonEmailHtml(a: SignedContractSalespersonEmailArgs): string {
+  const body = `
+    <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">Contrato assinado</h1>
+    <p style="margin:0 0 16px;font-size:14px;color:${COLORS.muted};line-height:1.6;">
+      O contrato de <strong style="color:${COLORS.foreground};">${escapeHtml(a.razaoSocial)}</strong> foi assinado em
+      ${formatBrDate(a.signedAt)}. Referência: ${escapeHtml(a.contractRef)}.
+    </p>
+    <p style="margin:0 0 20px;">
+      <a href="${a.dealUrl}" style="display:inline-block;padding:10px 20px;background:${COLORS.primary};color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">Ver negócio</a>
+    </p>
+    <p style="margin:0;font-size:13px;color:${COLORS.muted};line-height:1.6;">Uma cópia assinada em PDF segue em anexo.</p>
+  `;
+  return emailShell(body);
+}
+
 export function otpCodeEmailHtml(args: { code: string; contractTitle?: string }): string {
   const body = `
     <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">Confirme sua assinatura</h1>
