@@ -1490,7 +1490,10 @@
       "copyLinkRowButton": "Copy signing link",
       "toastLinkRegenerated": "New link generated, but couldn't copy automatically",
       "toastFailedRegenerate": "Failed to generate a new link",
-      "lastViewedAt": "Last viewed on {date}"
+      "lastViewedAt": "Last viewed on {date}",
+      "viewInternalButton": "View contract",
+      "viewDialogTitle": "Contract — {name}",
+      "viewNeutralNote": "Internal preview — does not count as opened by the client."
     },
     "public": {
       "loading": "Verifying contract...",

@@ -1490,7 +1490,10 @@
       "copyLinkRowButton": "Copiar link de assinatura",
       "toastLinkRegenerated": "Novo link gerado, mas não consegui copiar automaticamente",
       "toastFailedRegenerate": "Falha ao gerar um novo link",
-      "lastViewedAt": "Última visualização em {date}"
+      "lastViewedAt": "Última visualização em {date}",
+      "viewInternalButton": "Visualizar contrato",
+      "viewDialogTitle": "Contrato — {name}",
+      "viewNeutralNote": "Visualização interna — não conta como aberto pelo cliente."
     },
     "public": {
       "loading": "Verificando contrato...",

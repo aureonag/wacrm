@@ -37,6 +37,7 @@ import {
   X,
   Clock,
   Eye,
+  FileText,
   CheckCircle2,
   XCircle,
   Ban,
@@ -120,6 +121,7 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [copyingId, setCopyingId] = useState<string | null>(null);
   const [terminateTarget, setTerminateTarget] = useState<DealContract | null>(null);
+  const [viewingContract, setViewingContract] = useState<DealContract | null>(null);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -380,6 +382,17 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
                         {tTerminate("button")}
                       </Button>
                     )}
+                    {contract.rendered_content && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setViewingContract(contract)}
+                        title={t("viewInternalButton")}
+                        className="text-muted-foreground hover:text-primary"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     {canEdit &&
                       contract.signing_method === "virtual" &&
                       ["sent", "viewed", "expired"].includes(contract.status) && (
@@ -428,6 +441,33 @@ export function ContractTab({ dealId, accountId, contact, canEdit }: ContractTab
         contract={terminateTarget}
         onTerminated={load}
       />
+
+      {/* Internal preview: reads rendered_content already fetched by load()
+          under normal RLS — no call to the public /peek route, so opening
+          this never logs a 'viewed' event or flips draft->sent status
+          (Allan, 2026-09-29: needs a way to check a contract without it
+          registering as opened by the client). */}
+      <Dialog open={viewingContract !== null} onOpenChange={(v) => !v && setViewingContract(null)}>
+        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t("viewDialogTitle", { name: viewingContract?.razao_social ?? "" })}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">{t("viewNeutralNote")}</p>
+          <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-border bg-muted/20 p-4">
+            <ContractDocument content={viewingContract?.rendered_content ?? ""} />
+          </div>
+          <DialogFooter className="border-border bg-popover/50">
+            <Button
+              onClick={() => setViewingContract(null)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {t("close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-2xl max-h-[85vh] overflow-y-auto">

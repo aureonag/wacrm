@@ -1490,7 +1490,10 @@
       "copyLinkRowButton": "서명 링크 복사",
       "toastLinkRegenerated": "새 링크가 생성되었지만 자동으로 복사하지 못했습니다",
       "toastFailedRegenerate": "새 링크 생성에 실패했습니다",
-      "lastViewedAt": "마지막 열람: {date}"
+      "lastViewedAt": "마지막 열람: {date}",
+      "viewInternalButton": "계약서 보기",
+      "viewDialogTitle": "계약서 — {name}",
+      "viewNeutralNote": "내부 미리보기 — 고객이 열람한 것으로 기록되지 않습니다."
     },
     "public": {
       "loading": "계약서를 확인하는 중...",
