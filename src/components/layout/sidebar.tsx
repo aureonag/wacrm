@@ -695,6 +695,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                               <span className="flex-1">{t("kickoffLeadGeneration")}</span>
                             </a>
                           </li>
+                          <li>
+                            <a
+                              href="https://playbook.aureonag.com/aureon-integracao-midia.html"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(navRowBase, navRowInactive)}
+                            >
+                              <Zap className="h-4 w-4" />
+                              <span className="flex-1">{t("integracaoGestores")}</span>
+                            </a>
+                          </li>
                         </ul>
                       )}
                     </li>
