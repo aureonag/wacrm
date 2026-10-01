@@ -23,7 +23,7 @@
 // signing.
 // ============================================================
 
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import {
   parseContractSections,
   toTitleCase,
@@ -45,6 +45,12 @@ import { AUREON_PARTY } from "@/lib/contracts/aureon-party";
 // mistakes it for a second heading and it survives as a stray section
 // (Allan, 2026-09-30).
 const PARTY_HEADINGS = new Set(["contratante", "contratada"]);
+
+// Loaded from the production domain, same pattern as email-templates.ts's
+// LOGO_URL — @react-pdf/renderer fetches images over HTTP(S) at render
+// time, and a local filesystem path isn't reliably resolvable in every
+// runtime this generator runs in (Allan, 2026-09-30).
+const LOGO_URL = "https://aureonag.com/brand/aureon-logo-black.png";
 
 function isPartySection(heading: string): boolean {
   const normalized = heading.trim().toLowerCase();
@@ -110,17 +116,11 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.brand,
     marginBottom: 20,
   },
-  brandWordmark: {
-    fontSize: 15,
-    fontFamily: "Helvetica-Bold",
-    color: COLORS.brand,
-    letterSpacing: 1.5,
-  },
-  brandTagline: {
-    fontSize: 7.5,
-    color: COLORS.muted,
-    letterSpacing: 0.5,
-    marginTop: 1,
+  logo: {
+    // Source is 2457×423px (aspect ratio 5.809) — height derived from
+    // that ratio so the logo never looks stretched.
+    width: 110,
+    height: 18.9,
   },
   refBadge: {
     fontSize: 8,
@@ -313,10 +313,7 @@ function SignedContractPdfDocument(props: SignedContractPdfArgs) {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.brandRow} fixed>
-          <View>
-            <Text style={styles.brandWordmark}>AUREON</Text>
-            <Text style={styles.brandTagline}>PUBLICIDADE</Text>
-          </View>
+          <Image src={LOGO_URL} style={styles.logo} />
           <Text style={styles.refBadge}>Contrato Nº {props.refCode}</Text>
         </View>
 
