@@ -310,7 +310,11 @@ function PartyCard({ label, name, lines }: { label: string; name: string; lines:
   );
 }
 
-function SignedContractPdfDocument(props: SignedContractPdfArgs) {
+interface SignedContractPdfDocumentProps extends SignedContractPdfArgs {
+  pageHeight: number;
+}
+
+function SignedContractPdfDocument(props: SignedContractPdfDocumentProps) {
   const parsed = parseContractSections(props.renderedContent);
   const sections = parsed.sections.filter((s) => !isPartySection(s.heading));
 
@@ -321,17 +325,14 @@ function SignedContractPdfDocument(props: SignedContractPdfArgs) {
         repeated page breaks (a heading stranded at the bottom of a
         page, a section split mid-paragraph) harder to read than a
         single continuous document, even knowing a non-paginated PDF is
-        unusual to view/print (2026-10-01). Height is a generous fixed
-        budget (comfortably covers every real contract seen so far,
-        each well under half of this) rather than one computed from
-        content — react-pdf's layout engine doesn't expose a content's
-        measured height before the PDF bytes already exist. Height is
-        capped well under the PDF spec's 14400pt (200in) page-size
-        limit; a contract whose content still overflows this falls
-        back to pagination (section boxes keep wrap={false} below, so a
-        box would move to that extra page whole, never split).
+        unusual to view/print (2026-10-01). `pageHeight` is found by
+        generateSignedContractPdf's binary search below rather than
+        fixed here — react-pdf's layout engine doesn't expose a
+        content's measured height before the PDF bytes already exist,
+        and a blind oversized fixed height just left a big blank gap
+        after the last block, which Allan also flagged.
       */}
-      <Page size={[595.28, 10000]} style={styles.page}>
+      <Page size={[595.28, props.pageHeight]} style={styles.page}>
         <View style={styles.brandRow}>
           <Image src={LOGO_URL} style={styles.logo} />
           <Text style={styles.refBadge}>Contrato Nº {props.refCode}</Text>
@@ -439,6 +440,55 @@ function SignedContractPdfDocument(props: SignedContractPdfArgs) {
   );
 }
 
+// Comfortably covers every real contract seen so far (each needs well
+// under half of this) while staying under the PDF spec's 14400pt (200in)
+// page-size limit. A contract whose content still overflows this falls
+// back to this single oversized page rather than searching further —
+// section boxes keep wrap={false}, so a box would move to a second
+// (equally tall) auto-added page whole, never split mid-section.
+const MAX_PAGE_HEIGHT = 10000;
+// Low end of the search bracket — comfortably below the shortest real
+// page (header + party cards + one short section).
+const MIN_PAGE_HEIGHT = 1000;
+// Binary-search step count: (MAX - MIN) halved 10 times lands within
+// ~9pt of the true minimum, imperceptible on a printed page.
+const FIT_SEARCH_STEPS = 10;
+
+function countPdfPages(buffer: Buffer): number {
+  const matches = buffer.toString("latin1").match(/\/Type\s*\/Page[^s]/g);
+  return matches ? matches.length : 1;
+}
+
+async function renderAtHeight(args: SignedContractPdfArgs, pageHeight: number): Promise<Buffer> {
+  return renderToBuffer(<SignedContractPdfDocument {...args} pageHeight={pageHeight} />);
+}
+
+/**
+ * Finds the shortest single page that still fits all the content, so the
+ * PDF ends right after the last block instead of trailing into a big
+ * blank area — Allan's two rounds of feedback on the single-tall-page
+ * design (2026-10-01). react-pdf's layout engine doesn't expose a
+ * content's measured height ahead of a render, so this probes it
+ * empirically (binary search over real renders, reading each candidate's
+ * resulting page count) rather than estimating from font metrics.
+ */
 export async function generateSignedContractPdf(args: SignedContractPdfArgs): Promise<Buffer> {
-  return renderToBuffer(<SignedContractPdfDocument {...args} />);
+  let low = MIN_PAGE_HEIGHT;
+  let high = MAX_PAGE_HEIGHT;
+  let best = await renderAtHeight(args, high);
+  if (countPdfPages(best) > 1) {
+    // Even the safety cap isn't enough — fall back to it as-is.
+    return best;
+  }
+  for (let i = 0; i < FIT_SEARCH_STEPS && high - low > 1; i++) {
+    const mid = Math.round((low + high) / 2);
+    const candidate = await renderAtHeight(args, mid);
+    if (countPdfPages(candidate) === 1) {
+      best = candidate;
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  return best;
 }
