@@ -23,7 +23,7 @@
 // signing.
 // ============================================================
 
-import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer } from "@react-pdf/renderer";
 import {
   parseContractSections,
   toTitleCase,
@@ -31,6 +31,12 @@ import {
   type ContractSectionTone,
 } from "@/lib/contracts/render-sections";
 import { AUREON_PARTY } from "@/lib/contracts/aureon-party";
+
+// The default hyphenation splits long words at syllable boundaries when a
+// line is tight ("otimiza-ção"), which reads as a layout bug in a formal
+// contract rather than a stylistic choice — wrap whole words to the next
+// line instead (Allan, 2026-10-01).
+Font.registerHyphenationCallback((word) => [word]);
 
 // Same as contract-document.tsx's PARTY_HEADINGS — the template's own
 // CONTRATANTE/CONTRATADA sections are dropped from the body since this
