@@ -100,7 +100,11 @@
       "financeiro": "Financeiro",
       "chat": "Chat"
     },
-    "materiais": "Materiais"
+    "materiais": "Materiais",
+    "midia": "Mídia",
+    "kickoffEcommerce": "Kickoff E-commerce",
+    "kickoffLeadGeneration": "Kickoff Lead Generation",
+    "apresentacaoComercial": "Apresentação Comercial"
   },
   "Financeiro": {
     "sidebar": {

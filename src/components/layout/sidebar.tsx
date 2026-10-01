@@ -245,6 +245,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const [openSections, setOpenSections] = useState<Set<SectionKey>>(
     () => new Set([sectionForPath(pathname)]),
   );
+  const [midiaOpen, setMidiaOpen] = useState(false);
+  const [comercialOpen, setComercialOpen] = useState(false);
 
   useEffect(() => {
     const sec = sectionForPath(pathname);
@@ -617,7 +619,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               )}
             </li>
 
-            {/* Materiais — new group; only Playbook today, room to grow. */}
+            {/* Materiais — Comercial (Playbook + Apresentação Comercial) + Mídia (kickoffs), ambos em cascata. */}
             {canViewPlaybook && (
               <li>
                 <SectionButton
@@ -629,15 +631,72 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 {openSections.has("materiais") && (
                   <ul className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
                     <li>
-                      <a
-                        href="https://playbook.aureonag.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn(navRowBase, navRowInactive)}
-                      >
-                        <BookOpen className="h-4 w-4" />
-                        <span className="flex-1">{t("playbook")}</span>
-                      </a>
+                      <SectionButton
+                        icon={Briefcase}
+                        label={t("environment.comercial")}
+                        open={comercialOpen}
+                        onClick={() => setComercialOpen((v) => !v)}
+                      />
+                      {comercialOpen && (
+                        <ul className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
+                          <li>
+                            <a
+                              href="https://playbook.aureonag.com"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(navRowBase, navRowInactive)}
+                            >
+                              <BookOpen className="h-4 w-4" />
+                              <span className="flex-1">{t("playbook")}</span>
+                            </a>
+                          </li>
+                          <li>
+                            <a
+                              href="https://playbook.aureonag.com/apresentacao-comercial.html"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(navRowBase, navRowInactive)}
+                            >
+                              <LayoutGrid className="h-4 w-4" />
+                              <span className="flex-1">{t("apresentacaoComercial")}</span>
+                            </a>
+                          </li>
+                        </ul>
+                      )}
+                    </li>
+                    <li>
+                      <SectionButton
+                        icon={Radio}
+                        label={t("midia")}
+                        open={midiaOpen}
+                        onClick={() => setMidiaOpen((v) => !v)}
+                      />
+                      {midiaOpen && (
+                        <ul className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
+                          <li>
+                            <a
+                              href="https://playbook.aureonag.com/kickoff-ecommerce.html"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(navRowBase, navRowInactive)}
+                            >
+                              <Zap className="h-4 w-4" />
+                              <span className="flex-1">{t("kickoffEcommerce")}</span>
+                            </a>
+                          </li>
+                          <li>
+                            <a
+                              href="https://playbook.aureonag.com/kickoff-leadgeneration.html"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(navRowBase, navRowInactive)}
+                            >
+                              <Zap className="h-4 w-4" />
+                              <span className="flex-1">{t("kickoffLeadGeneration")}</span>
+                            </a>
+                          </li>
+                        </ul>
+                      )}
                     </li>
                   </ul>
                 )}

@@ -100,7 +100,11 @@
       "financeiro": "재무",
       "chat": "채팅"
     },
-    "materiais": "자료"
+    "materiais": "자료",
+    "midia": "미디어",
+    "kickoffEcommerce": "이커머스 킥오프",
+    "kickoffLeadGeneration": "리드 제너레이션 킥오프",
+    "apresentacaoComercial": "영업 프레젠테이션"
   },
   "Financeiro": {
     "sidebar": {
