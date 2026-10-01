@@ -378,11 +378,13 @@ function SignedContractPdfDocument(props: SignedContractPdfArgs) {
           }
 
           return (
-            <View
-              key={i}
-              style={[styles.section, { backgroundColor: tone.bg, borderColor: tone.border }]}
-              wrap={false}
-            >
+            // Unlike the other boxes on the page (party cards, Resumo,
+            // signature), a content section can grow large after a
+            // merge like Serviço Contratado + Pacote Contratado — forcing
+            // the whole box to the next page (wrap={false}) left a big
+            // blank gap under the party cards instead. Let it flow across
+            // the page break like a normal paragraph (Allan, 2026-10-01).
+            <View key={i} style={[styles.section, { backgroundColor: tone.bg, borderColor: tone.border }]}>
               <Text style={[styles.heading, { color: tone.heading }]}>{toTitleCase(section.heading)}</Text>
               {section.blocks.map((block, j) =>
                 block.type === "list" ? (
