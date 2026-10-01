@@ -249,17 +249,16 @@ const styles = StyleSheet.create({
     color: COLORS.body,
   },
   footer: {
-    position: "absolute",
-    bottom: 20,
-    left: 44,
-    right: 44,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    // Flows right after the signature box instead of pinned to the
+    // page bottom — on the single tall page (see the Page comment
+    // above) the real page bottom sits far below the actual content.
+    marginTop: 20,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     paddingTop: 6,
     fontSize: 7.5,
     color: COLORS.muted,
+    textAlign: "center",
   },
 });
 
@@ -317,8 +316,23 @@ function SignedContractPdfDocument(props: SignedContractPdfArgs) {
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.brandRow} fixed>
+      {/*
+        One tall page instead of A4 pagination — Allan found the
+        repeated page breaks (a heading stranded at the bottom of a
+        page, a section split mid-paragraph) harder to read than a
+        single continuous document, even knowing a non-paginated PDF is
+        unusual to view/print (2026-10-01). Height is a generous fixed
+        budget (comfortably covers every real contract seen so far,
+        each well under half of this) rather than one computed from
+        content — react-pdf's layout engine doesn't expose a content's
+        measured height before the PDF bytes already exist. Height is
+        capped well under the PDF spec's 14400pt (200in) page-size
+        limit; a contract whose content still overflows this falls
+        back to pagination (section boxes keep wrap={false} below, so a
+        box would move to that extra page whole, never split).
+      */}
+      <Page size={[595.28, 10000]} style={styles.page}>
+        <View style={styles.brandRow}>
           <Image src={LOGO_URL} style={styles.logo} />
           <Text style={styles.refBadge}>Contrato Nº {props.refCode}</Text>
         </View>
@@ -378,13 +392,11 @@ function SignedContractPdfDocument(props: SignedContractPdfArgs) {
           }
 
           return (
-            // Unlike the other boxes on the page (party cards, Resumo,
-            // signature), a content section can grow large after a
-            // merge like Serviço Contratado + Pacote Contratado — forcing
-            // the whole box to the next page (wrap={false}) left a big
-            // blank gap under the party cards instead. Let it flow across
-            // the page break like a normal paragraph (Allan, 2026-10-01).
-            <View key={i} style={[styles.section, { backgroundColor: tone.bg, borderColor: tone.border }]}>
+            <View
+              key={i}
+              style={[styles.section, { backgroundColor: tone.bg, borderColor: tone.border }]}
+              wrap={false}
+            >
               <Text style={[styles.heading, { color: tone.heading }]}>{toTitleCase(section.heading)}</Text>
               {section.blocks.map((block, j) =>
                 block.type === "list" ? (
@@ -419,9 +431,8 @@ function SignedContractPdfDocument(props: SignedContractPdfArgs) {
           {props.signedIp && <Text style={styles.signatureLine}>Endereço IP: {props.signedIp}.</Text>}
         </View>
 
-        <View style={styles.footer} fixed>
+        <View style={styles.footer}>
           <Text>Aureon Publicidade · contrato assinado eletronicamente · Ref. {props.refCode}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>
     </Document>
