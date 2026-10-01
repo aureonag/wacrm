@@ -702,7 +702,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                               rel="noopener noreferrer"
                               className={cn(navRowBase, navRowInactive)}
                             >
-                              <Zap className="h-4 w-4" />
+                              <BookOpen className="h-4 w-4" />
                               <span className="flex-1">{t("integracaoGestores")}</span>
                             </a>
                           </li>
