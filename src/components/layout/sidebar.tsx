@@ -213,7 +213,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const tCreate = useTranslations("Chat.createChannel");
   const pathname = usePathname();
   const router = useRouter();
-  const { profile, profileLoading, account, accountRole, signOut, isOwner, permissions } = useAuth();
+  const { profile, profileLoading, account, accountRole, signOut, isOwner, permissions, canManageMembers } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   const hasComercialAccess = useHasEnvironmentAccess("comercial");
@@ -514,6 +514,20 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         >
                           <Building2 className="h-4 w-4" />
                           <span className="flex-1">{tOp("clients")}</span>
+                        </Link>
+                      </li>
+                    )}
+                    {canManageMembers && (
+                      <li>
+                        <Link
+                          href="/operational/afiliados"
+                          className={cn(
+                            navRowBase,
+                            pathname.startsWith("/operational/afiliados") ? navRowActive : navRowInactive,
+                          )}
+                        >
+                          <UsersRound className="h-4 w-4" />
+                          <span className="flex-1">{tOp("affiliates")}</span>
                         </Link>
                       </li>
                     )}
