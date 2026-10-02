@@ -3372,7 +3372,7 @@
       "instagram": "Instagram ou perfil social",
       "password": "Senha para acessar o portal (mínimo 10 caracteres)",
       "accept": "Li e aceito as regras desta campanha (versão {n}). Entendo que minha participação depende da aprovação da loja.",
-      "submit": "Enviar inscrição",
+      "submit": "Enviar código de confirmação",
       "submitting": "Enviando…",
       "doneTitle": "Inscrição recebida!",
       "doneBody": "Seu cadastro aguarda a aprovação da loja. Entre no portal com seu e-mail e senha para acompanhar.",
@@ -3384,7 +3384,17 @@
       "joined": "Inscrição enviada! Aguarde a aprovação da loja.",
       "haveAccount": "Já tem conta? Entrar no portal",
       "discountPercent": "{value}%",
-      "rewardMonthly": "{month} · {type}"
+      "rewardMonthly": "{month} · {type}",
+      "sendingCode": "Enviando código…",
+      "tooManyCodes": "Muitos pedidos de código. Aguarde alguns minutos e tente de novo.",
+      "codeTitle": "Confirme seu e-mail",
+      "codeSent": "Enviamos um código de 6 dígitos para {email}. Digite-o abaixo para concluir a inscrição.",
+      "codeLabel": "Código de confirmação",
+      "codeHint": "O código vale por 10 minutos. Olhe também a caixa de spam.",
+      "finish": "Concluir inscrição",
+      "resend": "Reenviar código",
+      "resendIn": "Reenviar em {s}s",
+      "editData": "Corrigir meus dados"
     }
   }
 }

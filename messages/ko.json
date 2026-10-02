@@ -3372,7 +3372,7 @@
       "instagram": "Instagram or social profile",
       "password": "Password for the portal (minimum 10 characters)",
       "accept": "I have read and accept the rules of this campaign (version {n}). I understand my participation depends on the store's approval.",
-      "submit": "Submit sign-up",
+      "submit": "Send confirmation code",
       "submitting": "Sending…",
       "doneTitle": "Sign-up received!",
       "doneBody": "Your registration is waiting for the store's approval. Sign in to the portal with your e-mail and password to follow it.",
@@ -3384,7 +3384,17 @@
       "joined": "Sign-up sent! Wait for the store's approval.",
       "haveAccount": "Already have an account? Sign in to the portal",
       "discountPercent": "{value}%",
-      "rewardMonthly": "{month} · {type}"
+      "rewardMonthly": "{month} · {type}",
+      "sendingCode": "Sending code…",
+      "tooManyCodes": "Too many code requests. Wait a few minutes and try again.",
+      "codeTitle": "Confirm your e-mail",
+      "codeSent": "We sent a 6-digit code to {email}. Enter it below to finish signing up.",
+      "codeLabel": "Confirmation code",
+      "codeHint": "The code is valid for 10 minutes. Check your spam folder too.",
+      "finish": "Finish sign-up",
+      "resend": "Resend code",
+      "resendIn": "Resend in {s}s",
+      "editData": "Fix my details"
     }
   }
 }

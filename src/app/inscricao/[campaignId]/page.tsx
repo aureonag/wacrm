@@ -42,6 +42,16 @@ export default function CampaignSignupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", email: "", instagram: "", password: "", accept: false });
+  const [step, setStep] = useState<"form" | "code">("form");
+  const [code, setCode] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setTimeout(() => setCooldown((n) => n - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +71,27 @@ export default function CampaignSignupPage() {
       cancelled = true;
     };
   }, [campaignId]);
+
+  async function sendCode(campaignId: string) {
+    setBusy(true);
+    setError("");
+    const res = await fetch("/api/public/affiliates/register/send-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campaign_id: campaignId, email: form.email }),
+    });
+    setBusy(false);
+    const data = (await res.json().catch(() => null)) as { error?: string; email_masked?: string } | null;
+    if (!res.ok) {
+      if (res.status === 503 && data?.error === "portal_not_ready") return setError(t("notReady"));
+      if (res.status === 429) return setError(t("tooManyCodes"));
+      return setError(res.status === 400 || res.status === 409 || res.status === 502 || res.status === 503 ? (data?.error ?? t("error")) : t("error"));
+    }
+    setMaskedEmail(data?.email_masked ?? form.email);
+    setCode("");
+    setCooldown(60);
+    setStep("code");
+  }
 
   async function post(url: string, body: unknown, success: "registered" | "joined") {
     setBusy(true);
@@ -170,10 +201,62 @@ export default function CampaignSignupPage() {
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            void post("/api/public/affiliates/register", { ...form, campaign_id: c.id, revision: c.revision }, "registered");
+            if (step === "form") void sendCode(c.id);
+            else void post("/api/public/affiliates/register", { ...form, code, campaign_id: c.id, revision: c.revision }, "registered");
           }}
         >
-          <h2 className="text-sm font-semibold text-foreground">{t("formTitle")}</h2>
+          <h2 className="text-sm font-semibold text-foreground">{step === "form" ? t("formTitle") : t("codeTitle")}</h2>
+          {step === "code" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t("codeSent", { email: maskedEmail })}</p>
+              <div className="space-y-1.5">
+                <Label htmlFor="s-code">{t("codeLabel")}</Label>
+                <Input
+                  id="s-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  className="text-center text-lg tracking-[0.4em]"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                />
+                <p className="text-xs text-muted-foreground">{t("codeHint")}</p>
+              </div>
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
+                {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+                {busy ? t("submitting") : t("finish")}
+              </Button>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  className="hover:underline disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline"
+                  disabled={busy || cooldown > 0}
+                  onClick={() => void sendCode(c.id)}
+                >
+                  {cooldown > 0 ? t("resendIn", { s: cooldown }) : t("resend")}
+                </button>
+                <button
+                  type="button"
+                  className="hover:underline"
+                  onClick={() => {
+                    setStep("form");
+                    setError("");
+                  }}
+                >
+                  {t("editData")}
+                </button>
+              </div>
+            </div>
+          ) : (
+          <>
           <div className="space-y-1.5">
             <Label htmlFor="s-name">{t("name")}</Label>
             <Input id="s-name" required maxLength={200} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
@@ -224,13 +307,15 @@ export default function CampaignSignupPage() {
           )}
           <Button type="submit" className="w-full" disabled={busy || !form.accept}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            {busy ? t("submitting") : t("submit")}
+            {busy ? t("sendingCode") : t("submit")}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
             <Link href="/portal/entrar" className="hover:underline">
               {t("haveAccount")}
             </Link>
           </p>
+          </>
+          )}
         </form>
       )}
     </section>

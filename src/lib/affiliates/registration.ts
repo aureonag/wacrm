@@ -9,7 +9,23 @@ export interface RegisterInput {
   email: string;
   instagram: string | null;
   password: string;
+  /** 6-digit code e-mailed to the address (confirms it belongs to the person). */
+  code: string;
   accept: true;
+}
+
+export interface SendCodeInput {
+  campaign_id: string;
+  email: string;
+}
+
+/** Validates the "send me a confirmation code" body. Throws BadInput. */
+export function parseSendCodeInput(body: unknown): SendCodeInput {
+  const b = (body ?? {}) as Record<string, unknown>;
+  if (!isUuid(b.campaign_id)) throw new BadInput("Campanha inválida.");
+  const email = (typeof b.email === "string" ? b.email.trim() : "").toLowerCase();
+  if (email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadInput("E-mail inválido.");
+  return { campaign_id: b.campaign_id, email };
 }
 
 function optText(v: unknown, max: number): string | null {
@@ -35,8 +51,10 @@ export function parseRegisterInput(body: unknown): RegisterInput {
   if (password.length < 10) throw new BadInput("A senha deve ter pelo menos 10 caracteres.");
   if (password.length > 72) throw new BadInput("A senha deve ter no máximo 72 caracteres.");
   if (b.accept !== true) throw new BadInput("É preciso aceitar as regras da campanha.");
+  const code = typeof b.code === "string" ? b.code.trim() : "";
+  if (!/^\d{6}$/.test(code)) throw new BadInput("Informe o código de 6 dígitos enviado ao seu e-mail.");
 
-  return { campaign_id: b.campaign_id, revision, name, email, instagram: optText(b.instagram, 100), password, accept: true };
+  return { campaign_id: b.campaign_id, revision, name, email, instagram: optText(b.instagram, 100), password, code, accept: true };
 }
 
 /** Coupon code candidate from the person's name: letters + random digits. */

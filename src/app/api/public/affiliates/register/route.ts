@@ -7,14 +7,17 @@
 //
 // Refuses to run until migration 101 is applied (aff_portal_ready), otherwise
 // every sign-up would become the owner of a brand-new CRM account.
-// The e-mail is created as confirmed: the human approval step is the check.
+// The e-mail is created as confirmed ONLY after the person types the 6-digit
+// code mailed to it (send-code); the store/Aureon approval is a second check.
 
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { BadInput } from "@/lib/affiliates/campaigns";
 import { couponCandidate, parseRegisterInput } from "@/lib/affiliates/registration";
+import { isModuleNotReady } from "@/lib/affiliates/admin";
 import { clientIp, isPortalReady, portalNotReadyResponse } from "@/lib/affiliates/portal";
+import { CONSUME_MESSAGES, consumeSignupCode } from "@/lib/affiliates/signup-codes";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
@@ -69,6 +72,20 @@ export async function POST(request: Request) {
     if (existing.error) return NextResponse.json({ error: "Failed to register" }, { status: 500 });
     if (existing.data) return NextResponse.json(EMAIL_TAKEN, { status: 409 });
 
+    // The person must prove the e-mail is theirs: the 6-digit code mailed by
+    // send-code. Consumed only here, after every other check has passed.
+    let consumed: Awaited<ReturnType<typeof consumeSignupCode>>;
+    try {
+      consumed = await consumeSignupCode(admin, input.email, campaign.id, input.code);
+    } catch (err) {
+      if (isModuleNotReady(err as { code?: string })) return portalNotReadyResponse();
+      console.error("[register] code check failed:", err);
+      return NextResponse.json({ error: "Failed to register" }, { status: 500 });
+    }
+    if (!consumed.ok) {
+      return NextResponse.json({ error: CONSUME_MESSAGES[consumed.reason](consumed.remaining) }, { status: 400 });
+    }
+
     const user = await admin.auth.admin.createUser({
       email: input.email,
       password: input.password,
@@ -79,7 +96,11 @@ export async function POST(request: Request) {
     if (user.error || !user.data.user) {
       const msg = user.error?.message ?? "";
       if (/already|registered|exists/i.test(msg)) return NextResponse.json(EMAIL_TAKEN, { status: 409 });
-      if (/password/i.test(msg)) return NextResponse.json({ error: "Escolha uma senha mais forte." }, { status: 400 });
+      if (/password/i.test(msg)) {
+        // Fixable without a new e-mail: give the code back.
+        await consumed.restore();
+        return NextResponse.json({ error: "Escolha uma senha mais forte." }, { status: 400 });
+      }
       console.error("[register] createUser failed:", msg);
       return NextResponse.json({ error: "Failed to register" }, { status: 500 });
     }

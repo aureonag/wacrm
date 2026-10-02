@@ -151,6 +151,23 @@ export function otpCodeEmailHtml(args: { code: string; contractTitle?: string })
   return emailShell(body);
 }
 
+/** E-mail do código de confirmação da inscrição de afiliado (módulo Afiliados). */
+export function affiliateOtpEmailHtml(args: { code: string; store: string; campaign: string }): string {
+  const body = `
+    <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">Confirme seu e-mail</h1>
+    <p style="margin:0 0 20px;font-size:14px;color:${COLORS.muted};line-height:1.6;">
+      Use o código abaixo para concluir sua inscrição na campanha
+      <strong style="color:${COLORS.foreground};">${escapeHtml(args.campaign)}</strong> de
+      <strong style="color:${COLORS.foreground};">${escapeHtml(args.store)}</strong>.
+    </p>
+    <div style="margin:0 0 20px;text-align:center;">
+      <span style="display:inline-block;padding:14px 28px;background:${COLORS.primarySoftBg};border:1px solid ${COLORS.primarySoftBorder};border-radius:8px;font-size:28px;font-weight:700;letter-spacing:6px;color:${COLORS.foreground};">${escapeHtml(args.code)}</span>
+    </div>
+    <p style="margin:0;font-size:13px;color:${COLORS.muted};line-height:1.5;">Este código expira em 10 minutos. Se você não pediu este código, pode ignorar este e-mail.</p>
+  `;
+  return emailShell(body);
+}
+
 // ------------------------------------------------------------
 // Cancelamento de contrato assinado (minuta enviada ao cliente).
 // Nunca inclui valores: so identifica o contrato e a data de efeito.

@@ -197,6 +197,10 @@ export const RATE_LIMITS = {
   /** Afiliados: public sign-up, per IP. Each success creates an auth user,
    *  so this is the anti-abuse bucket: 5 per 10 minutes. */
   affiliateSignup: { limit: 5, windowMs: 600_000 },
+  /** Afiliados: e-mail confirmation code send (public). Each success mails a
+   *  real inbox, so — like contractSendCode — 3 per 10 minutes, applied both
+   *  per IP and per e-mail address. */
+  affiliateSendCode: { limit: 3, windowMs: 600_000 },
   /** Afiliados: portal writes (profile, invoice upload), per user. */
   affiliatePortalWrite: { limit: 30, windowMs: 60_000 },
 } as const;
