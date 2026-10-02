@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type ReactNode } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
@@ -32,7 +33,7 @@ export function SettingsRail({
   hints?: Partial<Record<SettingsSection, ReactNode>>;
 }) {
   const t = useTranslations('Settings');
-  const activeRef = useRef<HTMLButtonElement>(null);
+  const activeRef = useRef<HTMLAnchorElement>(null);
 
   // When horizontal (mobile), keep the active chip in view. On desktop
   // the rail is a static column, so skip.
@@ -74,11 +75,28 @@ export function SettingsRail({
               const Icon = meta.icon;
               const isActive = s === active;
               return (
-                <button
+                // A real `<a href>` (via next/link), not a bare
+                // `<button onClick>` — on a page this heavy (chat,
+                // presence, permissions all fetching on mount),
+                // clicking before React finishes hydrating used to be a
+                // dead click: no listener was attached yet and a
+                // `<button>` has no native fallback. `Link` always has
+                // a working `href`, so a click that lands before
+                // hydration still navigates (full reload, slower) —
+                // working-but-slow beats fully-dead — and a click after
+                // hydration is still intercepted for the fast
+                // client-side path via `onSelect` (Allan, 2026-10-02,
+                // reported "Setores"/"Cargos e permissões" not
+                // responding to clicks on the live site).
+                <Link
                   key={s}
                   ref={isActive ? activeRef : undefined}
-                  type="button"
-                  onClick={() => onSelect(s)}
+                  href={`/settings?tab=${s}`}
+                  scroll={false}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelect(s);
+                  }}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
@@ -100,7 +118,7 @@ export function SettingsRail({
                       {hints[s]}
                     </span>
                   ) : null}
-                </button>
+                </Link>
               );
             })}
           </div>

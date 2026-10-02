@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { ChevronRight, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -255,10 +256,18 @@ export function SettingsOverview({
           const meta = SECTION_META[section];
           const Icon = meta.icon;
           return (
-            <button
+            // Real `<a href>` via next/link — see the same comment in
+            // settings-rail.tsx for why a bare `<button onClick>` was a
+            // dead click on this page if clicked before hydration
+            // finished (Allan, 2026-10-02).
+            <Link
               key={section}
-              type="button"
-              onClick={() => onSelect(section)}
+              href={`/settings?tab=${section}`}
+              scroll={false}
+              onClick={(e) => {
+                e.preventDefault();
+                onSelect(section);
+              }}
               className={cn(
                 'group flex items-start gap-3.5 rounded-xl border border-border bg-card p-4 text-left transition-colors',
                 'hover:border-primary-soft-2 hover:bg-card-2',
@@ -282,7 +291,7 @@ export function SettingsOverview({
                 </span>
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </button>
+            </Link>
           );
         })}
       </div>
