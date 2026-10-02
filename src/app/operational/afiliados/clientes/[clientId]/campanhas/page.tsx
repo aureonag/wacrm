@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Gift, Loader2, Pencil, Plus, Power, Users } from "lucide-react";
+import { Copy, Gift, Loader2, Pencil, Plus, Power, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
@@ -39,6 +39,16 @@ export default function AffiliateCampaignsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+
+  async function copyLink(c: Campaign) {
+    const link = `${window.location.origin}/inscricao/${c.id}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success(t("campaigns.linkCopied"));
+    } catch {
+      toast.error(link);
+    }
+  }
 
   async function toggle(c: Campaign) {
     setBusyId(c.id);
@@ -104,6 +114,10 @@ export default function AffiliateCampaignsPage() {
                     <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{c.description}</p>
                   </div>
                   <div className="flex shrink-0 gap-1">
+                    <Button variant="outline" size="sm" onClick={() => copyLink(c)}>
+                      <Copy className="h-3.5 w-3.5" />
+                      {t("campaigns.copyLink")}
+                    </Button>
                     <Link href={`${base}/${c.id}`}>
                       <Button variant="outline" size="sm">
                         <Pencil className="h-3.5 w-3.5" />

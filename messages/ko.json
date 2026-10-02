@@ -428,7 +428,9 @@
         "rewardGiftback": "{value}% in Giftback",
         "periodic": "Fixed period · {start} to {end}",
         "recurrent": "Recurring · since {start}",
-        "participants": "{count, plural, one {# participant} other {# participants}}"
+        "participants": "{count, plural, one {# participant} other {# participants}}",
+        "copyLink": "Copy sign-up link",
+        "linkCopied": "Sign-up link copied."
       },
       "editor": {
         "back": "Back to campaigns",
@@ -3303,6 +3305,86 @@
       "attach": "파일 첨부",
       "fileTooLarge": "파일이 너무 큽니다 (최대 16MB).",
       "uploadError": "업로드에 실패했습니다."
+    }
+  },
+  "Portal": {
+    "login": {
+      "title": "Affiliate portal",
+      "subtitle": "Follow your campaigns and commissions.",
+      "email": "E-mail",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "error": "Wrong e-mail or password.",
+      "notAffiliate": "This is not an affiliate account. Use the CRM login.",
+      "hint": "Not an affiliate yet? Use the sign-up link of the campaign sent by the store."
+    },
+    "nav": {
+      "title": "Affiliate portal",
+      "campaigns": "Campaigns",
+      "commissions": "Commissions",
+      "profile": "My profile",
+      "signOut": "Sign out"
+    },
+    "campaigns": {
+      "title": "My campaigns",
+      "description": "Campaigns you take part in and your coupons.",
+      "empty": "You are not in any campaign yet.",
+      "emptyHint": "Use the sign-up link sent by the store.",
+      "code": "Your coupon",
+      "pendingHint": "Waiting for the store's approval.",
+      "rejectedHint": "Your participation was not approved.",
+      "inactiveHint": "Participation deactivated.",
+      "acceptedVersion": "Rules accepted: version {n}",
+      "updatedRules": "The store updated the rules (version {n})."
+    },
+    "commissions": {
+      "title": "My commissions",
+      "description": "Send the invoice of each commission to get paid.",
+      "empty": "You have no closed commissions yet.",
+      "storeLabel": "Store {store}",
+      "sendInvoiceHint": "Send your invoice to release the payment."
+    },
+    "profile": {
+      "title": "My profile",
+      "description": "Your contact details and the Pix key to receive commissions.",
+      "email": "E-mail (cannot be changed)",
+      "name": "Name",
+      "phone": "Phone",
+      "instagram": "Instagram",
+      "city": "City",
+      "state": "State",
+      "pixTitle": "Pix key",
+      "pixHint": "The Pix key is used to pay your commissions.",
+      "save": "Save",
+      "saved": "Profile updated."
+    },
+    "signup": {
+      "eyebrow": "Campaign sign-up",
+      "discountBuyer": "Buyer discount",
+      "rewards": "Rewards",
+      "rules": "Campaign rules",
+      "closed": "This campaign is not accepting new sign-ups.",
+      "notFound": "Campaign not found.",
+      "formTitle": "Join the program",
+      "name": "Full name",
+      "email": "E-mail",
+      "instagram": "Instagram or social profile",
+      "password": "Password for the portal (minimum 10 characters)",
+      "accept": "I have read and accept the rules of this campaign (version {n}). I understand my participation depends on the store's approval.",
+      "submit": "Submit sign-up",
+      "submitting": "Sending…",
+      "doneTitle": "Sign-up received!",
+      "doneBody": "Your registration is waiting for the store's approval. Sign in to the portal with your e-mail and password to follow it.",
+      "goPortal": "Go to my portal",
+      "notReady": "Affiliate sign-up has not been enabled yet. Please try again later.",
+      "error": "Could not submit the sign-up.",
+      "loggedInTitle": "You are signed in as {name}",
+      "join": "Join this campaign",
+      "joined": "Sign-up sent! Wait for the store's approval.",
+      "haveAccount": "Already have an account? Sign in to the portal",
+      "discountPercent": "{value}%",
+      "rewardMonthly": "{month} · {type}"
     }
   }
 }

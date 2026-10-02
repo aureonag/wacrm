@@ -42,6 +42,40 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // Afiliados portal. Portal users (affiliates; app_metadata.aff_portal, set
+  // only by the server — migration 101) have NO CRM profile and must stay in
+  // the portal; everyone else is sent to the portal login when they open a
+  // portal page without a session.
+  const pathname = request.nextUrl.pathname
+  if (user?.app_metadata?.aff_portal === true) {
+    const inPortalArea =
+      pathname.startsWith('/portal') ||
+      pathname.startsWith('/inscricao') ||
+      pathname.startsWith('/api/portal') ||
+      pathname.startsWith('/api/public')
+    if (!inPortalArea) {
+      if (pathname.startsWith('/api/')) {
+        return withRefreshedCookies(NextResponse.json({ error: 'Forbidden' }, { status: 403 }))
+      }
+      const url = request.nextUrl.clone()
+      url.pathname = '/portal/afiliado'
+      url.search = ''
+      return withRefreshedCookies(NextResponse.redirect(url))
+    }
+    if (pathname === '/portal/entrar') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/portal/afiliado'
+      url.search = ''
+      return withRefreshedCookies(NextResponse.redirect(url))
+    }
+  }
+  if (!user && pathname.startsWith('/portal/afiliado')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/portal/entrar'
+    url.search = ''
+    return withRefreshedCookies(NextResponse.redirect(url))
+  }
+
   // Auth pages - redirect to dashboard if already logged in.
   // Exception: when an invite token is in the query string we
   // send the already-signed-in user to /join/<token> instead so

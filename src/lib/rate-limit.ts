@@ -192,6 +192,13 @@ export const RATE_LIMITS = {
    *  covers a busy kanban session (rapid drags, comments, checklist
    *  ticks) while still bounding a runaway script. */
   taskWrite: { limit: 120, windowMs: 60_000 },
+  /** Afiliados: public campaign page (peek), per IP. */
+  affiliatePeek: { limit: 30, windowMs: 60_000 },
+  /** Afiliados: public sign-up, per IP. Each success creates an auth user,
+   *  so this is the anti-abuse bucket: 5 per 10 minutes. */
+  affiliateSignup: { limit: 5, windowMs: 600_000 },
+  /** Afiliados: portal writes (profile, invoice upload), per user. */
+  affiliatePortalWrite: { limit: 30, windowMs: 60_000 },
 } as const;
 
 /** Test-only helper. Clears the in-memory state so unit tests don't

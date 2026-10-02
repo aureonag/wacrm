@@ -428,7 +428,9 @@
         "rewardGiftback": "{value}% em Giftback",
         "periodic": "Período definido · {start} a {end}",
         "recurrent": "Recorrente · desde {start}",
-        "participants": "{count, plural, one {# participante} other {# participantes}}"
+        "participants": "{count, plural, one {# participante} other {# participantes}}",
+        "copyLink": "Copiar link de inscrição",
+        "linkCopied": "Link de inscrição copiado."
       },
       "editor": {
         "back": "Voltar para campanhas",
@@ -3303,6 +3305,86 @@
       "attach": "Anexar arquivo",
       "fileTooLarge": "Arquivo muito grande (máx. 16 MB).",
       "uploadError": "Falha ao enviar o arquivo."
+    }
+  },
+  "Portal": {
+    "login": {
+      "title": "Portal do afiliado",
+      "subtitle": "Acompanhe suas campanhas e comissões.",
+      "email": "E-mail",
+      "password": "Senha",
+      "submit": "Entrar",
+      "submitting": "Entrando…",
+      "error": "E-mail ou senha incorretos.",
+      "notAffiliate": "Esta conta não é de afiliado. Use o login do CRM.",
+      "hint": "Ainda não é afiliado? Use o link de inscrição da campanha enviado pela loja."
+    },
+    "nav": {
+      "title": "Portal do afiliado",
+      "campaigns": "Campanhas",
+      "commissions": "Comissões",
+      "profile": "Meu perfil",
+      "signOut": "Sair"
+    },
+    "campaigns": {
+      "title": "Minhas campanhas",
+      "description": "Campanhas das quais você participa e seus cupons.",
+      "empty": "Você ainda não participa de nenhuma campanha.",
+      "emptyHint": "Use o link de inscrição enviado pela loja.",
+      "code": "Seu cupom",
+      "pendingHint": "Aguardando a aprovação da loja.",
+      "rejectedHint": "Sua participação não foi aprovada.",
+      "inactiveHint": "Participação desativada.",
+      "acceptedVersion": "Regras aceitas: versão {n}",
+      "updatedRules": "A loja atualizou as regras (versão {n})."
+    },
+    "commissions": {
+      "title": "Minhas comissões",
+      "description": "Envie a nota fiscal de cada comissão para receber o pagamento.",
+      "empty": "Você ainda não tem comissões fechadas.",
+      "storeLabel": "Loja {store}",
+      "sendInvoiceHint": "Envie sua nota fiscal para liberar o pagamento."
+    },
+    "profile": {
+      "title": "Meu perfil",
+      "description": "Seus dados de contato e a chave Pix para receber as comissões.",
+      "email": "E-mail (não pode ser alterado)",
+      "name": "Nome",
+      "phone": "Telefone",
+      "instagram": "Instagram",
+      "city": "Cidade",
+      "state": "UF",
+      "pixTitle": "Chave Pix",
+      "pixHint": "A chave Pix é usada para o pagamento das suas comissões.",
+      "save": "Salvar",
+      "saved": "Perfil atualizado."
+    },
+    "signup": {
+      "eyebrow": "Inscrição na campanha",
+      "discountBuyer": "Desconto do comprador",
+      "rewards": "Recompensas",
+      "rules": "Regras da campanha",
+      "closed": "Esta campanha não está recebendo novas inscrições.",
+      "notFound": "Campanha não encontrada.",
+      "formTitle": "Faça parte do programa",
+      "name": "Nome completo",
+      "email": "E-mail",
+      "instagram": "Instagram ou perfil social",
+      "password": "Senha para acessar o portal (mínimo 10 caracteres)",
+      "accept": "Li e aceito as regras desta campanha (versão {n}). Entendo que minha participação depende da aprovação da loja.",
+      "submit": "Enviar inscrição",
+      "submitting": "Enviando…",
+      "doneTitle": "Inscrição recebida!",
+      "doneBody": "Seu cadastro aguarda a aprovação da loja. Entre no portal com seu e-mail e senha para acompanhar.",
+      "goPortal": "Acessar meu portal",
+      "notReady": "O cadastro de afiliados ainda não foi ativado. Tente novamente mais tarde.",
+      "error": "Não foi possível enviar a inscrição.",
+      "loggedInTitle": "Você está logado como {name}",
+      "join": "Participar desta campanha",
+      "joined": "Inscrição enviada! Aguarde a aprovação da loja.",
+      "haveAccount": "Já tem conta? Entrar no portal",
+      "discountPercent": "{value}%",
+      "rewardMonthly": "{month} · {type}"
     }
   }
 }
