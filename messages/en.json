@@ -2445,6 +2445,11 @@
           "visible": "Always visible",
           "hidden": "Always hidden"
         },
+        "permissionsStateShort": {
+          "default": "Default",
+          "visible": "Visible",
+          "hidden": "Hidden"
+        },
         "permissionsUpdateError": "Failed to update permissions",
         "permissionsUpdatedToast": "Updated {name}'s permissions",
         "colMember": "Member",

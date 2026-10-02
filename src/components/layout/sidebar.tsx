@@ -227,9 +227,15 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     !item.module || isOwner || permissions.has(`comercial:${item.module}:view`);
   const visibleComercialItems = COMERCIAL_ITEMS.filter(canView);
   const canViewPlaybook = isOwner || permissions.has("comercial:playbook:view");
+  // Migration 093 — Chat had no gate at all; Operacional's menu entry
+  // now needs BOTH the pre-existing environment-access gate AND this
+  // permission (same "visibility only" scope as every other nav item,
+  // layered on top rather than replacing the environment check).
+  const canViewChat = isOwner || permissions.has("comercial:chat:view");
+  const canViewOperationalMenu = isOwner || permissions.has("comercial:operational:view");
 
   const showComercial = isOwner || hasComercialAccess;
-  const showOperational = isOwner || hasOperationalAccess;
+  const showOperational = isOwner || (hasOperationalAccess && canViewOperationalMenu);
   const showFinanceiro = isOwner;
 
   const currentSection = sectionForPath(pathname);
@@ -542,7 +548,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               </li>
             )}
 
-            {/* Chat — no gate (migration 084), every account member reaches it. */}
+            {/* Chat — gated by comercial:chat:view (migration 093); was
+                unconditional before (migration 084 only ever ensured the
+                routes themselves didn't block access). */}
+            {canViewChat && (
             <li>
               <SectionButton
                 icon={MessageSquare}
@@ -618,6 +627,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 </div>
               )}
             </li>
+            )}
 
             {/* Materiais — Comercial (Playbook + Apresentação Comercial) + Mídia (kickoffs), ambos em cascata. */}
             {canViewPlaybook && (

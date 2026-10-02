@@ -1,5 +1,5 @@
 // Sidebar nav items that can be shown/hidden via permissions (migration
-// 079) — mirrors the `module` values set on navItems in
+// 079, extended by 093) — mirrors the `module` values set on navItems in
 // components/layout/sidebar.tsx, and reuses that component's own
 // translation keys ("Sidebar" namespace) so labels never drift between
 // surfaces. Dashboard has no `module` there (never hideable), so it's
@@ -16,5 +16,12 @@ export const NAV_MODULES: { module: string; labelKey: string }[] = [
   { module: 'automations', labelKey: 'automations' },
   { module: 'flows', labelKey: 'flows' },
   { module: 'agents', labelKey: 'aiAgents' },
-  { module: 'playbook', labelKey: 'playbook' },
+  // The `playbook` module name is the gate's historical name (it used to
+  // just be the Playbook link); the section it now gates is labeled
+  // "Materiais" in the sidebar, so the label here follows that, not the
+  // module string — Allan didn't recognize "Playbook" as the same thing
+  // (2026-10-02).
+  { module: 'playbook', labelKey: 'materiais' },
+  { module: 'chat', labelKey: 'environment.chat' },
+  { module: 'operational', labelKey: 'environment.operational' },
 ];

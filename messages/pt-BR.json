@@ -2445,6 +2445,11 @@
           "visible": "Sempre visível",
           "hidden": "Sempre oculto"
         },
+        "permissionsStateShort": {
+          "default": "Padrão",
+          "visible": "Visível",
+          "hidden": "Oculto"
+        },
         "permissionsUpdateError": "Não foi possível atualizar as permissões",
         "permissionsUpdatedToast": "Permissões de {name} atualizadas",
         "colMember": "Membro",

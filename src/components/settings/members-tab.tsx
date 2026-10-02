@@ -799,7 +799,7 @@ export function MembersTab() {
           menu, consolidated into one dialog (see `managingMember` state
           comment above). */}
       <Dialog open={managingMember !== null} onOpenChange={(open) => !open && setManagingMember(null)}>
-        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-md">
+        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">
               {tCargo('accessDialogTitle', { name: managingMember?.full_name || t('unnamed') })}
@@ -866,9 +866,13 @@ export function MembersTab() {
                         setDraftNavOverrides((prev) => new Map(prev).set(module, v as NavOverrideState))
                       }
                     >
-                      <SelectTrigger className="w-40 bg-muted border-border text-foreground">
+                      {/* Short label in the closed trigger (the full
+                          "Padrão (segue o cargo)" text was getting
+                          clipped at the old width) — the dropdown's own
+                          options keep the fuller, descriptive text. */}
+                      <SelectTrigger className="w-44 shrink-0 bg-muted border-border text-foreground">
                         <SelectValue>
-                          {tCargo(`permissionsState.${draftNavOverrides.get(module) ?? 'default'}`)}
+                          {tCargo(`permissionsStateShort.${draftNavOverrides.get(module) ?? 'default'}`)}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>

@@ -2445,6 +2445,11 @@
           "visible": "항상 표시",
           "hidden": "항상 숨김"
         },
+        "permissionsStateShort": {
+          "default": "기본값",
+          "visible": "표시",
+          "hidden": "숨김"
+        },
         "permissionsUpdateError": "권한을 업데이트하지 못했습니다",
         "permissionsUpdatedToast": "{name}의 권한이 업데이트되었습니다",
         "colMember": "구성원",
