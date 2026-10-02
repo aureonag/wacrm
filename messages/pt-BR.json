@@ -332,7 +332,66 @@
     "sidebar": {
       "dashboard": "Dashboard",
       "boards": "Gestão de Tarefas",
-      "clients": "Clientes ativos"
+      "clients": "Clientes ativos",
+      "affiliates": "Afiliados"
+    },
+    "affiliates": {
+      "title": "Afiliados",
+      "description": "Gestão do programa de afiliados dos clientes: lojas, afiliados, campanhas e comissões.",
+      "noAccessTitle": "Sem acesso a Afiliados",
+      "noAccessHint": "Esta área é restrita a administradores.",
+      "notReadyTitle": "Módulo ainda não ativado",
+      "notReadyHint": "As tabelas do módulo Afiliados ainda não foram criadas no banco de dados.",
+      "error": "Não foi possível carregar os dados.",
+      "saveError": "Não foi possível salvar.",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "tabs": {
+        "overview": "Visão geral",
+        "clients": "Clientes"
+      },
+      "overview": {
+        "activeClients": "Clientes ativos",
+        "campaigns": "Campanhas ativas",
+        "affiliates": "Afiliados",
+        "suspended": "{count, plural, =0 {Nenhum suspenso} one {# suspenso} other {# suspensos}}"
+      },
+      "clients": {
+        "search": "Buscar por nome, CNPJ ou e-mail",
+        "add": "Novo cliente",
+        "addTitle": "Novo cliente",
+        "editTitle": "Editar cliente",
+        "formHint": "Dados da empresa que contratou a ferramenta de afiliados.",
+        "empty": "Nenhum cliente cadastrado ainda.",
+        "noResults": "Nenhum cliente encontrado.",
+        "active": "Ativo",
+        "suspended": "Suspenso",
+        "edit": "Editar",
+        "suspend": "Suspender acesso",
+        "reactivate": "Reativar acesso",
+        "remove": "Remover",
+        "removeTitle": "Remover {name}?",
+        "removeHint": "O cliente perde o acesso e sai da lista. Campanhas, comissões e histórico são preservados.",
+        "created": "Cliente cadastrado.",
+        "updated": "Cliente atualizado.",
+        "status_active": "Acesso reativado.",
+        "status_suspended": "Acesso suspenso.",
+        "status_removed": "Cliente removido.",
+        "fieldName": "Nome da loja",
+        "fieldLegalName": "Razão social",
+        "fieldCnpj": "CNPJ",
+        "fieldPlatform": "Plataforma",
+        "fieldContactName": "Contato",
+        "fieldContactEmail": "E-mail do contato",
+        "fieldContactPhone": "Telefone",
+        "fieldNotes": "Observações",
+        "platform_nuvemshop": "Nuvemshop",
+        "platform_tray": "Tray",
+        "platform_outra": "Outra",
+        "nUsers": "{count, plural, one {# usuário} other {# usuários}}",
+        "nCampaigns": "{count, plural, one {# campanha} other {# campanhas}}",
+        "nAffiliates": "{count, plural, one {# afiliado} other {# afiliados}}"
+      }
     },
     "dashboard": {
       "title": "Dashboard Operacional",
@@ -2378,6 +2437,7 @@
         "saving": "Salvando…",
         "permissionsAction": "Permissões de menu",
         "permissionsCount": "{count} {count, plural, =1 {ajuste} other {ajustes}}",
+        "permissionsDefault": "Padrão do cargo",
         "permissionsDialogTitle": "Permissões de menu — {name}",
         "permissionsDialogDesc": "Controle quais itens do menu lateral aparecem só para esta pessoa, independente do cargo dela. \"Padrão\" segue o que o cargo permite.",
         "permissionsState": {
@@ -2386,7 +2446,20 @@
           "hidden": "Sempre oculto"
         },
         "permissionsUpdateError": "Não foi possível atualizar as permissões",
-        "permissionsUpdatedToast": "Permissões de {name} atualizadas"
+        "permissionsUpdatedToast": "Permissões de {name} atualizadas",
+        "colMember": "Membro",
+        "colCargo": "Cargo",
+        "colSector": "Setor",
+        "colAccess": "Permissões",
+        "colActions": "Ações",
+        "fullAccess": "Acesso total",
+        "accessDialogTitle": "Gerenciar acesso — {name}",
+        "accessLevelLabel": "Nível de acesso",
+        "accessLevelHint": "Controla o que esta pessoa pode administrar no sistema (ex.: gerenciar outros membros) — diferente do Cargo acima, que só controla o que ela vê no menu lateral.",
+        "sectorSectionTitle": "Setor",
+        "permissionsSectionTitle": "Visibilidade do menu",
+        "accessUpdateError": "Não foi possível atualizar o acesso",
+        "accessUpdatedToast": "Acesso de {name} atualizado"
       }
     },
     "resetPassword": {
@@ -2645,6 +2718,8 @@
       "deleteBtn": "Excluir",
       "menuVisibilityTitle": "Visibilidade do menu lateral",
       "menuVisibilityDesc": "Atalho para tirar um item do menu de todos os cargos de uma vez, sem precisar editar cada um.",
+      "categoryNav": "Menu principal",
+      "categoryBusiness": "Negócios",
       "grantedToCount": "{count, plural, =0 {nenhum cargo} =1 {1 cargo} other {{count} cargos}}",
       "disableEverywhere": "Desativar para todos",
       "disableEverywhereToast": "\"{item}\" desativado em todos os cargos",

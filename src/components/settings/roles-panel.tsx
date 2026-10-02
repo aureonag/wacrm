@@ -39,6 +39,15 @@ const ENV_ICON: Record<PlatformEnvironment, typeof Briefcase> = {
   operational: Workflow,
 };
 
+// Splits the flat Comercial module list into two labeled groups instead
+// of one undifferentiated list — the 11 `comercial:*:view` nav modules
+// (sidebar visibility) read very differently from the CRM-object CRUD
+// modules (dashboard/pipelines/deals/contacts), and showing them
+// together under raw lowercase module strings was part of what Allan
+// found hard to scan (2026-10-01). Only `comercial` gets this split —
+// `operational` stays a flat list, out of scope for this pass.
+const NAV_MODULE_SET = new Set(NAV_MODULES.map((m) => m.module));
+
 export function RolesPanel() {
   const t = useTranslations('Settings.rolesPanel');
   const tEnv = useTranslations('Sidebar.environment');
@@ -385,28 +394,68 @@ export function RolesPanel() {
               <Label className="text-muted-foreground">{t('permissionsLabel')}</Label>
               {[...permissionsByEnvModule.entries()].map(([env, modules]) => {
                 const EnvIcon = ENV_ICON[env];
+                const moduleEntries = [...modules.entries()];
+                // Only Comercial gets split into Menu Principal vs
+                // Negócios — Operational stays a flat list (see the
+                // NAV_MODULE_SET comment above).
+                const navEntries = env === 'comercial' ? moduleEntries.filter(([m]) => NAV_MODULE_SET.has(m)) : [];
+                const otherEntries = env === 'comercial' ? moduleEntries.filter(([m]) => !NAV_MODULE_SET.has(m)) : moduleEntries;
                 return (
                   <div key={env} className="rounded-lg border border-border p-3">
                     <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <EnvIcon className="size-3.5" />
                       {tEnv(env)}
                     </div>
-                    <div className="space-y-2">
-                      {[...modules.entries()].map(([module, perms]) => (
-                        <div key={module} className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                          <span className="w-28 shrink-0 text-xs text-muted-foreground">{module}</span>
-                          {perms.map((perm) => (
-                            <label key={perm.id} className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
-                              <Checkbox
-                                checked={permissionIds.has(perm.id)}
-                                onCheckedChange={() => togglePermission(perm.id)}
-                              />
-                              {perm.label}
-                            </label>
+                    {navEntries.length > 0 && (
+                      <div className="mb-3">
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                          {t('categoryNav')}
+                        </p>
+                        <div className="space-y-2">
+                          {navEntries.map(([module, perms]) => (
+                            <div key={module} className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                              <span className="w-28 shrink-0 text-xs text-muted-foreground">
+                                {tSidebar(NAV_MODULES.find((m) => m.module === module)?.labelKey ?? module)}
+                              </span>
+                              {perms.map((perm) => (
+                                <label key={perm.id} className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
+                                  <Checkbox
+                                    checked={permissionIds.has(perm.id)}
+                                    onCheckedChange={() => togglePermission(perm.id)}
+                                  />
+                                  {perm.label}
+                                </label>
+                              ))}
+                            </div>
                           ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+                    {otherEntries.length > 0 && (
+                      <div>
+                        {env === 'comercial' && navEntries.length > 0 && (
+                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                            {t('categoryBusiness')}
+                          </p>
+                        )}
+                        <div className="space-y-2">
+                          {otherEntries.map(([module, perms]) => (
+                            <div key={module} className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                              <span className="w-28 shrink-0 text-xs text-muted-foreground">{module}</span>
+                              {perms.map((perm) => (
+                                <label key={perm.id} className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
+                                  <Checkbox
+                                    checked={permissionIds.has(perm.id)}
+                                    onCheckedChange={() => togglePermission(perm.id)}
+                                  />
+                                  {perm.label}
+                                </label>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

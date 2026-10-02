@@ -25,13 +25,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
-  Info,
   KeyRound,
   Loader2,
   Mail,
   MailX,
   Plus,
-  SlidersHorizontal,
   Trash2,
   UsersRound,
 } from 'lucide-react';
@@ -50,6 +48,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -157,11 +156,16 @@ export function MembersTab() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
   const [resettingMember, setResettingMember] = useState<Member | null>(null);
-  const [editingSectorsFor, setEditingSectorsFor] = useState<Member | null>(null);
+  // Single "Gerenciar acesso" dialog, replacing what used to be two
+  // separate dialogs (Setores, Permissões de menu) plus the inline base-
+  // Role select — Allan found the three scattered controls confusing,
+  // especially since Cargo and the base Role can have overlapping-sounding
+  // names (2026-10-01).
+  const [managingMember, setManagingMember] = useState<Member | null>(null);
   const [draftSectorIds, setDraftSectorIds] = useState<Set<string>>(new Set());
-  const [editingPermissionsFor, setEditingPermissionsFor] = useState<Member | null>(null);
   const [draftNavOverrides, setDraftNavOverrides] = useState<Map<string, NavOverrideState>>(new Map());
-  const [savingPermissions, setSavingPermissions] = useState(false);
+  const [draftRole, setDraftRole] = useState<AccountRole>('agent');
+  const [savingAccess, setSavingAccess] = useState(false);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
   );
@@ -224,54 +228,6 @@ export function MembersTab() {
     void loadEverything();
   }, [loadEverything]);
 
-  async function handleRoleChange(member: Member, nextRole: AccountRole) {
-    if (member.role === nextRole) return;
-    // Optimistic update — flip the dropdown immediately so the UI
-    // feels snappy. If the server PATCH fails we revert below so
-    // the dropdown doesn't lie about the persisted state.
-    const previousRole = member.role;
-    setPendingMemberAction(member.user_id);
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.user_id === member.user_id ? { ...m, role: nextRole } : m,
-      ),
-    );
-    try {
-      const res = await fetch(`/api/account/members/${member.user_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: nextRole }),
-      });
-      if (!res.ok) {
-        // Revert the optimistic flip. The toast on its own wasn't
-        // enough — the dropdown was left showing the new role
-        // forever, so the next interaction operated on a wrong
-        // baseline (re-trying the same change would no-op via the
-        // `member.role === nextRole` guard at the top).
-        setMembers((prev) =>
-          prev.map((m) =>
-            m.user_id === member.user_id ? { ...m, role: previousRole } : m,
-          ),
-        );
-        const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to update role');
-        return;
-      }
-      toast.success(t('updatedToast', { name: member.full_name || t('unnamed'), role: tRoles(nextRole) }));
-    } catch (err) {
-      // Same revert on network failure.
-      setMembers((prev) =>
-        prev.map((m) =>
-          m.user_id === member.user_id ? { ...m, role: previousRole } : m,
-        ),
-      );
-      console.error('[MembersTab] role change error:', err);
-      toast.error('Could not reach the server');
-    } finally {
-      setPendingMemberAction(null);
-    }
-  }
-
   async function handleCargoChange(member: Member, nextRoleId: string | null) {
     if (member.role_id === nextRoleId) return;
     const previous = member.role_id;
@@ -296,82 +252,89 @@ export function MembersTab() {
     }
   }
 
-  function openSectorsEditor(member: Member) {
-    setEditingSectorsFor(member);
+  function openAccessManager(member: Member) {
     setDraftSectorIds(new Set(member.sector_ids));
-  }
-
-  async function handleSaveSectors() {
-    if (!editingSectorsFor) return;
-    const sectorIds = [...draftSectorIds];
-    try {
-      const res = await fetch(`/api/account/members/${editingSectorsFor.user_id}/sectors`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sector_ids: sectorIds }),
-      });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || tCargo('sectorsUpdateError'));
-        return;
-      }
-      setMembers((prev) =>
-        prev.map((m) => (m.user_id === editingSectorsFor.user_id ? { ...m, sector_ids: sectorIds } : m)),
-      );
-      toast.success(tCargo('sectorsUpdatedToast', { name: editingSectorsFor.full_name || t('unnamed') }));
-      setEditingSectorsFor(null);
-    } catch (err) {
-      console.error('[MembersTab] sectors save error:', err);
-      toast.error('Could not reach the server');
-    }
-  }
-
-  function openPermissionsEditor(member: Member) {
     const draft = new Map<string, NavOverrideState>();
     for (const { module } of NAV_MODULES) {
       const granted = member.nav_overrides[module];
       draft.set(module, granted === undefined ? 'default' : granted ? 'visible' : 'hidden');
     }
     setDraftNavOverrides(draft);
-    setEditingPermissionsFor(member);
+    // Owner row never opens this dialog (see the `!isOwnerRow` guard at
+    // the call site), but guard here too since `draftRole` must be one
+    // of the editable values the Select renders.
+    setDraftRole(member.role === 'owner' ? 'agent' : member.role);
+    setManagingMember(member);
   }
 
-  async function handleSavePermissions() {
-    if (!editingPermissionsFor) return;
-    const overrides: { permission_id: string; granted: boolean }[] = [];
-    const nextOverrides: Record<string, boolean> = {};
-    for (const [module, state] of draftNavOverrides) {
-      if (state === 'default') continue;
-      const permissionId = navPermissionIdByModule.get(module);
-      if (!permissionId) continue; // catalog not loaded yet — shouldn't happen once the dialog is open
-      const granted = state === 'visible';
-      overrides.push({ permission_id: permissionId, granted });
-      nextOverrides[module] = granted;
-    }
-    setSavingPermissions(true);
+  // One dialog now covers what used to be three independent controls
+  // (base Role select, Setores dialog, Permissões de menu dialog) — see
+  // the `managingMember` state comment above. Each save call stays its
+  // own existing endpoint; firing them together is safe since all three
+  // are full-replace/idempotent.
+  async function handleSaveAccess() {
+    if (!managingMember) return;
+    setSavingAccess(true);
     try {
-      const res = await fetch(`/api/account/members/${editingPermissionsFor.user_id}/permissions`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overrides }),
-      });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || tCargo('permissionsUpdateError'));
+      const tasks: Promise<Response>[] = [];
+
+      if (draftRole !== managingMember.role) {
+        tasks.push(
+          fetch(`/api/account/members/${managingMember.user_id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: draftRole }),
+          }),
+        );
+      }
+
+      const sectorIds = [...draftSectorIds];
+      tasks.push(
+        fetch(`/api/account/members/${managingMember.user_id}/sectors`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sector_ids: sectorIds }),
+        }),
+      );
+
+      const overrides: { permission_id: string; granted: boolean }[] = [];
+      const nextOverrides: Record<string, boolean> = {};
+      for (const [module, state] of draftNavOverrides) {
+        if (state === 'default') continue;
+        const permissionId = navPermissionIdByModule.get(module);
+        if (!permissionId) continue; // catalog not loaded yet — shouldn't happen once the dialog is open
+        const granted = state === 'visible';
+        overrides.push({ permission_id: permissionId, granted });
+        nextOverrides[module] = granted;
+      }
+      tasks.push(
+        fetch(`/api/account/members/${managingMember.user_id}/permissions`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ overrides }),
+        }),
+      );
+
+      const results = await Promise.all(tasks);
+      if (results.some((res) => !res.ok)) {
+        toast.error(tCargo('accessUpdateError'));
         return;
       }
+
       setMembers((prev) =>
         prev.map((m) =>
-          m.user_id === editingPermissionsFor.user_id ? { ...m, nav_overrides: nextOverrides } : m,
+          m.user_id === managingMember.user_id
+            ? { ...m, role: draftRole, sector_ids: sectorIds, nav_overrides: nextOverrides }
+            : m,
         ),
       );
-      toast.success(tCargo('permissionsUpdatedToast', { name: editingPermissionsFor.full_name || t('unnamed') }));
-      setEditingPermissionsFor(null);
+      toast.success(tCargo('accessUpdatedToast', { name: managingMember.full_name || t('unnamed') }));
+      setManagingMember(null);
     } catch (err) {
-      console.error('[MembersTab] permissions save error:', err);
+      console.error('[MembersTab] access save error:', err);
       toast.error('Could not reach the server');
     } finally {
-      setSavingPermissions(false);
+      setSavingAccess(false);
     }
   }
 
@@ -471,6 +434,18 @@ export function MembersTab() {
       {/* Roster */}
       <Card>
         <CardContent className="p-0">
+          {/* Column headers — desktop only. The grid-template-columns
+              here must stay in sync with each row's below so headers
+              line up; previously the row was a loose flex cluster with
+              no headers at all, which read as unaligned/disorganized
+              (Allan, 2026-10-01). */}
+          <div className="hidden border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(180px,2fr)_132px_110px_150px_76px] sm:items-center sm:gap-4">
+            <span>{tCargo('colMember')}</span>
+            <span>{tCargo('colCargo')}</span>
+            <span>{tCargo('colSector')}</span>
+            <span>{tCargo('colAccess')}</span>
+            <span className="text-right">{tCargo('colActions')}</span>
+          </div>
           <ul className="divide-y divide-border">
             {members.map((member) => {
               const roleMeta = ROLE_META[member.role];
@@ -489,14 +464,13 @@ export function MembersTab() {
               return (
                 <li
                   key={member.user_id}
-                  // Mobile: stack identity (avatar+name+email) above the
-                  // role/remove actions so the role dropdown's fixed
-                  // 128px width doesn't force the name into a 50-pixel
-                  // truncation. Desktop (sm+): everything inline as
-                  // before.
-                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
+                  // Mobile: stack as a single column. Desktop (sm+): a
+                  // grid whose columns match the header above —
+                  // Membro | Cargo | Setor | Permissões | Ações.
+                  className="grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-[minmax(180px,2fr)_132px_110px_150px_76px] sm:items-center sm:gap-4"
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-4">
+                  {/* Membro */}
+                  <div className="flex min-w-0 items-center gap-3">
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -537,35 +511,40 @@ export function MembersTab() {
                             {t('you')}
                           </Badge>
                         )}
+                        {/* Owner badge moved here from its own column —
+                            it's a fixed account attribute (there's only
+                            ever one), not something anyone picks from a
+                            dropdown, so it doesn't deserve column space
+                            next to the two real per-person controls
+                            (Allan, 2026-10-01). */}
+                        {isOwnerRow && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                            <RoleIcon className="size-3" />
+                            {tRoles('owner')}
+                          </span>
+                        )}
                       </div>
                       {member.email && (
                         <p className="truncate text-xs text-muted-foreground">
                           {member.email}
                         </p>
                       )}
+                      <p className="truncate text-[11px] text-muted-foreground/70">
+                        {t('joined', { date: fmtDate(member.joined_at) })}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Joined date stays desktop-only. The mobile row's
-                      vertical density makes the joined date noise. */}
-                  <div className="hidden sm:block text-right text-xs text-muted-foreground">
-                    {t('joined', { date: fmtDate(member.joined_at) })}
-                  </div>
-
-                  {/* Actions cluster. On mobile this is its own row
-                      below the identity block; on desktop it sits
-                      inline. Items align to the start on mobile so the
-                      role dropdown lines up under the avatar. */}
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Cargo (migration 058) — independent of the base
-                        Role select below; assignable to any member
-                        including the owner and self. */}
+                  {/* Cargo (migration 058) — kept as a quick inline
+                      action; assignable to any member including the
+                      owner and self. */}
+                  <div>
                     {canManageMembers ? (
                       <Select
                         value={member.role_id ?? '__none'}
                         onValueChange={(v) => handleCargoChange(member, v === '__none' ? null : (v as string))}
                       >
-                        <SelectTrigger className="w-32 bg-muted border-border text-foreground">
+                        <SelectTrigger className="w-full bg-muted border-border text-foreground">
                           <SelectValue>
                             {roles.find((r) => r.id === member.role_id)?.name ?? tCargo('none')}
                           </SelectValue>
@@ -584,116 +563,49 @@ export function MembersTab() {
                         {roles.find((r) => r.id === member.role_id)?.name ?? tCargo('none')}
                       </span>
                     )}
+                  </div>
 
-                    {/* Setores (migration 058) — independent of Cargo. */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openSectorsEditor(member)}
-                      disabled={!canManageMembers}
-                      className="border-border text-muted-foreground hover:bg-muted"
-                    >
-                      {member.sector_ids.length > 0
-                        ? tCargo('sectorsCount', { count: member.sector_ids.length })
-                        : tCargo('none')}
-                    </Button>
+                  {/* Setor — display only; editing happens in the
+                      "Gerenciar acesso" panel (Permissões column) along
+                      with Nível de acesso and visibilidade do menu. */}
+                  <div className="text-xs text-muted-foreground">
+                    {member.sector_ids.length > 0
+                      ? tCargo('sectorsCount', { count: member.sector_ids.length })
+                      : tCargo('none')}
+                  </div>
 
-                    {/* Per-person menu-visibility overrides (migration
-                        079) — independent of Cargo, same pattern as
-                        Setores above. */}
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openPermissionsEditor(member)}
-                            disabled={!canManageMembers}
-                            className="border-border text-muted-foreground hover:bg-muted"
-                          >
-                            <SlidersHorizontal className="size-4" />
-                            {Object.keys(member.nav_overrides).length > 0
-                              ? tCargo('permissionsCount', { count: Object.keys(member.nav_overrides).length })
-                              : null}
-                          </Button>
-                        }
-                      />
-                      <TooltipContent>{tCargo('permissionsAction')}</TooltipContent>
-                    </Tooltip>
-
-                    {/* "Tipo" (base account role — Administrador/Agente/
-                        Visualizador) explained on hover: this is
-                        distinct from "Cargo" above, which happens to
-                        share the word "Administrador" as one of its
-                        own custom names and confused Allan into asking
-                        for this. */}
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <button
-                            type="button"
-                            aria-label={tRoles('infoLabel')}
-                            className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
-                          />
-                        }
+                  {/* Permissões — single entry point into the combined
+                      "Gerenciar acesso" dialog (Nível de acesso + Setor +
+                      visibilidade do menu), replacing what used to be
+                      three separate controls (Setores button, Ajustes
+                      button, base-Role select) plus a static info icon
+                      (Allan, 2026-10-01). */}
+                  <div>
+                    {isOwnerRow ? (
+                      <span className="text-xs text-muted-foreground">{tCargo('fullAccess')}</span>
+                    ) : canManageMembers ? (
+                      <button
+                        type="button"
+                        onClick={() => openAccessManager(member)}
+                        className="text-xs font-medium text-primary hover:underline"
                       >
-                        <Info className="size-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent className="block max-w-64 space-y-1.5 text-left">
-                        <p>
-                          <span className="font-semibold">{tRoles('owner')}:</span> {tRoles('ownerHint')}
-                        </p>
-                        <p>
-                          <span className="font-semibold">{tRoles('admin')}:</span> {tRoles('adminHint')}
-                        </p>
-                        <p>
-                          <span className="font-semibold">{tRoles('agent')}:</span> {tRoles('agentHint')}
-                        </p>
-                        <p>
-                          <span className="font-semibold">{tRoles('viewer')}:</span> {tRoles('viewerHint')}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    {/* Role display / editor. Inline Select is admin+
-                        only AND not allowed on the owner row (owner
-                        changes go through transfer, which lands later). */}
-                    {canManageMembers && !isOwnerRow && !isSelf ? (
-                      <Select
-                        value={member.role}
-                        onValueChange={(v) =>
-                          // Base UI Select can emit null on clear. We
-                          // don't expose a clear affordance, so the
-                          // guard is defensive — but the typed
-                          // signature requires it.
-                          v && handleRoleChange(member, v as AccountRole)
-                        }
-                      >
-                        <SelectTrigger
-                          className="w-32 bg-muted border-border text-foreground"
-                          disabled={isBusy}
-                        >
-                          <SelectValue>{tRoles(member.role)}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {EDITABLE_ROLES.map((r) => (
-                            <SelectItem key={r.value} value={r.value}>
-                              {tRoles(r.value)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {Object.keys(member.nav_overrides).length > 0
+                          ? tCargo('permissionsCount', { count: Object.keys(member.nav_overrides).length })
+                          : tCargo('permissionsDefault')}
+                      </button>
                     ) : (
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${roleMeta.className}`}
-                      >
-                        <RoleIcon className="size-3.5" />
-                        {tRoles(member.role)}
+                      <span className="text-xs text-muted-foreground">
+                        {Object.keys(member.nav_overrides).length > 0
+                          ? tCargo('permissionsCount', { count: Object.keys(member.nav_overrides).length })
+                          : tCargo('permissionsDefault')}
                       </span>
                     )}
+                  </div>
 
-                    {/* Remove. Admin+ only; never on the owner row;
-                        never on yourself. Pre-polish styling was
+                  {/* Ações */}
+                  <div className="flex items-center justify-start gap-2 sm:justify-end">
+                    {/* Reset password. Admin+ only; never on the owner
+                        row; never on yourself. Pre-polish styling was
                         neutral-default + red-on-hover — the
                         destructive intent was invisible until the
                         user moused over. Now red is the default
@@ -883,98 +795,108 @@ export function MembersTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editingSectorsFor !== null} onOpenChange={(open) => !open && setEditingSectorsFor(null)}>
-        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">
-              {tCargo('sectorsDialogTitle', { name: editingSectorsFor?.full_name || t('unnamed') })}
-            </DialogTitle>
-          </DialogHeader>
-          {sectors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{tCargo('noSectorsYet')}</p>
-          ) : (
-            <div className="space-y-2">
-              {sectors.map((sector) => (
-                <label key={sector.id} className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground">
-                  <Checkbox
-                    checked={draftSectorIds.has(sector.id)}
-                    onCheckedChange={() =>
-                      setDraftSectorIds((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(sector.id)) next.delete(sector.id);
-                        else next.add(sector.id);
-                        return next;
-                      })
-                    }
-                  />
-                  {sector.name}
-                </label>
-              ))}
-            </div>
-          )}
-          <DialogFooter className="bg-popover border-border">
-            <Button
-              variant="outline"
-              onClick={() => setEditingSectorsFor(null)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t('cancel')}
-            </Button>
-            <Button onClick={handleSaveSectors} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              {tCargo('save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={editingPermissionsFor !== null} onOpenChange={(open) => !open && setEditingPermissionsFor(null)}>
+      {/* Gerenciar acesso — Nível de acesso + Setor + Visibilidade do
+          menu, consolidated into one dialog (see `managingMember` state
+          comment above). */}
+      <Dialog open={managingMember !== null} onOpenChange={(open) => !open && setManagingMember(null)}>
         <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">
-              {tCargo('permissionsDialogTitle', { name: editingPermissionsFor?.full_name || t('unnamed') })}
+              {tCargo('accessDialogTitle', { name: managingMember?.full_name || t('unnamed') })}
             </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {tCargo('permissionsDialogDesc')}
-            </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] space-y-1 overflow-y-auto pr-1">
-            {NAV_MODULES.map(({ module, labelKey }) => (
-              <div key={module} className="flex items-center justify-between gap-3 py-1.5">
-                <span className="text-sm text-foreground">{tSidebar(labelKey)}</span>
-                <Select
-                  value={draftNavOverrides.get(module) ?? 'default'}
-                  onValueChange={(v) =>
-                    setDraftNavOverrides((prev) => new Map(prev).set(module, v as NavOverrideState))
-                  }
-                >
-                  <SelectTrigger className="w-40 bg-muted border-border text-foreground">
-                    <SelectValue>
-                      {tCargo(`permissionsState.${draftNavOverrides.get(module) ?? 'default'}`)}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">{tCargo('permissionsState.default')}</SelectItem>
-                    <SelectItem value="visible">{tCargo('permissionsState.visible')}</SelectItem>
-                    <SelectItem value="hidden">{tCargo('permissionsState.hidden')}</SelectItem>
-                  </SelectContent>
-                </Select>
+
+          <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
+            {/* Nível de acesso — base account role (admin/agent/viewer).
+                Distinct from Cargo, which stays editable inline in the
+                roster and only controls menu/module visibility. */}
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">{tCargo('accessLevelLabel')}</Label>
+              <Select value={draftRole} onValueChange={(v) => v && setDraftRole(v as AccountRole)}>
+                <SelectTrigger className="w-full bg-muted border-border text-foreground">
+                  <SelectValue>{tRoles(draftRole)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {EDITABLE_ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {tRoles(r.value)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{tCargo('accessLevelHint')}</p>
+            </div>
+
+            <div>
+              <Label className="text-muted-foreground">{tCargo('sectorSectionTitle')}</Label>
+              {sectors.length === 0 ? (
+                <p className="mt-1.5 text-sm text-muted-foreground">{tCargo('noSectorsYet')}</p>
+              ) : (
+                <div className="mt-1.5 space-y-2">
+                  {sectors.map((sector) => (
+                    <label key={sector.id} className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground">
+                      <Checkbox
+                        checked={draftSectorIds.has(sector.id)}
+                        onCheckedChange={() =>
+                          setDraftSectorIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(sector.id)) next.delete(sector.id);
+                            else next.add(sector.id);
+                            return next;
+                          })
+                        }
+                      />
+                      {sector.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-muted-foreground">{tCargo('permissionsSectionTitle')}</Label>
+              <p className="mt-1 text-xs text-muted-foreground">{tCargo('permissionsDialogDesc')}</p>
+              <div className="mt-1.5 space-y-1">
+                {NAV_MODULES.map(({ module, labelKey }) => (
+                  <div key={module} className="flex items-center justify-between gap-3 py-1.5">
+                    <span className="text-sm text-foreground">{tSidebar(labelKey)}</span>
+                    <Select
+                      value={draftNavOverrides.get(module) ?? 'default'}
+                      onValueChange={(v) =>
+                        setDraftNavOverrides((prev) => new Map(prev).set(module, v as NavOverrideState))
+                      }
+                    >
+                      <SelectTrigger className="w-40 bg-muted border-border text-foreground">
+                        <SelectValue>
+                          {tCargo(`permissionsState.${draftNavOverrides.get(module) ?? 'default'}`)}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">{tCargo('permissionsState.default')}</SelectItem>
+                        <SelectItem value="visible">{tCargo('permissionsState.visible')}</SelectItem>
+                        <SelectItem value="hidden">{tCargo('permissionsState.hidden')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
+
           <DialogFooter className="bg-popover border-border">
             <Button
               variant="outline"
-              onClick={() => setEditingPermissionsFor(null)}
+              onClick={() => setManagingMember(null)}
               className="border-border text-muted-foreground hover:bg-muted"
             >
               {t('cancel')}
             </Button>
             <Button
-              onClick={handleSavePermissions}
-              disabled={savingPermissions}
+              onClick={handleSaveAccess}
+              disabled={savingAccess}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {savingPermissions ? tCargo('saving') : tCargo('save')}
+              {savingAccess ? tCargo('saving') : tCargo('save')}
             </Button>
           </DialogFooter>
         </DialogContent>

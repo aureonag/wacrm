@@ -332,7 +332,66 @@
     "sidebar": {
       "dashboard": "대시보드",
       "boards": "업무 관리",
-      "clients": "활성 고객"
+      "clients": "활성 고객",
+      "affiliates": "Affiliates"
+    },
+    "affiliates": {
+      "title": "Affiliates",
+      "description": "Manage the affiliate program of your clients: stores, affiliates, campaigns and commissions.",
+      "noAccessTitle": "No access to Affiliates",
+      "noAccessHint": "This area is restricted to administrators.",
+      "notReadyTitle": "Module not enabled yet",
+      "notReadyHint": "The Affiliates module tables have not been created in the database yet.",
+      "error": "Could not load data.",
+      "saveError": "Could not save.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "tabs": {
+        "overview": "Overview",
+        "clients": "Clients"
+      },
+      "overview": {
+        "activeClients": "Active clients",
+        "campaigns": "Active campaigns",
+        "affiliates": "Affiliates",
+        "suspended": "{count, plural, =0 {None suspended} other {# suspended}}"
+      },
+      "clients": {
+        "search": "Search by name, tax ID or e-mail",
+        "add": "New client",
+        "addTitle": "New client",
+        "editTitle": "Edit client",
+        "formHint": "Company that subscribed to the affiliate tool.",
+        "empty": "No clients yet.",
+        "noResults": "No clients found.",
+        "active": "Active",
+        "suspended": "Suspended",
+        "edit": "Edit",
+        "suspend": "Suspend access",
+        "reactivate": "Reactivate access",
+        "remove": "Remove",
+        "removeTitle": "Remove {name}?",
+        "removeHint": "The client loses access and leaves the list. Campaigns, commissions and history are kept.",
+        "created": "Client created.",
+        "updated": "Client updated.",
+        "status_active": "Access reactivated.",
+        "status_suspended": "Access suspended.",
+        "status_removed": "Client removed.",
+        "fieldName": "Store name",
+        "fieldLegalName": "Legal name",
+        "fieldCnpj": "Tax ID (CNPJ)",
+        "fieldPlatform": "Platform",
+        "fieldContactName": "Contact",
+        "fieldContactEmail": "Contact e-mail",
+        "fieldContactPhone": "Phone",
+        "fieldNotes": "Notes",
+        "platform_nuvemshop": "Nuvemshop",
+        "platform_tray": "Tray",
+        "platform_outra": "Other",
+        "nUsers": "{count, plural, one {# user} other {# users}}",
+        "nCampaigns": "{count, plural, one {# campaign} other {# campaigns}}",
+        "nAffiliates": "{count, plural, one {# affiliate} other {# affiliates}}"
+      }
     },
     "dashboard": {
       "title": "운영 대시보드",
@@ -2378,6 +2437,7 @@
         "saving": "저장 중…",
         "permissionsAction": "메뉴 권한",
         "permissionsCount": "재정의 {count}개",
+        "permissionsDefault": "직책 기본값",
         "permissionsDialogTitle": "메뉴 권한 — {name}",
         "permissionsDialogDesc": "역할과 상관없이 이 사람에게만 표시되는 사이드바 항목을 제어합니다. \"기본값\"은 역할이 허용하는 대로 따릅니다.",
         "permissionsState": {
@@ -2386,7 +2446,20 @@
           "hidden": "항상 숨김"
         },
         "permissionsUpdateError": "권한을 업데이트하지 못했습니다",
-        "permissionsUpdatedToast": "{name}의 권한이 업데이트되었습니다"
+        "permissionsUpdatedToast": "{name}의 권한이 업데이트되었습니다",
+        "colMember": "구성원",
+        "colCargo": "직책",
+        "colSector": "부서",
+        "colAccess": "권한",
+        "colActions": "작업",
+        "fullAccess": "전체 접근",
+        "accessDialogTitle": "접근 관리 — {name}",
+        "accessLevelLabel": "접근 수준",
+        "accessLevelHint": "이 사람이 시스템에서 관리할 수 있는 범위를 제어합니다(예: 다른 구성원 관리) — 위의 직책과 달리 사이드바에 표시되는 항목만 제어하는 것이 아닙니다.",
+        "sectorSectionTitle": "부서",
+        "permissionsSectionTitle": "메뉴 표시 여부",
+        "accessUpdateError": "접근 권한을 업데이트하지 못했습니다",
+        "accessUpdatedToast": "{name}의 접근 권한이 업데이트되었습니다"
       }
     },
     "resetPassword": {
@@ -2645,6 +2718,8 @@
       "deleteBtn": "삭제",
       "menuVisibilityTitle": "사이드바 표시 여부",
       "menuVisibilityDesc": "각 역할을 일일이 수정하지 않고 한 번에 모든 역할의 메뉴에서 항목을 제거하는 단축 기능입니다.",
+      "categoryNav": "메인 메뉴",
+      "categoryBusiness": "비즈니스",
       "grantedToCount": "역할 {count}개",
       "disableEverywhere": "전체 비활성화",
       "disableEverywhereToast": "\"{item}\"이(가) 모든 역할에서 비활성화되었습니다",

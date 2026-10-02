@@ -332,7 +332,66 @@
     "sidebar": {
       "dashboard": "Dashboard",
       "boards": "Task Management",
-      "clients": "Active clients"
+      "clients": "Active clients",
+      "affiliates": "Affiliates"
+    },
+    "affiliates": {
+      "title": "Affiliates",
+      "description": "Manage the affiliate program of your clients: stores, affiliates, campaigns and commissions.",
+      "noAccessTitle": "No access to Affiliates",
+      "noAccessHint": "This area is restricted to administrators.",
+      "notReadyTitle": "Module not enabled yet",
+      "notReadyHint": "The Affiliates module tables have not been created in the database yet.",
+      "error": "Could not load data.",
+      "saveError": "Could not save.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "tabs": {
+        "overview": "Overview",
+        "clients": "Clients"
+      },
+      "overview": {
+        "activeClients": "Active clients",
+        "campaigns": "Active campaigns",
+        "affiliates": "Affiliates",
+        "suspended": "{count, plural, =0 {None suspended} other {# suspended}}"
+      },
+      "clients": {
+        "search": "Search by name, tax ID or e-mail",
+        "add": "New client",
+        "addTitle": "New client",
+        "editTitle": "Edit client",
+        "formHint": "Company that subscribed to the affiliate tool.",
+        "empty": "No clients yet.",
+        "noResults": "No clients found.",
+        "active": "Active",
+        "suspended": "Suspended",
+        "edit": "Edit",
+        "suspend": "Suspend access",
+        "reactivate": "Reactivate access",
+        "remove": "Remove",
+        "removeTitle": "Remove {name}?",
+        "removeHint": "The client loses access and leaves the list. Campaigns, commissions and history are kept.",
+        "created": "Client created.",
+        "updated": "Client updated.",
+        "status_active": "Access reactivated.",
+        "status_suspended": "Access suspended.",
+        "status_removed": "Client removed.",
+        "fieldName": "Store name",
+        "fieldLegalName": "Legal name",
+        "fieldCnpj": "Tax ID (CNPJ)",
+        "fieldPlatform": "Platform",
+        "fieldContactName": "Contact",
+        "fieldContactEmail": "Contact e-mail",
+        "fieldContactPhone": "Phone",
+        "fieldNotes": "Notes",
+        "platform_nuvemshop": "Nuvemshop",
+        "platform_tray": "Tray",
+        "platform_outra": "Other",
+        "nUsers": "{count, plural, one {# user} other {# users}}",
+        "nCampaigns": "{count, plural, one {# campaign} other {# campaigns}}",
+        "nAffiliates": "{count, plural, one {# affiliate} other {# affiliates}}"
+      }
     },
     "dashboard": {
       "title": "Operational Dashboard",
@@ -2378,6 +2437,7 @@
         "saving": "Saving…",
         "permissionsAction": "Menu permissions",
         "permissionsCount": "{count} {count, plural, =1 {override} other {overrides}}",
+        "permissionsDefault": "Follows cargo",
         "permissionsDialogTitle": "Menu permissions — {name}",
         "permissionsDialogDesc": "Control which sidebar items show up for this person only, regardless of their role. \"Default\" follows whatever their role allows.",
         "permissionsState": {
@@ -2386,7 +2446,20 @@
           "hidden": "Always hidden"
         },
         "permissionsUpdateError": "Failed to update permissions",
-        "permissionsUpdatedToast": "Updated {name}'s permissions"
+        "permissionsUpdatedToast": "Updated {name}'s permissions",
+        "colMember": "Member",
+        "colCargo": "Cargo",
+        "colSector": "Sector",
+        "colAccess": "Permissions",
+        "colActions": "Actions",
+        "fullAccess": "Full access",
+        "accessDialogTitle": "Manage access — {name}",
+        "accessLevelLabel": "Access level",
+        "accessLevelHint": "Controls what this person can administer in the system (e.g. managing other members) — different from Cargo above, which only controls what shows up in the sidebar.",
+        "sectorSectionTitle": "Sector",
+        "permissionsSectionTitle": "Menu visibility",
+        "accessUpdateError": "Failed to update access",
+        "accessUpdatedToast": "Updated {name}'s access"
       }
     },
     "resetPassword": {
@@ -2645,6 +2718,8 @@
       "deleteBtn": "Delete",
       "menuVisibilityTitle": "Sidebar visibility",
       "menuVisibilityDesc": "Shortcut to remove an item from every role's menu at once, instead of editing each one.",
+      "categoryNav": "Main menu",
+      "categoryBusiness": "Business",
       "grantedToCount": "{count, plural, =0 {no roles} =1 {1 role} other {{count} roles}}",
       "disableEverywhere": "Disable for all",
       "disableEverywhereToast": "\"{item}\" disabled for every role",
