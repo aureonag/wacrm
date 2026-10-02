@@ -806,7 +806,7 @@ export function MembersTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
+          <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-4">
             {/* Nível de acesso — base account role (admin/agent/viewer).
                 Distinct from Cargo, which stays editable inline in the
                 roster and only controls menu/module visibility. */}
