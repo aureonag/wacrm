@@ -866,19 +866,22 @@ export function MembersTab() {
                         setDraftNavOverrides((prev) => new Map(prev).set(module, v as NavOverrideState))
                       }
                     >
-                      {/* Short label in the closed trigger (the full
-                          "Padrão (segue o cargo)" text was getting
-                          clipped at the old width) — the dropdown's own
-                          options keep the fuller, descriptive text. */}
+                      {/* Short labels everywhere (trigger AND options) —
+                          the dropdown's open panel matches the trigger's
+                          width, so the longer "Padrão (segue o cargo)"
+                          text was clipping there too, not just in the
+                          closed trigger. The section description above
+                          already explains what "Padrão" means, so the
+                          parenthetical was redundant anyway. */}
                       <SelectTrigger className="w-44 shrink-0 bg-muted border-border text-foreground">
                         <SelectValue>
                           {tCargo(`permissionsStateShort.${draftNavOverrides.get(module) ?? 'default'}`)}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">{tCargo('permissionsState.default')}</SelectItem>
-                        <SelectItem value="visible">{tCargo('permissionsState.visible')}</SelectItem>
-                        <SelectItem value="hidden">{tCargo('permissionsState.hidden')}</SelectItem>
+                        <SelectItem value="default">{tCargo('permissionsStateShort.default')}</SelectItem>
+                        <SelectItem value="visible">{tCargo('permissionsStateShort.visible')}</SelectItem>
+                        <SelectItem value="hidden">{tCargo('permissionsStateShort.hidden')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
