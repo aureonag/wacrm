@@ -1936,7 +1936,17 @@
       "toastImported": "{count} deals imported",
       "toastDeleted": "{count} companies deleted",
       "toastFailedDelete": "Could not delete the selected companies",
-      "selectRowLabel": "Select {company}"
+      "selectRowLabel": "Select {company}",
+      "listLabel": "List",
+      "destinationLabel": "Destination",
+      "newList": "Start a new list",
+      "destinationMismatch": "The menu is on {menu}, but this list goes to {destination}.",
+      "retarget": "Change destination to {name}",
+      "retargeted": "List destination changed to {name}.",
+      "retargetFailed": "Could not change the list destination.",
+      "confirmImportTitle": "Confirm import",
+      "confirmImportDesc": "Send {count, plural, one {# company} other {# companies}} to the {pipeline} pipeline?",
+      "confirmImportButton": "Import to {pipeline}"
     }
   },
   "Broadcasts": {

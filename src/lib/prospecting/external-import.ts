@@ -374,6 +374,11 @@ export async function createExternalRun(
     instagram_followers: c.instagram_followers,
     google_rating: c.google_rating,
     google_review_count: c.google_review_count,
+    // Pre-selected: the background job that normally scores/selects candidates
+    // may not be running, and a list that arrives with nothing ticked makes
+    // "Importar selecionados" import zero. The job, when it does run, still
+    // overrides this per candidate (duplicates end up unselected).
+    selected: true,
     source_data: {
       origin: args.origin,
       imported_at: new Date().toISOString(),

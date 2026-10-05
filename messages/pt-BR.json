@@ -1936,7 +1936,17 @@
       "toastImported": "{count} negócios importados",
       "toastDeleted": "{count} empresa(s) excluída(s)",
       "toastFailedDelete": "Não foi possível excluir as empresas selecionadas",
-      "selectRowLabel": "Selecionar {company}"
+      "selectRowLabel": "Selecionar {company}",
+      "listLabel": "Lista",
+      "destinationLabel": "Destino",
+      "newList": "Começar nova lista",
+      "destinationMismatch": "O menu está em {menu}, mas esta lista vai para {destination}.",
+      "retarget": "Mudar destino para {name}",
+      "retargeted": "Destino da lista alterado para {name}.",
+      "retargetFailed": "Não foi possível alterar o destino da lista.",
+      "confirmImportTitle": "Confirmar importação",
+      "confirmImportDesc": "Enviar {count, plural, one {# empresa} other {# empresas}} para o pipeline {pipeline}?",
+      "confirmImportButton": "Importar para {pipeline}"
     }
   },
   "Broadcasts": {

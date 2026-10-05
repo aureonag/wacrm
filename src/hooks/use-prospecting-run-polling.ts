@@ -18,6 +18,9 @@ export interface ProspectingRunSnapshot {
   duplicate_count: number;
   imported_count: number;
   error: string | null;
+  pipeline_id: string;
+  /** Human label of the source (uploaded file name or "Texto colado"). */
+  prompt: string | null;
 }
 
 function isSettled(status: string): boolean {
@@ -79,5 +82,10 @@ export function useProspectingRunPolling(runId: string | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId, run?.status]);
 
-  return { run, loading, isSettled: run ? isSettled(run.status) : false };
+  return {
+    run,
+    loading,
+    isSettled: run ? isSettled(run.status) : false,
+    refresh: () => (runId ? fetchRun(runId) : Promise.resolve()),
+  };
 }

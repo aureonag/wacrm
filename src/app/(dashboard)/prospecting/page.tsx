@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { loadPipelines } from "@/lib/pipelines/queries";
+import type { Pipeline } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { ProspectingExternalImport } from "@/components/prospecting/prospecting-external-import";
 import {
@@ -19,7 +22,8 @@ import { PROSPECTING_DEFAULT_QUANTITY } from "@/lib/prospecting/constants";
 
 export default function ProspectingPage() {
   const t = useTranslations("Prospecting");
-  const { user } = useAuth();
+  const { user, accountId } = useAuth();
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<ProspectingCandidate[]>([]);
   const [selections, setSelections] = useState<ProspectingSelections>({
@@ -30,7 +34,48 @@ export default function ProspectingPage() {
     quantity: PROSPECTING_DEFAULT_QUANTITY,
   });
 
-  const { run } = useProspectingRunPolling(activeRunId);
+  const { run, refresh } = useProspectingRunPolling(activeRunId);
+
+  useEffect(() => {
+    if (!accountId) return;
+    let cancelled = false;
+    (async () => {
+      const rows = await loadPipelines(createClient());
+      if (!cancelled) setPipelines(rows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId]);
+
+  // "Começar nova lista" hides the last list for good (until a new one is
+  // uploaded): remember its id so the reload-rehydration below skips it.
+  const DISMISSED_KEY = "prospecting:dismissed-run";
+  function startNewList() {
+    try {
+      if (activeRunId) window.localStorage.setItem(DISMISSED_KEY, activeRunId);
+    } catch {
+      // storage unavailable — the list just comes back on the next reload
+    }
+    setActiveRunId(null);
+    setCandidates([]);
+  }
+
+  async function retargetRun(pipelineId: string): Promise<boolean> {
+    if (!activeRunId) return false;
+    const res = await fetch(`/api/prospecting/runs/${activeRunId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "retarget", pipeline_id: pipelineId }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => null);
+      toast.error(json?.error ?? t("results.retargetFailed"));
+      return false;
+    }
+    await refresh();
+    return true;
+  }
 
   const loadCandidates = useCallback(async (runId: string) => {
     try {
@@ -59,7 +104,13 @@ export default function ProspectingPage() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!cancelled && data?.id) setActiveRunId(data.id as string);
+      let dismissed: string | null = null;
+      try {
+        dismissed = window.localStorage.getItem(DISMISSED_KEY);
+      } catch {
+        // ignore
+      }
+      if (!cancelled && data?.id && data.id !== dismissed) setActiveRunId(data.id as string);
     })();
     return () => {
       cancelled = true;
@@ -92,6 +143,12 @@ export default function ProspectingPage() {
           {activeRunId && candidates.length > 0 && (
             <ProspectingResultsTable
               runId={activeRunId}
+              listLabel={run?.prompt ?? null}
+              destinationPipelineId={run?.pipeline_id ?? null}
+              pipelines={pipelines}
+              selectedPipelineId={selections.pipelineId}
+              onRetarget={retargetRun}
+              onNewList={startNewList}
               candidates={candidates}
               onCandidatesChange={setCandidates}
               onImported={() => void loadCandidates(activeRunId)}
@@ -100,7 +157,7 @@ export default function ProspectingPage() {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4">
-          <ProspectingConfigCard selections={selections} onChange={setSelections} />
+          <ProspectingConfigCard selections={selections} onChange={setSelections} pipelines={pipelines} />
         </div>
       </div>
     </div>

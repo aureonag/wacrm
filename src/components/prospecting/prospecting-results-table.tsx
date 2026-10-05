@@ -8,6 +8,8 @@ import {
   ExternalLink,
   Import,
   Loader2,
+  MapPin,
+  Plus,
   Sparkle,
   Star,
   Trash2,
@@ -25,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/hooks/use-can";
+import type { Pipeline } from "@/types";
 import { useTranslations } from "next-intl";
 
 export interface ProspectingCandidate {
@@ -50,6 +53,15 @@ export interface ProspectingCandidate {
 
 interface ProspectingResultsTableProps {
   runId: string;
+  /** Source of the list on screen (uploaded file name / "Texto colado"). */
+  listLabel: string | null;
+  /** Pipeline this list was created for — where "Importar" really sends the cards. */
+  destinationPipelineId: string | null;
+  pipelines: Pipeline[];
+  /** What the "Pipeline de destino" menu currently shows (may differ from the list's). */
+  selectedPipelineId: string;
+  onRetarget: (pipelineId: string) => Promise<boolean>;
+  onNewList: () => void;
   candidates: ProspectingCandidate[];
   onCandidatesChange: (candidates: ProspectingCandidate[]) => void;
   onImported: () => void;
@@ -117,6 +129,12 @@ function StatusPill({ candidate, t }: { candidate: ProspectingCandidate; t: Retu
 
 export function ProspectingResultsTable({
   runId,
+  listLabel,
+  destinationPipelineId,
+  pipelines,
+  selectedPipelineId,
+  onRetarget,
+  onNewList,
   candidates,
   onCandidatesChange,
   onImported,
@@ -128,6 +146,20 @@ export function ProspectingResultsTable({
   const [selectingAll, setSelectingAll] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [retargeting, setRetargeting] = useState(false);
+
+  const nameOf = (id: string | null) => pipelines.find((x) => x.id === id)?.name ?? null;
+  const destinationName = nameOf(destinationPipelineId);
+  const menuName = nameOf(selectedPipelineId || null);
+  const mismatch = !!destinationPipelineId && !!selectedPipelineId && selectedPipelineId !== destinationPipelineId;
+
+  async function handleRetarget() {
+    setRetargeting(true);
+    const ok = await onRetarget(selectedPipelineId);
+    setRetargeting(false);
+    if (ok) toast.success(t("retargeted", { name: menuName ?? "" }));
+  }
 
   // Every candidate is selectable, imported or not — imported ones can still
   // be picked for bulk deletion (the deal itself is untouched, see the
@@ -226,6 +258,37 @@ export function ProspectingResultsTable({
 
   return (
     <div className="space-y-3">
+      <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0 text-sm text-foreground">
+            <span className="text-muted-foreground">{t("listLabel")}: </span>
+            <span className="font-medium">{listLabel ?? "—"}</span>
+            <span className="mx-2 text-muted-foreground">·</span>
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              <span className="text-muted-foreground">{t("destinationLabel")}: </span>
+              <span className="font-semibold text-primary">{destinationName ?? "—"}</span>
+            </span>
+          </div>
+          <Button variant="outline" size="sm" onClick={onNewList}>
+            <Plus className="h-3.5 w-3.5" />
+            {t("newList")}
+          </Button>
+        </div>
+        {mismatch && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300">
+            <span className="inline-flex items-center gap-1.5">
+              <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+              {t("destinationMismatch", { menu: menuName ?? "", destination: destinationName ?? "" })}
+            </span>
+            <Button size="sm" variant="outline" disabled={retargeting} onClick={() => void handleRetarget()}>
+              {retargeting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {t("retarget", { name: menuName ?? "" })}
+            </Button>
+          </div>
+        )}
+      </div>
+
       {canImport && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-3">
           <label className="flex items-center gap-2 text-sm text-foreground">
@@ -248,13 +311,51 @@ export function ProspectingResultsTable({
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
-            <Button size="sm" onClick={handleImport} disabled={importing || selectedIds.length === 0}>
+            <Button size="sm" onClick={() => setConfirmOpen(true)} disabled={importing || selectedIds.length === 0}>
               {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Import className="h-3.5 w-3.5" />}
               {t("importButton")}
             </Button>
           </div>
         </div>
       )}
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-sm bg-popover border-border text-popover-foreground">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-popover-foreground">
+              <MapPin className="h-4 w-4 text-primary" />
+              {t("confirmImportTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("confirmImportDesc", { count: selectedIds.length, pipeline: destinationName ?? "—" })}
+          </p>
+          {mismatch && (
+            <p className="text-xs text-amber-300">
+              {t("destinationMismatch", { menu: menuName ?? "", destination: destinationName ?? "" })}
+            </p>
+          )}
+          <DialogFooter className="bg-popover/50 border-border">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmOpen(false);
+                void handleImport();
+              }}
+              disabled={importing}
+            >
+              <Import className="h-3.5 w-3.5" />
+              {t("confirmImportButton", { pipeline: destinationName ?? "" })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-sm bg-popover border-border text-popover-foreground">

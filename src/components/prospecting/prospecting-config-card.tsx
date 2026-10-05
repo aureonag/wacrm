@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { loadPipelines } from "@/lib/pipelines/queries";
 import {
   PROSPECTING_DEFAULT_QUANTITY,
   PROSPECTING_MAX_QUANTITY,
@@ -34,6 +33,8 @@ export interface ProspectingSelections {
 interface ProspectingConfigCardProps {
   selections: ProspectingSelections;
   onChange: (selections: ProspectingSelections) => void;
+  /** Loaded once by the page (also used to name each list's destination). */
+  pipelines: Pipeline[];
 }
 
 function Chip({
@@ -61,12 +62,11 @@ function Chip({
   );
 }
 
-export function ProspectingConfigCard({ selections, onChange }: ProspectingConfigCardProps) {
+export function ProspectingConfigCard({ selections, onChange, pipelines }: ProspectingConfigCardProps) {
   const t = useTranslations("Prospecting.config");
   const supabase = createClient();
   const { accountId } = useAuth();
 
-  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [customQuantity, setCustomQuantity] = useState("");
 
@@ -74,12 +74,8 @@ export function ProspectingConfigCard({ selections, onChange }: ProspectingConfi
     if (!accountId) return;
     let cancelled = false;
     (async () => {
-      const [pipelineRows, profileRows] = await Promise.all([
-        loadPipelines(supabase),
-        supabase.from("profiles").select("*").order("full_name"),
-      ]);
+      const profileRows = await supabase.from("profiles").select("*").order("full_name");
       if (cancelled) return;
-      setPipelines(pipelineRows);
       setProfiles((profileRows.data as Profile[] | null) ?? []);
     })();
     return () => {
