@@ -18,9 +18,20 @@ import type { Deal, DealTag, PipelineStage } from "@/types";
 import { DealCard } from "./deal-card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/currency";
 import { useTranslations } from "next-intl";
+
+/** Board-wide "Selecionar" mode (bulk delete). Absent = normal board. */
+export interface BoardSelection {
+  selectedIds: Set<string>;
+  /** Won / with-paperwork deals: shown with a lock, cannot be selected. */
+  lockedIds: Set<string>;
+  onToggle: (dealId: string) => void;
+  /** Select (or clear) every selectable deal of one stage. */
+  onToggleStage: (dealIds: string[], select: boolean) => void;
+}
 
 interface PipelineBoardProps {
   stages: PipelineStage[];
@@ -28,6 +39,7 @@ interface PipelineBoardProps {
   onDealMoved: (dealId: string, newStageId: string) => void;
   onAddDeal: (stageId: string) => void;
   onTagsChanged: (dealId: string, tags: DealTag[]) => void;
+  selection?: BoardSelection;
 }
 
 export function PipelineBoard({
@@ -36,6 +48,7 @@ export function PipelineBoard({
   onDealMoved,
   onAddDeal,
   onTagsChanged,
+  selection,
 }: PipelineBoardProps) {
   const { defaultCurrency } = useAuth();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
@@ -191,6 +204,7 @@ export function PipelineBoard({
               tagEditorDealId={tagEditorDealId}
               onToggleTagEditor={setTagEditorDealId}
               onTagsChanged={onTagsChanged}
+              selection={selection}
             />
           );
         })}
@@ -269,6 +283,7 @@ function StageColumn({
   tagEditorDealId,
   onToggleTagEditor,
   onTagsChanged,
+  selection,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -278,9 +293,14 @@ function StageColumn({
   tagEditorDealId: string | null;
   onToggleTagEditor: (dealId: string | null) => void;
   onTagsChanged: (dealId: string, tags: DealTag[]) => void;
+  selection?: BoardSelection;
 }) {
   const t = useTranslations("Pipelines.board");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+
+  const selectableIds = selection ? deals.filter((d) => !selection.lockedIds.has(d.id)).map((d) => d.id) : [];
+  const allStageSelected =
+    !!selection && selectableIds.length > 0 && selectableIds.every((id) => selection.selectedIds.has(id));
 
   return (
     // On mobile each column is `w-[85vw]` (with a reasonable min/max)
@@ -296,7 +316,16 @@ function StageColumn({
         style={{ backgroundColor: stage.color }}
       />
       <div className="flex items-center justify-between pt-3">
-        <h3 className="truncate text-sm font-semibold text-foreground">
+        {selection && (
+          <Checkbox
+            className="mr-2 shrink-0"
+            checked={allStageSelected}
+            disabled={selectableIds.length === 0}
+            aria-label={t("selectStageAria", { stage: stage.name })}
+            onCheckedChange={(checked) => selection.onToggleStage(selectableIds, checked === true)}
+          />
+        )}
+        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
           {stage.name}
         </h3>
         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
@@ -328,6 +357,7 @@ function StageColumn({
               tagEditorOpen={tagEditorDealId === deal.id}
               onToggleTagEditor={onToggleTagEditor}
               onTagsChanged={onTagsChanged}
+              selection={selection}
             />
           ))
         )}
@@ -352,24 +382,28 @@ function DraggableDealCard({
   tagEditorOpen,
   onToggleTagEditor,
   onTagsChanged,
+  selection,
 }: {
   deal: Deal;
   stage: PipelineStage;
   tagEditorOpen: boolean;
   onToggleTagEditor: (dealId: string | null) => void;
   onTagsChanged: (dealId: string, tags: DealTag[]) => void;
+  selection?: BoardSelection;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: deal.id,
+    // Selecting must not start a drag (or move a deal by accident).
+    disabled: !!selection,
   });
 
   return (
     <div
       ref={setNodeRef}
       data-dnd-card="true"
-      {...listeners}
-      {...attributes}
-      style={{ opacity: isDragging ? 0.3 : 1, touchAction: "none" }}
+      {...(selection ? {} : listeners)}
+      {...(selection ? {} : attributes)}
+      style={{ opacity: isDragging ? 0.3 : 1, touchAction: selection ? "auto" : "none" }}
     >
       <DealCard
         deal={deal}
@@ -377,6 +411,15 @@ function DraggableDealCard({
         tagEditorOpen={tagEditorOpen}
         onToggleTagEditor={onToggleTagEditor}
         onTagsChanged={onTagsChanged}
+        selection={
+          selection
+            ? {
+                selected: selection.selectedIds.has(deal.id),
+                locked: selection.lockedIds.has(deal.id),
+                onToggle: () => selection.onToggle(deal.id),
+              }
+            : undefined
+        }
       />
     </div>
   );

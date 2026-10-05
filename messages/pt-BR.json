@@ -1345,11 +1345,24 @@
       "toastFailedMoveDeal": "Falha ao mover negócio",
       "toastFailedCreatePipeline": "Falha ao criar pipeline",
       "toastPipelineCreated": "Pipeline criado",
-      "toastNotLinkedToAccount": "Seu perfil não está vinculado a uma conta."
+      "toastNotLinkedToAccount": "Seu perfil não está vinculado a uma conta.",
+      "selectMode": "Selecionar",
+      "cancelSelect": "Cancelar",
+      "selectedCount": "{count, plural, one {# selecionado} other {# selecionados}}",
+      "deleteSelected": "Excluir",
+      "bulkDeleteTitle": "Excluir {count, plural, one {# negócio} other {# negócios}}?",
+      "bulkDeleteDesc": "Isso apaga também notas, histórico, etiquetas e anexos desses negócios e não pode ser desfeito. Negócios ganhos ou com contrato não entram na seleção.",
+      "bulkDeleteConfirm": "Excluir definitivamente",
+      "bulkDeleting": "Excluindo…",
+      "toastBulkDeleted": "{count, plural, one {# negócio excluído} other {# negócios excluídos}}.",
+      "toastBulkDeletePartial": "{deleted} de {requested} negócios excluídos. Os demais não puderam ser apagados.",
+      "toastBulkDeleteFailed": "Não foi possível excluir os negócios selecionados.",
+      "toastBulkKept": "{count, plural, one {# negócio com contrato foi mantido.} other {# negócios com contrato foram mantidos.}}"
     },
     "board": {
       "dropDealHere": "Solte um negócio aqui",
-      "addDeal": "Adicionar negócio"
+      "addDeal": "Adicionar negócio",
+      "selectStageAria": "Selecionar todos de {stage}"
     },
     "search": {
       "triggerLabel": "Buscar negócios (Ctrl K)",
@@ -1375,7 +1388,8 @@
       "addTagConfirm": "Adicionar",
       "removeTagAria": "Remover etiqueta {label}",
       "toastFailed": "Falha ao salvar etiqueta",
-      "staleDays": "{days} dias parado"
+      "staleDays": "{days} dias parado",
+      "lockedHint": "Negócios ganhos ou com contrato não podem ser excluídos em massa."
     },
     "activity": {
       "movedTo": "Movido para {stage}",

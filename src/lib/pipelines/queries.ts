@@ -295,3 +295,49 @@ export async function syncDealValueFromLineItems(
   await db.from("deals").update({ value }).eq("id", dealId);
   return value;
 }
+
+const BULK_CHUNK = 80;
+
+/**
+ * Deals that must NOT be bulk-deleted besides those already won: any deal
+ * that has a contract (draft, sent or signed) or a closing sheet attached —
+ * deleting it would cascade-delete that paperwork. Returned ids are a subset
+ * of `dealIds`. Chunked so the `in (...)` list never blows the URL limit.
+ */
+export async function loadDealIdsWithPaperwork(db: SupabaseClient, dealIds: string[]): Promise<Set<string>> {
+  const protectedIds = new Set<string>();
+  for (let i = 0; i < dealIds.length; i += BULK_CHUNK) {
+    const chunk = dealIds.slice(i, i + BULK_CHUNK);
+    const [contracts, sheets] = await Promise.all([
+      db.from("deal_contracts").select("deal_id").in("deal_id", chunk),
+      db.from("deal_closing_sheets").select("deal_id").in("deal_id", chunk),
+    ]);
+    for (const row of [...(contracts.data ?? []), ...(sheets.data ?? [])]) {
+      protectedIds.add((row as { deal_id: string }).deal_id);
+    }
+  }
+  return protectedIds;
+}
+
+/**
+ * Deletes deals in chunks (RLS decides what the caller may delete).
+ * Returns how many rows were really deleted and how many ids were asked for,
+ * so the UI can report a partial result honestly.
+ */
+export async function deleteDealsBulk(
+  db: SupabaseClient,
+  dealIds: string[],
+): Promise<{ deleted: number; requested: number; failed: boolean }> {
+  let deleted = 0;
+  let failed = false;
+  for (let i = 0; i < dealIds.length; i += BULK_CHUNK) {
+    const chunk = dealIds.slice(i, i + BULK_CHUNK);
+    const { data, error } = await db.from("deals").delete().in("id", chunk).select("id");
+    if (error) {
+      failed = true;
+      continue;
+    }
+    deleted += data?.length ?? 0;
+  }
+  return { deleted, requested: dealIds.length, failed };
+}

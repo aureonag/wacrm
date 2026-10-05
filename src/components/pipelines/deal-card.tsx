@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Deal, DealTag, PipelineStage } from "@/types";
-import { Calendar, Check, Clock, Plus, X } from "lucide-react";
+import { Calendar, Check, Clock, Lock, Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { sumLineItems } from "@/lib/pipelines/queries";
 import { frenteLabelKey } from "@/lib/deals/frente";
@@ -24,6 +24,10 @@ interface DealCardProps {
   tagEditorOpen?: boolean;
   onToggleTagEditor?: (dealId: string | null) => void;
   onTagsChanged?: (dealId: string, tags: DealTag[]) => void;
+  /** Present only while the board is in "Selecionar" mode: the card stops being
+   *  a link, toggles on click and shows a checkbox. `locked` cards (won or with
+   *  a contract) can't be picked. */
+  selection?: { selected: boolean; locked: boolean; onToggle: () => void };
 }
 
 function formatDate(dateStr: string) {
@@ -47,6 +51,7 @@ export function DealCard({
   tagEditorOpen,
   onToggleTagEditor,
   onTagsChanged,
+  selection,
 }: DealCardProps) {
   const t = useTranslations("Pipelines.card");
   const supabase = createClient();
@@ -115,11 +120,20 @@ export function DealCard({
     onTagsChanged?.(deal.id, (deal.dealTags ?? []).filter((t) => t.id !== tagId));
   }
 
+  const selectionClassName = selection
+    ? selection.locked
+      ? "cursor-not-allowed opacity-50"
+      : selection.selected
+        ? "cursor-pointer border-primary ring-2 ring-primary/40"
+        : "cursor-pointer"
+    : "";
   const cardClassName = `group relative block w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
     isOverlay
       ? "shadow-xl"
-      : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
-  }`;
+      : selection
+        ? ""
+        : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
+  } ${selectionClassName}`;
 
   const cardContent = (
     <>
@@ -131,6 +145,21 @@ export function DealCard({
       />
 
       <div className="flex items-start justify-between gap-2">
+        {selection && (
+          <span
+            aria-hidden
+            title={selection.locked ? t("lockedHint") : undefined}
+            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+              selection.locked
+                ? "border-border bg-muted text-muted-foreground"
+                : selection.selected
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-muted-foreground/50 bg-transparent"
+            }`}
+          >
+            {selection.locked ? <Lock className="h-2.5 w-2.5" /> : selection.selected ? <Check className="h-3 w-3" /> : null}
+          </span>
+        )}
         <h4 className="flex-1 text-sm font-semibold leading-snug text-foreground break-words">
           {deal.title}
         </h4>
@@ -242,7 +271,7 @@ export function DealCard({
             )}
           </span>
         ))}
-        {canEdit && !isOverlay && !tagEditorOpen && (
+        {canEdit && !isOverlay && !tagEditorOpen && !selection && (
           <button
             type="button"
             onClick={openTagEditor}
@@ -321,6 +350,30 @@ export function DealCard({
 
   if (isOverlay) {
     return <div className={cardClassName}>{cardContent}</div>;
+  }
+
+  if (selection) {
+    return (
+      <div
+        role="checkbox"
+        aria-checked={selection.selected}
+        aria-disabled={selection.locked}
+        tabIndex={0}
+        title={selection.locked ? t("lockedHint") : undefined}
+        onClick={() => {
+          if (!selection.locked) selection.onToggle();
+        }}
+        onKeyDown={(e) => {
+          if ((e.key === " " || e.key === "Enter") && !selection.locked) {
+            e.preventDefault();
+            selection.onToggle();
+          }
+        }}
+        className={cardClassName}
+      >
+        {cardContent}
+      </div>
+    );
   }
 
   return (

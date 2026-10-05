@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Pipeline, PipelineStage, Deal, DealTag } from "@/types";
-import { PipelineBoard } from "@/components/pipelines/pipeline-board";
+import { PipelineBoard, type BoardSelection } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealCreateModal } from "@/components/pipelines/deal-create-modal";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, Plus } from "lucide-react";
+import { GitBranch, ListChecks, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
@@ -36,6 +36,8 @@ import {
   loadPipelines as fetchPipelines,
   loadPipelineStages,
   loadPipelineDeals,
+  loadDealIdsWithPaperwork,
+  deleteDealsBulk,
 } from "@/lib/pipelines/queries";
 
 // Pipeline creation is admin-class (settings-tier write under
@@ -112,6 +114,13 @@ export default function PipelinesPage() {
   // Deal" and the per-column "+" trigger the same modal.
   const [dealFormOpen, setDealFormOpen] = useState(false);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
+
+  // "Selecionar" mode (bulk delete). Same permission as deleting one deal.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [paperworkIds, setPaperworkIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
@@ -290,6 +299,8 @@ export default function PipelinesPage() {
   const handleSelectPipeline = useCallback((pipelineId: string) => {
     setSelectedPipelineId(pipelineId);
     persistSelectedPipeline(pipelineId);
+    setSelectMode(false);
+    setSelectedIds(new Set());
   }, []);
 
   const refreshPipelines = useCallback(async () => {
@@ -374,6 +385,85 @@ export default function PipelinesPage() {
     },
     [stages],
   );
+
+  // Won deals, deals parked in the "Contrato fechado" stage and deals with a
+  // contract / closing sheet are never offered for bulk deletion.
+  const lockedIds = useMemo(() => {
+    const contractStageIds = new Set(stages.filter((st) => st.kind === "contract_closed").map((st) => st.id));
+    const locked = new Set<string>();
+    for (const d of deals) {
+      if (d.status === "won" || contractStageIds.has(d.stage_id) || paperworkIds.has(d.id)) locked.add(d.id);
+    }
+    return locked;
+  }, [deals, stages, paperworkIds]);
+
+  // Selected ids that still exist on the board and are not locked.
+  const selectedList = useMemo(
+    () => [...selectedIds].filter((id) => !lockedIds.has(id) && deals.some((d) => d.id === id)),
+    [selectedIds, lockedIds, deals],
+  );
+
+  const enterSelectMode = useCallback(async () => {
+    setSelectedIds(new Set());
+    setSelectMode(true);
+    setPaperworkIds(await loadDealIdsWithPaperwork(supabase, deals.map((d) => d.id)));
+  }, [supabase, deals]);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    setConfirmDeleteOpen(false);
+  }, []);
+
+  const toggleSelected = useCallback((dealId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(dealId)) next.delete(dealId);
+      else next.add(dealId);
+      return next;
+    });
+  }, []);
+
+  const toggleStageSelected = useCallback((dealIds: string[], select: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of dealIds) {
+        if (select) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }, []);
+
+  async function handleBulkDelete() {
+    if (selectedList.length === 0) return;
+    setBulkDeleting(true);
+    // Re-check paperwork right before deleting: the lock set loaded when the
+    // mode was entered may be stale (a contract could have been created since).
+    const freshPaperwork = await loadDealIdsWithPaperwork(supabase, selectedList);
+    const toDelete = selectedList.filter((id) => !freshPaperwork.has(id));
+    const kept = selectedList.length - toDelete.length;
+    const result = toDelete.length > 0 ? await deleteDealsBulk(supabase, toDelete) : { deleted: 0, requested: 0, failed: false };
+    setBulkDeleting(false);
+    setConfirmDeleteOpen(false);
+
+    if (result.deleted === 0 && toDelete.length > 0) {
+      toast.error(t("toastBulkDeleteFailed"));
+      return;
+    }
+    if (result.deleted < result.requested || result.failed) {
+      toast.warning(t("toastBulkDeletePartial", { deleted: result.deleted, requested: result.requested }));
+    } else {
+      toast.success(t("toastBulkDeleted", { count: result.deleted }));
+    }
+    if (kept > 0) toast.info(t("toastBulkKept", { count: kept }));
+    exitSelectMode();
+    await refreshDeals();
+  }
+
+  const boardSelection: BoardSelection | undefined = selectMode
+    ? { selectedIds, lockedIds, onToggle: toggleSelected, onToggleStage: toggleStageSelected }
+    : undefined;
 
   const handleTagsChanged = useCallback((dealId: string, tags: DealTag[]) => {
     setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, dealTags: tags } : d)));
@@ -479,6 +569,36 @@ export default function PipelinesPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {canCreateDeals && selectMode && (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {t("selectedCount", { count: selectedList.length })}
+              </span>
+              <Button variant="outline" onClick={exitSelectMode} className="border-border bg-card text-foreground hover:bg-muted">
+                {t("cancelSelect")}
+              </Button>
+              {selectedList.length > 0 && (
+                <Button
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  className="bg-red-600 text-white hover:bg-red-700"
+                >
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  {t("deleteSelected")}
+                </Button>
+              )}
+            </>
+          )}
+          {canCreateDeals && !selectMode && (
+            <Button
+              variant="outline"
+              disabled={deals.length === 0}
+              onClick={() => void enterSelectMode()}
+              className="border-border bg-card text-foreground hover:bg-muted"
+            >
+              <ListChecks className="mr-1 h-4 w-4" />
+              {t("selectMode")}
+            </Button>
+          )}
           <GatedButton
             variant="outline"
             canAct={canEditSettings}
@@ -531,6 +651,7 @@ export default function PipelinesPage() {
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
             onTagsChanged={handleTagsChanged}
+            selection={boardSelection}
           />
         </>
       )}
@@ -590,6 +711,36 @@ export default function PipelinesPage() {
           }}
         />
       )}
+
+      {/* Bulk delete confirmation */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={(o) => !bulkDeleting && setConfirmDeleteOpen(o)}>
+        <DialogContent className="sm:max-w-sm bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t("bulkDeleteTitle", { count: selectedList.length })}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("bulkDeleteDesc")}</p>
+          <DialogFooter className="bg-popover/50 border-border">
+            <Button
+              variant="outline"
+              disabled={bulkDeleting}
+              onClick={() => setConfirmDeleteOpen(false)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              disabled={bulkDeleting}
+              onClick={() => void handleBulkDelete()}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {bulkDeleting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+              {bulkDeleting ? t("bulkDeleting") : t("bulkDeleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New deal modal */}
       <DealCreateModal

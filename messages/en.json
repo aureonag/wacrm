@@ -1345,11 +1345,24 @@
       "toastFailedMoveDeal": "Failed to move deal",
       "toastFailedCreatePipeline": "Failed to create pipeline",
       "toastPipelineCreated": "Pipeline created",
-      "toastNotLinkedToAccount": "Your profile is not linked to an account."
+      "toastNotLinkedToAccount": "Your profile is not linked to an account.",
+      "selectMode": "Select",
+      "cancelSelect": "Cancel",
+      "selectedCount": "{count, plural, one {# selected} other {# selected}}",
+      "deleteSelected": "Delete",
+      "bulkDeleteTitle": "Delete {count, plural, one {# deal} other {# deals}}?",
+      "bulkDeleteDesc": "This also deletes their notes, history, tags and attachments and cannot be undone. Won deals and deals with a contract are not part of the selection.",
+      "bulkDeleteConfirm": "Delete permanently",
+      "bulkDeleting": "Deleting…",
+      "toastBulkDeleted": "{count, plural, one {# deal deleted} other {# deals deleted}}.",
+      "toastBulkDeletePartial": "{deleted} of {requested} deals deleted. The rest could not be deleted.",
+      "toastBulkDeleteFailed": "Could not delete the selected deals.",
+      "toastBulkKept": "{count, plural, one {# deal with a contract was kept.} other {# deals with a contract were kept.}}"
     },
     "board": {
       "dropDealHere": "Drop a deal here",
-      "addDeal": "Add Deal"
+      "addDeal": "Add Deal",
+      "selectStageAria": "Select all in {stage}"
     },
     "search": {
       "triggerLabel": "Search deals (Ctrl K)",
@@ -1375,7 +1388,8 @@
       "addTagConfirm": "Add",
       "removeTagAria": "Remove tag {label}",
       "toastFailed": "Failed to save tag",
-      "staleDays": "{days} days stale"
+      "staleDays": "{days} days stale",
+      "lockedHint": "Won deals and deals with a contract cannot be bulk-deleted."
     },
     "activity": {
       "movedTo": "Moved to {stage}",

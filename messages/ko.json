@@ -1345,11 +1345,24 @@
       "toastFailedMoveDeal": "딜을 이동하지 못했습니다",
       "toastFailedCreatePipeline": "파이프라인을 만들지 못했습니다",
       "toastPipelineCreated": "파이프라인이 생성되었습니다",
-      "toastNotLinkedToAccount": "프로필이 계정에 연결되어 있지 않습니다."
+      "toastNotLinkedToAccount": "프로필이 계정에 연결되어 있지 않습니다.",
+      "selectMode": "Select",
+      "cancelSelect": "Cancel",
+      "selectedCount": "{count, plural, one {# selected} other {# selected}}",
+      "deleteSelected": "Delete",
+      "bulkDeleteTitle": "Delete {count, plural, one {# deal} other {# deals}}?",
+      "bulkDeleteDesc": "This also deletes their notes, history, tags and attachments and cannot be undone. Won deals and deals with a contract are not part of the selection.",
+      "bulkDeleteConfirm": "Delete permanently",
+      "bulkDeleting": "Deleting…",
+      "toastBulkDeleted": "{count, plural, one {# deal deleted} other {# deals deleted}}.",
+      "toastBulkDeletePartial": "{deleted} of {requested} deals deleted. The rest could not be deleted.",
+      "toastBulkDeleteFailed": "Could not delete the selected deals.",
+      "toastBulkKept": "{count, plural, one {# deal with a contract was kept.} other {# deals with a contract were kept.}}"
     },
     "board": {
       "dropDealHere": "여기에 딜을 놓으세요",
-      "addDeal": "딜 추가"
+      "addDeal": "딜 추가",
+      "selectStageAria": "Select all in {stage}"
     },
     "search": {
       "triggerLabel": "딜 검색 (Ctrl K)",
@@ -1375,7 +1388,8 @@
       "addTagConfirm": "추가",
       "removeTagAria": "태그 {label} 제거",
       "toastFailed": "태그 저장에 실패했습니다",
-      "staleDays": "{days}일째 정체"
+      "staleDays": "{days}일째 정체",
+      "lockedHint": "Won deals and deals with a contract cannot be bulk-deleted."
     },
     "activity": {
       "movedTo": "{stage}(으)로 이동됨",
