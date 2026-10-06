@@ -21,6 +21,12 @@ import { CONSUME_MESSAGES, consumeSignupCode } from "@/lib/affiliates/signup-cod
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
+/** Rollback of a half-finished sign-up. A failed delete leaves an orphan user, so say so loudly. */
+async function dropUser(admin: ReturnType<typeof supabaseAdmin>, userId: string) {
+  const { error } = await admin.auth.admin.deleteUser(userId).catch((e: Error) => ({ error: e }));
+  if (error) console.error("[register] CRITICAL: rollback could not delete user", userId, error.message);
+}
+
 const EMAIL_TAKEN = {
   error:
     "Não foi possível concluir o cadastro com este e-mail. Se você já tem cadastro, entre no portal e participe da campanha por lá.",
@@ -91,7 +97,10 @@ export async function POST(request: Request) {
       password: input.password,
       email_confirm: true,
       app_metadata: { aff_portal: true },
-      user_metadata: { full_name: input.name },
+      // The auth service writes app_metadata AFTER inserting the row, so the
+      // handle_new_user trigger only sees user_metadata (migration 104). Access
+      // to the portal is still granted by app_metadata alone.
+      user_metadata: { full_name: input.name, aff_portal: true },
     });
     if (user.error || !user.data.user) {
       const msg = user.error?.message ?? "";
@@ -110,7 +119,7 @@ export async function POST(request: Request) {
     const profile = await admin.from("profiles").select("user_id").eq("user_id", createdUserId).maybeSingle();
     if (profile.data) {
       console.error("[register] CRITICAL: portal user got a CRM profile — rolling back", createdUserId);
-      await admin.auth.admin.deleteUser(createdUserId);
+      await dropUser(admin, createdUserId);
       createdUserId = null;
       return portalNotReadyResponse();
     }
@@ -121,7 +130,7 @@ export async function POST(request: Request) {
       .select("id")
       .single();
     if (affiliate.error) {
-      await admin.auth.admin.deleteUser(createdUserId);
+      await dropUser(admin, createdUserId);
       createdUserId = null;
       if (affiliate.error.code === "23505") return NextResponse.json(EMAIL_TAKEN, { status: 409 });
       console.error("[register] affiliate insert failed:", affiliate.error.message);
@@ -153,7 +162,7 @@ export async function POST(request: Request) {
     }
     if (!membershipId) {
       await admin.from("aff_affiliates").delete().eq("id", affiliate.data.id);
-      await admin.auth.admin.deleteUser(createdUserId);
+      await dropUser(admin, createdUserId);
       createdUserId = null;
       return NextResponse.json({ error: "Failed to register" }, { status: 500 });
     }
@@ -171,7 +180,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
-    if (createdUserId) await admin.auth.admin.deleteUser(createdUserId).catch(() => undefined);
+    if (createdUserId) await dropUser(admin, createdUserId);
     if (err instanceof BadInput) return NextResponse.json({ error: err.message }, { status: 400 });
     console.error("[register] unexpected:", err);
     return NextResponse.json({ error: "Failed to register" }, { status: 500 });
