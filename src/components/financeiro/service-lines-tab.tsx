@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, Repeat, Trash2 } from "lucide-react";
+import { GripVertical, Loader2, Plus, Repeat, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { getYearOptions } from "@/lib/finance/period";
 import { MONTH_NAMES_PT } from "@/lib/finance/types";
@@ -72,6 +72,10 @@ export function ServiceLinesTab() {
   const [allocations, setAllocations] = useState<FinTeamAllocation[]>([]);
   const [loadingAllocations, setLoadingAllocations] = useState(false);
   const [draftRows, setDraftRows] = useState<AllocRow[]>([]);
+  // Team members shown as (possibly empty) account groups so clients can be dragged onto them.
+  const [extraGroupIds, setExtraGroupIds] = useState<string[]>([]);
+  const [dragClientId, setDragClientId] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const [newAllocMemberId, setNewAllocMemberId] = useState("");
   const [newAllocFreelancer, setNewAllocFreelancer] = useState("");
 
@@ -461,9 +465,24 @@ export function ServiceLinesTab() {
       }
       byKey.get(key)!.clients.push(c);
     }
+    for (const id of extraGroupIds) {
+      const member = teamMembers.find((m) => m.id === id);
+      if (member && !byKey.has(id)) byKey.set(id, { key: id, label: member.name, clients: [] });
+    }
     return Array.from(byKey.values());
-  }, [activeClients, teamMembers]);
+  }, [activeClients, teamMembers, extraGroupIds]);
   const showGroupHeaders = activeGroups.some((g) => g.label);
+  const addableMembers = teamMembers.filter((m) => !activeGroups.some((g) => g.key === m.id));
+
+  function handleDropOnGroup(groupKey: string) {
+    const client = clients.find((c) => c.id === dragClientId);
+    setDragClientId(null);
+    setDragOverKey(null);
+    if (!client) return;
+    const target = groupKey === "__none__" ? "" : groupKey;
+    if ((client.responsible_team_member_id ?? "") === target) return;
+    void handleSetClientResponsible(client, target);
+  }
 
   const allocRows: AllocRow[] = useMemo(() => {
     const byKey = new Map<string, AllocRow>();
@@ -570,6 +589,25 @@ export function ServiceLinesTab() {
               <CardTitle className="text-foreground">Clientes — {selectedLine.name}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {addableMembers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value=""
+                    onChange={(e) => e.target.value && setExtraGroupIds((prev) => [...prev, e.target.value])}
+                    className={selectClass}
+                  >
+                    <option value="">+ Adicionar responsável (grupo)</option>
+                    {addableMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-muted-foreground">
+                    Depois arraste as contas pelo ícone ⠿ para dentro do grupo.
+                  </span>
+                </div>
+              )}
               {loadingClients ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="size-5 animate-spin text-primary" />
@@ -614,26 +652,73 @@ export function ServiceLinesTab() {
                       return (
                         <Fragment key={group.key}>
                           {showGroupHeaders && (
-                            <TableRow key={`${group.key}-header`} className="bg-muted/60 hover:bg-muted/60">
+                            <TableRow
+                              key={`${group.key}-header`}
+                              onDragOver={(e) => {
+                                if (!dragClientId) return;
+                                e.preventDefault();
+                                setDragOverKey(group.key);
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                handleDropOnGroup(group.key);
+                              }}
+                              className={`hover:bg-muted/60 ${dragOverKey === group.key ? "bg-primary/20" : "bg-muted/60"}`}
+                            >
                               <TableCell
                                 colSpan={MONTHS.length + 2}
-                                className="sticky left-0 z-10 bg-muted/60 text-xs font-semibold text-foreground"
+                                className="sticky left-0 z-10 text-xs font-semibold text-foreground"
                               >
                                 {group.label ?? "Sem responsável"}
                                 <span className="ml-2 font-normal text-muted-foreground">
                                   Faturamento no ano: {formatCurrency(groupTotal, "BRL")}
                                 </span>
+                                {group.clients.length === 0 && (
+                                  <span className="ml-2 font-normal italic text-muted-foreground">
+                                    Arraste contas para cá
+                                  </span>
+                                )}
                               </TableCell>
                             </TableRow>
                           )}
                           {group.clients.map((client) => (
-                            <TableRow key={client.id}>
+                            <TableRow
+                              key={client.id}
+                              onDragOver={(e) => {
+                                if (!dragClientId) return;
+                                e.preventDefault();
+                                setDragOverKey(group.key);
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                handleDropOnGroup(group.key);
+                              }}
+                              className={dragClientId === client.id ? "opacity-40" : undefined}
+                            >
                               <TableCell className="sticky left-0 z-10 bg-card p-0.5">
-                                <DescriptionCell
-                                  value={client.code ? `${client.code} - ${client.name}` : client.name}
-                                  resetKey={`${client.id}-desc-${client.code ?? ""}-${client.name}`}
-                                  onSave={(raw) => handleUpdateClientDescription(client, raw)}
-                                />
+                                <div className="flex items-center">
+                                  <span
+                                    draggable
+                                    onDragStart={(e) => {
+                                      e.dataTransfer.effectAllowed = "move";
+                                      e.dataTransfer.setData("text/plain", client.id);
+                                      setDragClientId(client.id);
+                                    }}
+                                    onDragEnd={() => {
+                                      setDragClientId(null);
+                                      setDragOverKey(null);
+                                    }}
+                                    title="Arraste para mover a conta para outro responsável"
+                                    className="cursor-grab px-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                                  >
+                                    <GripVertical className="size-4" />
+                                  </span>
+                                  <DescriptionCell
+                                    value={client.code ? `${client.code} - ${client.name}` : client.name}
+                                    resetKey={`${client.id}-desc-${client.code ?? ""}-${client.name}`}
+                                    onSave={(raw) => handleUpdateClientDescription(client, raw)}
+                                  />
+                                </div>
                               </TableCell>
                               {MONTHS.map((m) => (
                                 <TableCell key={m} className="p-0.5 text-right">

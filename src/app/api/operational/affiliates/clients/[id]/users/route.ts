@@ -18,6 +18,9 @@ import {
 import { isUuid } from "@/lib/affiliates/campaigns";
 import { parseOverrides, type StoreOverrides } from "@/lib/affiliates/store-access";
 import { parseRole, STORE_USER_COLUMNS, toStoreUser, type StoreUserRow } from "@/lib/affiliates/store-users";
+import { randomBytes } from "node:crypto";
+import { isEmailConfigured } from "@/lib/contracts/email";
+import { sendInvite } from "@/lib/affiliates/portal-access";
 import { createPortalUser, dropNewPortalUser, PortalUserError } from "@/lib/affiliates/store-portal";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -75,12 +78,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     let userId: string | null = otherStore.data?.user_id ?? asAffiliate.data?.user_id ?? null;
     let created = false;
 
+    // No password given -> the person sets their own through an invite e-mail.
+    const wantInvite = !userId && password === "";
+    if (wantInvite && !isEmailConfigured()) {
+      throw new BadInput("O envio de e-mail não está configurado: defina uma senha inicial para esta pessoa.");
+    }
     if (!userId) {
-      if (password.length < 10 || password.length > 200) {
-        throw new BadInput("Defina uma senha inicial de pelo menos 10 caracteres.");
+      if (!wantInvite && (password.length < 10 || password.length > 200)) {
+        throw new BadInput("A senha inicial deve ter pelo menos 10 caracteres.");
       }
       try {
-        userId = await createPortalUser(admin, { email, password, name });
+        // The invite flow creates the login with a random password nobody knows.
+        userId = await createPortalUser(admin, { email, password: wantInvite ? randomBytes(24).toString("base64url") : password, name });
         created = true;
       } catch (err) {
         if (err instanceof PortalUserError) {
@@ -107,7 +116,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     await writeAudit(admin, ctx, { clientId: id, action: "Adicionou pessoa à equipe", objectType: "client_user", objectId: data.id });
-    return NextResponse.json({ user: toStoreUser(data as StoreUserRow), login_created: created }, { status: 201 });
+
+    let inviteSent = false;
+    if (wantInvite) {
+      const store = await admin.from("aff_clients").select("name").eq("id", id).maybeSingle();
+      try {
+        await sendInvite(admin, req, { email, name, store: store.data?.name ?? null });
+        inviteSent = true;
+      } catch (err) {
+        // The person exists; the team can resend from the list.
+        console.error("[POST affiliates/users] invite e-mail failed:", err);
+      }
+    }
+    return NextResponse.json(
+      { user: toStoreUser(data as StoreUserRow), login_created: created, invite_sent: inviteSent },
+      { status: 201 },
+    );
   } catch (err) {
     if (err instanceof BadInput) return NextResponse.json({ error: err.message }, { status: 400 });
     return toErrorResponse(err);

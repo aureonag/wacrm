@@ -299,3 +299,35 @@ export function terminationEmailHtml(a: TerminationEmailArgs): string {
   `;
   return emailShell(body);
 }
+
+/** E-mail do código de "esqueci minha senha" do portal (módulo Afiliados). */
+export function portalResetEmailHtml(args: { code: string }): string {
+  const body = `
+    <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">Redefinir sua senha</h1>
+    <p style="margin:0 0 20px;font-size:14px;color:${COLORS.muted};line-height:1.6;">
+      Use o código abaixo para criar uma nova senha de acesso ao portal.
+    </p>
+    <div style="margin:0 0 20px;text-align:center;">
+      <span style="display:inline-block;padding:14px 28px;background:${COLORS.primarySoftBg};border:1px solid ${COLORS.primarySoftBorder};border-radius:8px;font-size:28px;font-weight:700;letter-spacing:6px;color:${COLORS.foreground};">${escapeHtml(args.code)}</span>
+    </div>
+    <p style="margin:0;font-size:13px;color:${COLORS.muted};line-height:1.5;">Este código expira em 10 minutos. Se você não pediu, pode ignorar este e-mail: sua senha continua a mesma.</p>
+  `;
+  return emailShell(body);
+}
+
+/** E-mail de convite para definir a senha e entrar no portal (afiliado ou pessoa de loja). */
+export function portalInviteEmailHtml(args: { name: string; store: string | null; link: string }): string {
+  const body = `
+    <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">Você foi convidado(a)</h1>
+    <p style="margin:0 0 20px;font-size:14px;color:${COLORS.muted};line-height:1.6;">
+      Olá, <strong style="color:${COLORS.foreground};">${escapeHtml(args.name)}</strong>.
+      ${args.store ? `Você recebeu acesso ao portal de <strong style="color:${COLORS.foreground};">${escapeHtml(args.store)}</strong>.` : "Você recebeu acesso ao portal."}
+      Clique no botão para definir sua senha e entrar.
+    </p>
+    <p style="margin:0 0 20px;">
+      <a href="${escapeHtml(args.link)}" style="display:inline-block;padding:10px 20px;background:${COLORS.primary};color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">Definir minha senha</a>
+    </p>
+    <p style="margin:0;font-size:13px;color:${COLORS.muted};line-height:1.5;">Este link vale por 3 dias e só funciona uma vez. Se você não esperava este convite, pode ignorar este e-mail.</p>
+  `;
+  return emailShell(body);
+}

@@ -527,7 +527,10 @@
         "pix_phone": "Phone",
         "pix_random": "Random key",
         "tabParticipants": "Participants",
-        "tabRanking": "Ranking"
+        "tabRanking": "Ranking",
+        "invite": "Send invite",
+        "inviteSent": "Invite sent by e-mail.",
+        "inviteNotReady": "Invites are not enabled in the database yet (migration 105)."
       },
       "commissions": {
         "closeTitle": "Close commission",
@@ -788,8 +791,8 @@
         "fieldName": "Name",
         "fieldEmail": "E-mail",
         "fieldRole": "Role",
-        "fieldPassword": "Initial password",
-        "passwordHint": "At least 10 characters. Only needed if the person does not have portal access yet. Send it through a secure channel.",
+        "fieldPassword": "Initial password (optional)",
+        "passwordHint": "Leave blank so the person gets an e-mail and sets their own password. If you fill it in, at least 10 characters, and send it through a secure channel.",
         "permissionsTitle": "Permissions per module",
         "permissionsHint": "\"Role default\" uses what the chosen role allows. Pick another value only to open an exception.",
         "added": "Person added.",
@@ -816,7 +819,11 @@
         "level_inherit": "Role default",
         "level_none": "No access",
         "level_view": "View only",
-        "level_edit": "View and edit"
+        "level_edit": "View and edit",
+        "inviteSent": "Invite sent again by e-mail.",
+        "resendInvite": "Resend invite",
+        "addedInvite": "Person added. We e-mailed them to set a password.",
+        "addedNoInvite": "Person added, but the e-mail did not go out. Use \"Resend invite\"."
       },
       "ranking": {
         "title": "Affiliate ranking",
@@ -3620,7 +3627,8 @@
       "submitting": "Signing in…",
       "error": "Wrong e-mail or password.",
       "notAffiliate": "This is not an affiliate account. Use the CRM login.",
-      "hint": "Not an affiliate yet? Use the sign-up link of the campaign sent by the store."
+      "hint": "Not an affiliate yet? Use the sign-up link of the campaign sent by the store.",
+      "forgot": "Forgot my password"
     },
     "nav": {
       "title": "Affiliate portal",
@@ -3721,6 +3729,36 @@
       "noAccessHint": "This account is not linked to any store or affiliate registration. Talk to whoever invited you.",
       "asAffiliate": "My affiliate registration",
       "signOut": "Sign out"
+    },
+    "forgot": {
+      "title": "Forgot my password",
+      "subtitle": "Enter the e-mail of your access. If it exists, we send a 6-digit code.",
+      "email": "E-mail",
+      "send": "Send code",
+      "sending": "Sending…",
+      "back": "Back to sign in",
+      "error": "Could not send the code. Try again.",
+      "tooMany": "Too many attempts. Wait a few minutes and try again.",
+      "noEmail": "E-mail sending is not configured in this environment yet.",
+      "notReady": "This feature is not enabled yet. Talk to the Aureon team."
+    },
+    "setPassword": {
+      "title": "Set password",
+      "subtitleCode": "Type the code we e-mailed you and choose a new password.",
+      "subtitleInvite": "Choose the password you will use to sign in to the portal.",
+      "email": "E-mail",
+      "code": "6-digit code",
+      "password": "New password",
+      "passwordHint": "At least {min} characters.",
+      "confirm": "Repeat the password",
+      "mismatch": "The passwords do not match.",
+      "submit": "Save password",
+      "saving": "Saving…",
+      "done": "Password set! Taking you to sign in…",
+      "back": "Back to sign in",
+      "error": "Could not set the password. Try again.",
+      "tooMany": "Too many attempts. Wait a few minutes and try again.",
+      "notReady": "This feature is not enabled yet. Talk to the Aureon team."
     }
   }
 }

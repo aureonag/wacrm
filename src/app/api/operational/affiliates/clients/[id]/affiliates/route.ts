@@ -34,6 +34,7 @@ interface MembershipRow {
     phone: string | null;
     instagram: string | null;
     pix_key: string | null;
+    user_id: string | null;
   } | null;
 }
 
@@ -46,7 +47,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { data, error } = await admin
       .from("aff_memberships")
       .select(
-        "id, code, status, accepted_revision, accepted_at, created_at, campaign_id, aff_campaigns(name), aff_affiliates(id, name, email, phone, instagram, pix_key)",
+        "id, code, status, accepted_revision, accepted_at, created_at, campaign_id, aff_campaigns(name), aff_affiliates(id, name, email, phone, instagram, pix_key, user_id)",
       )
       .eq("client_id", id)
       .order("created_at", { ascending: false });
@@ -75,6 +76,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
               phone: m.aff_affiliates.phone,
               instagram: m.aff_affiliates.instagram,
               has_pix: Boolean(m.aff_affiliates.pix_key),
+              has_login: Boolean(m.aff_affiliates.user_id),
             }
           : null,
       })),

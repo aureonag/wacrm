@@ -550,6 +550,17 @@ export function ExpensesTab() {
                     ))}
                   </TableRow>
                 ))}
+                <TableRow className="border-t-2 font-semibold">
+                  <TableCell className="sticky left-0 z-10 bg-card px-2 py-2 text-foreground">Total do mês</TableCell>
+                  {MONTHS.map((m) => {
+                    const total = expenses.filter((e) => e.month === m).reduce((sum, e) => sum + e.amount, 0);
+                    return (
+                      <TableCell key={m} className="px-2 py-2 text-right text-xs tabular-nums text-foreground">
+                        {total === 0 ? "—" : total.toFixed(2).replace(".", ",")}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
               </TableBody>
             </Table>
           )}

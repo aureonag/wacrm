@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Pause, Pencil, Play, Plus } from "lucide-react";
+import { Loader2, Mail, Pause, Pencil, Play, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,20 +96,29 @@ export function TeamView() {
     setEditing(u);
   }
 
-  async function call(url: string, method: "POST" | "PATCH", body: unknown): Promise<boolean> {
+  async function call(url: string, method: "POST" | "PATCH", body: unknown): Promise<Response | null> {
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) return true;
+    if (res.ok) return res;
     const data = (await res.json().catch(() => null)) as { error?: string } | null;
     if (res.status === 503 && data?.error === "portal_not_ready") toast.error(t("team.notReady"));
-    else toast.error([400, 409].includes(res.status) ? (data?.error ?? t("saveError")) : t("saveError"));
-    return false;
+    else toast.error([400, 409, 429, 502, 503].includes(res.status) ? (data?.error ?? t("saveError")) : t("saveError"));
+    return null;
+  }
+
+  async function resendInvite(u: StoreUser) {
+    setBusyId(u.id);
+    const res = await fetch(`${apiBase}/users/${u.id}/invite`, { method: "POST" });
+    setBusyId(null);
+    if (res.ok) return toast.success(t("team.inviteSent"));
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    toast.error(res.status === 503 && data?.error === "portal_not_ready" ? t("team.notReady") : (data?.error ?? t("saveError")));
   }
 
   async function save() {
     if (!editing) return;
     setSaving(true);
     const isNew = editing === "new";
-    const ok = isNew
+    const res = isNew
       ? await call(`${apiBase}/users`, "POST", {
           name: form.name,
           email: form.email,
@@ -123,17 +132,23 @@ export function TeamView() {
           permissions: overridesFrom(form.levels),
         });
     setSaving(false);
-    if (!ok) return;
-    toast.success(isNew ? t("team.added") : t("team.updated"));
+    if (!res) return;
+    if (isNew) {
+      const created = (await res.json().catch(() => null)) as { invite_sent?: boolean } | null;
+      if (!form.password && created?.invite_sent === false) toast.warning(t("team.addedNoInvite"));
+      else toast.success(form.password ? t("team.added") : t("team.addedInvite"));
+    } else {
+      toast.success(t("team.updated"));
+    }
     setEditing(null);
     await load();
   }
 
   async function setStatus(u: StoreUser, status: "active" | "disabled") {
     setBusyId(u.id);
-    const ok = await call(`${apiBase}/users/${u.id}`, "PATCH", { status });
+    const res = await call(`${apiBase}/users/${u.id}`, "PATCH", { status });
     setBusyId(null);
-    if (!ok) return;
+    if (!res) return;
     toast.success(status === "disabled" ? t("team.disabled") : t("team.reactivated"));
     await load();
   }
@@ -181,6 +196,12 @@ export function TeamView() {
                 </div>
                 {canEdit && (
                   <div className="flex shrink-0 gap-1">
+                    {!disabled && (
+                      <Button variant="outline" size="sm" disabled={busyId === u.id} onClick={() => resendInvite(u)}>
+                        <Mail className="h-3.5 w-3.5" />
+                        {t("team.resendInvite")}
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => openEdit(u)}>
                       <Pencil className="h-3.5 w-3.5" />
                       {t("team.edit")}

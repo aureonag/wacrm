@@ -527,7 +527,10 @@
         "pix_phone": "Telefone",
         "pix_random": "Chave aleatória",
         "tabParticipants": "Participantes",
-        "tabRanking": "Ranking"
+        "tabRanking": "Ranking",
+        "invite": "Enviar convite",
+        "inviteSent": "Convite enviado por e-mail.",
+        "inviteNotReady": "O convite ainda não está liberado no banco (migration 105)."
       },
       "commissions": {
         "closeTitle": "Fechar comissão",
@@ -788,8 +791,8 @@
         "fieldName": "Nome",
         "fieldEmail": "E-mail",
         "fieldRole": "Perfil",
-        "fieldPassword": "Senha inicial",
-        "passwordHint": "Mínimo de 10 caracteres. Necessária só se a pessoa ainda não tiver acesso ao portal. Envie por um canal seguro.",
+        "fieldPassword": "Senha inicial (opcional)",
+        "passwordHint": "Deixe em branco para a pessoa receber um e-mail e definir a própria senha. Se preencher, mínimo de 10 caracteres e envie por um canal seguro.",
         "permissionsTitle": "Permissões por módulo",
         "permissionsHint": "\"Padrão do perfil\" usa o que o perfil escolhido permite. Escolha outro valor só para abrir uma exceção.",
         "added": "Pessoa adicionada.",
@@ -816,7 +819,11 @@
         "level_inherit": "Padrão do perfil",
         "level_none": "Sem acesso",
         "level_view": "Só ver",
-        "level_edit": "Ver e editar"
+        "level_edit": "Ver e editar",
+        "inviteSent": "Convite reenviado por e-mail.",
+        "resendInvite": "Reenviar convite",
+        "addedInvite": "Pessoa adicionada. Enviamos um e-mail para ela definir a senha.",
+        "addedNoInvite": "Pessoa adicionada, mas o e-mail não saiu. Use \"Reenviar convite\"."
       },
       "ranking": {
         "title": "Ranking de afiliados",
@@ -3620,7 +3627,8 @@
       "submitting": "Entrando…",
       "error": "E-mail ou senha incorretos.",
       "notAffiliate": "Esta conta não é de afiliado. Use o login do CRM.",
-      "hint": "Ainda não é afiliado? Use o link de inscrição da campanha enviado pela loja."
+      "hint": "Ainda não é afiliado? Use o link de inscrição da campanha enviado pela loja.",
+      "forgot": "Esqueci minha senha"
     },
     "nav": {
       "title": "Portal do afiliado",
@@ -3721,6 +3729,36 @@
       "noAccessHint": "Esta conta não está ligada a nenhuma loja nem a um cadastro de afiliado. Fale com quem convidou você.",
       "asAffiliate": "Meu cadastro de afiliado",
       "signOut": "Sair"
+    },
+    "forgot": {
+      "title": "Esqueci minha senha",
+      "subtitle": "Informe o e-mail do seu acesso. Se ele existir, enviamos um código de 6 dígitos.",
+      "email": "E-mail",
+      "send": "Enviar código",
+      "sending": "Enviando…",
+      "back": "Voltar para o login",
+      "error": "Não foi possível enviar o código. Tente novamente.",
+      "tooMany": "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+      "noEmail": "O envio de e-mail ainda não está configurado neste ambiente.",
+      "notReady": "Este recurso ainda não está liberado. Fale com a equipe Aureon."
+    },
+    "setPassword": {
+      "title": "Definir senha",
+      "subtitleCode": "Digite o código que enviamos por e-mail e escolha uma nova senha.",
+      "subtitleInvite": "Escolha a senha que você vai usar para entrar no portal.",
+      "email": "E-mail",
+      "code": "Código de 6 dígitos",
+      "password": "Nova senha",
+      "passwordHint": "Mínimo de {min} caracteres.",
+      "confirm": "Repita a senha",
+      "mismatch": "As senhas não são iguais.",
+      "submit": "Salvar senha",
+      "saving": "Salvando…",
+      "done": "Senha definida! Levando você para o login…",
+      "back": "Voltar para o login",
+      "error": "Não foi possível definir a senha. Tente novamente.",
+      "tooMany": "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+      "notReady": "Este recurso ainda não está liberado. Fale com a equipe Aureon."
     }
   }
 }

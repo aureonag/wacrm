@@ -201,6 +201,11 @@ export const RATE_LIMITS = {
    *  real inbox, so — like contractSendCode — 3 per 10 minutes, applied both
    *  per IP and per e-mail address. */
   affiliateSendCode: { limit: 3, windowMs: 600_000 },
+  /** Portal: "esqueci minha senha" / convite (public). Each success mails a real
+   *  inbox: 3 per 10 minutes, applied per IP and per address. */
+  portalAccessCode: { limit: 3, windowMs: 600_000 },
+  /** Portal: set a new password with a code (public), per IP and per address. */
+  portalSetPassword: { limit: 10, windowMs: 600_000 },
   /** Afiliados: portal writes (profile, invoice upload), per user. */
   affiliatePortalWrite: { limit: 30, windowMs: 60_000 },
 } as const;

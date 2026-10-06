@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -70,7 +71,12 @@ export default function PortalLoginPage() {
           {busy && <Loader2 className="h-4 w-4 animate-spin" />}
           {busy ? t("submitting") : t("submit")}
         </Button>
-        <p className="text-xs text-muted-foreground">{t("hint")}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">{t("hint")}</p>
+          <Link href="/portal/esqueci-senha" className="shrink-0 text-xs font-medium text-primary hover:underline">
+            {t("forgot")}
+          </Link>
+        </div>
       </form>
     </div>
   );

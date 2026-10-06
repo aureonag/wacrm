@@ -6,7 +6,7 @@ import { AffiliateProfileDialog } from "../../../_components/affiliate-profile-d
 import { AffiliatesTabs } from "../../../_components/affiliates-tabs";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Check, Loader2, Plus, Power, Search, X } from "lucide-react";
+import { Check, Loader2, Mail, Plus, Power, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,7 @@ interface Membership {
   status: MembershipStatus;
   campaign_id: string;
   campaign_name: string;
-  affiliate: { id: string; name: string; email: string; phone: string | null; instagram: string | null; has_pix: boolean } | null;
+  affiliate: { id: string; name: string; email: string; phone: string | null; instagram: string | null; has_pix: boolean; has_login: boolean } | null;
 }
 
 type State = { kind: "loading" } | { kind: "error" } | { kind: "ready"; memberships: Membership[]; campaigns: Campaign[] };
@@ -129,6 +129,15 @@ export default function AffiliateMembersPage() {
     await load();
   }
 
+  async function invite(m: Membership) {
+    setBusyId(m.id);
+    const res = await fetch(`${apiBase}/affiliates/${m.id}/invite`, { method: "POST" });
+    setBusyId(null);
+    if (res.ok) return toast.success(t("members.inviteSent"));
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    toast.error(res.status === 503 && data?.error === "portal_not_ready" ? t("members.inviteNotReady") : [429, 502, 503].includes(res.status) ? (data?.error ?? t("saveError")) : t("saveError"));
+  }
+
   async function setStatus(m: Membership, status: "approved" | "rejected" | "inactive") {
     setBusyId(m.id);
     const res = await fetch(`${apiBase}/affiliates/${m.id}`, {
@@ -207,6 +216,12 @@ export default function AffiliateMembersPage() {
                   <span className="text-[11px] text-muted-foreground">{t("members.notSynced")}</span>
                 </div>
                 <div className={cn("flex shrink-0 gap-1", !canEdit && "hidden")}>
+                  {m.affiliate && !m.affiliate.has_login && m.status !== "rejected" && (
+                    <Button variant="outline" size="sm" disabled={busy} onClick={() => invite(m)}>
+                      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                      {t("members.invite")}
+                    </Button>
+                  )}
                   {m.status === "pending" && (
                     <>
                       <Button size="sm" disabled={busy} onClick={() => setStatus(m, "approved")}>
