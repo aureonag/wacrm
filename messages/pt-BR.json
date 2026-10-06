@@ -405,7 +405,8 @@
           "payments": "Pagamentos"
         },
         "contextBar": "Administração · conta selecionada",
-        "selectClient": "Selecionar cliente"
+        "selectClient": "Selecionar cliente",
+        "viewAsClient": "Ver como cliente"
       },
       "campaigns": {
         "add": "Nova campanha",
@@ -598,7 +599,8 @@
         "payments": "Pagamentos",
         "reports": "Relatórios",
         "integrations": "Integrações",
-        "development": "Desenvolvimento"
+        "development": "Desenvolvimento",
+        "team": "Equipe"
       },
       "headings": {
         "clients": {
@@ -640,6 +642,10 @@
         "development": {
           "title": "Desenvolvimento",
           "description": "Configurações técnicas separadas das operações financeiras."
+        },
+        "team": {
+          "title": "Equipe da loja",
+          "description": "Quem acessa a conta da loja e o que cada pessoa pode fazer."
         }
       },
       "dashboard": {
@@ -765,6 +771,50 @@
             "fail": "SMTP não configurado: o código de confirmação não chega ao afiliado."
           }
         }
+      },
+      "team": {
+        "add": "Adicionar pessoa",
+        "empty": "Nenhuma pessoa cadastrada ainda.",
+        "emptyHint": "Adicione quem vai acompanhar o programa de afiliados desta loja.",
+        "edit": "Editar",
+        "disable": "Desativar",
+        "reactivate": "Reativar",
+        "statusDisabled": "Desativado",
+        "addTitle": "Adicionar pessoa",
+        "editTitle": "Editar pessoa",
+        "formHint": "A pessoa entra pelo portal com e-mail e senha. O perfil define o que ela vê e faz; você pode ajustar módulo por módulo.",
+        "fieldName": "Nome",
+        "fieldEmail": "E-mail",
+        "fieldRole": "Perfil",
+        "fieldPassword": "Senha inicial",
+        "passwordHint": "Mínimo de 10 caracteres. Necessária só se a pessoa ainda não tiver acesso ao portal. Envie por um canal seguro.",
+        "permissionsTitle": "Permissões por módulo",
+        "permissionsHint": "\"Padrão do perfil\" usa o que o perfil escolhido permite. Escolha outro valor só para abrir uma exceção.",
+        "added": "Pessoa adicionada.",
+        "updated": "Acesso atualizado.",
+        "disabled": "Pessoa desativada. O acesso foi bloqueado.",
+        "reactivated": "Pessoa reativada.",
+        "notReady": "O cadastro de usuários do portal ainda não está liberado no banco (migrations 101 e 104).",
+        "role_owner": "Proprietário",
+        "role_manager": "Gestor de campanhas",
+        "role_finance": "Financeiro",
+        "role_viewer": "Leitura",
+        "roleHint_owner": "Tudo, inclusive equipe e pagamentos.",
+        "roleHint_manager": "Gerencia campanhas e afiliados; só consulta o financeiro.",
+        "roleHint_finance": "Notas, pagamentos e exportação; só consulta campanhas e afiliados.",
+        "roleHint_viewer": "Só consulta; não exporta dados nem vê pagamentos.",
+        "module_campaigns": "Campanhas",
+        "module_affiliates": "Afiliados",
+        "module_commissions": "Comissões",
+        "module_invoices": "Notas fiscais",
+        "module_payments": "Pagamentos",
+        "module_reports": "Relatórios e exportação",
+        "module_integrations": "Integrações",
+        "module_team": "Equipe",
+        "level_inherit": "Padrão do perfil",
+        "level_none": "Sem acesso",
+        "level_view": "Só ver",
+        "level_edit": "Ver e editar"
       }
     },
     "dashboard": {
@@ -3604,6 +3654,29 @@
       "resend": "Reenviar código",
       "resendIn": "Reenviar em {s}s",
       "editData": "Corrigir meus dados"
+    },
+    "store": {
+      "noAccessTitle": "Sem acesso a esta loja",
+      "noAccessHint": "Sua conta não tem acesso a esta loja, ou o acesso foi desativado.",
+      "backToPortal": "Voltar ao portal",
+      "menuLabel": "Meu portal",
+      "signOut": "Sair",
+      "selectStore": "Selecionar loja",
+      "viewingAs": "Visualizando como cliente · {name}",
+      "backToAdmin": "Voltar à administração",
+      "role_owner": "Proprietário",
+      "role_manager": "Gestor de campanhas",
+      "role_finance": "Financeiro",
+      "role_viewer": "Leitura"
+    },
+    "chooser": {
+      "loading": "Carregando…",
+      "title": "Onde você quer entrar?",
+      "subtitle": "Sua conta tem mais de um acesso.",
+      "noAccessTitle": "Nenhum acesso encontrado",
+      "noAccessHint": "Esta conta não está ligada a nenhuma loja nem a um cadastro de afiliado. Fale com quem convidou você.",
+      "asAffiliate": "Meu cadastro de afiliado",
+      "signOut": "Sair"
     }
   }
 }

@@ -34,7 +34,7 @@ export default function PortalLoginPage() {
       setError(t("notAffiliate"));
       return;
     }
-    router.replace("/portal/afiliado");
+    router.replace("/portal");
   }
 
   return (

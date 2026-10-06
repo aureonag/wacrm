@@ -2,11 +2,11 @@
 // attributed orders and the account history (aff_audit). Read only.
 // The CSV of approved payments is the existing /commissions/export route.
 //
-// Staff only (owner/admin) — see src/lib/affiliates/admin.ts.
+// Aureon staff, or a store user with the right permission — see requireClientAccess in src/lib/affiliates/admin.ts.
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
-import { isModuleNotReady, moduleNotReadyResponse, requireStaff } from "@/lib/affiliates/admin";
+import { isModuleNotReady, moduleNotReadyResponse, requireClientAccess } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 
 const ORDERS_LIMIT = 100;
@@ -14,9 +14,9 @@ const AUDIT_LIMIT = 40;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { admin } = await requireClientAccess(id, [["reports", "view"]]);
 
     const [orders, audit] = await Promise.all([
       admin

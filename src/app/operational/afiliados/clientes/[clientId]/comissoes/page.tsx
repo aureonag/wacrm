@@ -1,9 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import { CommissionsView } from "@/app/operational/afiliados/_components/commissions-view";
 
 export default function AffiliateCommissionsPage() {
-  const { clientId } = useParams<{ clientId: string }>();
-  return <CommissionsView clientId={clientId} mode="all" />;
+  return <CommissionsView mode="all" />;
 }

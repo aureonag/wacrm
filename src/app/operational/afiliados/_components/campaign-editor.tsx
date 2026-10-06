@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Campaign, DiscountType, Frequency, Reward, RewardType } from "@/lib/affiliates/campaigns";
+import { useWorkspace } from "./workspace";
 
 interface Draft {
   name: string;
@@ -60,11 +61,12 @@ function formatMonth(m: string): string {
   return m.split("-").reverse().join("/");
 }
 
-export function CampaignEditor({ clientId, campaign }: { clientId: string; campaign: Campaign | null }) {
+export function CampaignEditor({ campaign }: { clientId?: string; campaign: Campaign | null }) {
+  const { apiBase, pageBase } = useWorkspace();
   const t = useTranslations("Operational.affiliates");
   const router = useRouter();
   const edit = campaign !== null;
-  const backHref = `/operational/afiliados/clientes/${clientId}/campanhas`;
+  const backHref = `${pageBase}/campanhas`;
 
   const [draft, setDraft] = useState<Draft>(() => initialDraft(campaign));
   const [dirty, setDirty] = useState(false);
@@ -139,8 +141,8 @@ export function CampaignEditor({ clientId, campaign }: { clientId: string; campa
       ...(edit ? { revision: campaign.revision } : {}),
     };
     const url = edit
-      ? `/api/operational/affiliates/clients/${clientId}/campaigns/${campaign.id}`
-      : `/api/operational/affiliates/clients/${clientId}/campaigns`;
+      ? `${apiBase}/campaigns/${campaign.id}`
+      : `${apiBase}/campaigns`;
     const res = await fetch(url, {
       method: edit ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },

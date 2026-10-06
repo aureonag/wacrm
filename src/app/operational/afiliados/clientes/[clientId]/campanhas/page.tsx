@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useWorkspace } from "../../../_components/workspace";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Copy, Gift, Loader2, Pencil, Plus, Power, Users } from "lucide-react";
@@ -22,17 +22,18 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 
 export default function AffiliateCampaignsPage() {
   const t = useTranslations("Operational.affiliates");
-  const { clientId } = useParams<{ clientId: string }>();
+  const { apiBase, pageBase, can } = useWorkspace();
+  const canEdit = can("campaigns", "edit");
   const [state, setState] = useState<State>({ kind: "loading" });
   const [busyId, setBusyId] = useState<string | null>(null);
-  const base = `/operational/afiliados/clientes/${clientId}/campanhas`;
+  const base = `${pageBase}/campanhas`;
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/operational/affiliates/clients/${clientId}/campaigns`);
+    const res = await fetch(`${apiBase}/campaigns`);
     if (!res.ok) return setState({ kind: "error" });
     const data = (await res.json()) as { campaigns: Campaign[] };
     setState({ kind: "ready", campaigns: data.campaigns });
-  }, [clientId]);
+  }, [apiBase]);
 
   useEffect(() => {
     // Initial fetch; setState happens after the await, not synchronously.
@@ -52,7 +53,7 @@ export default function AffiliateCampaignsPage() {
 
   async function toggle(c: Campaign) {
     setBusyId(c.id);
-    const res = await fetch(`/api/operational/affiliates/clients/${clientId}/campaigns/${c.id}`, {
+    const res = await fetch(`${apiBase}/campaigns/${c.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: c.status === "active" ? "inactive" : "active" }),
@@ -76,14 +77,16 @@ export default function AffiliateCampaignsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Link href={`${base}/nova`}>
-          <Button>
-            <Plus className="h-4 w-4" />
-            {t("campaigns.add")}
-          </Button>
-        </Link>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Link href={`${base}/nova`}>
+            <Button>
+              <Plus className="h-4 w-4" />
+              {t("campaigns.add")}
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {state.campaigns.length === 0 ? (
         <EmptyState title={t("campaigns.empty")} hint={t("campaigns.emptyHint")} className="min-h-40" />
@@ -118,16 +121,20 @@ export default function AffiliateCampaignsPage() {
                       <Copy className="h-3.5 w-3.5" />
                       {t("campaigns.copyLink")}
                     </Button>
-                    <Link href={`${base}/${c.id}`}>
-                      <Button variant="outline" size="sm">
-                        <Pencil className="h-3.5 w-3.5" />
-                        {t("campaigns.edit")}
-                      </Button>
-                    </Link>
-                    <Button variant="outline" size="sm" disabled={busyId === c.id} onClick={() => toggle(c)}>
-                      {busyId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
-                      {active ? t("campaigns.deactivate") : t("campaigns.activate")}
-                    </Button>
+                    {canEdit && (
+                      <>
+                        <Link href={`${base}/${c.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Pencil className="h-3.5 w-3.5" />
+                            {t("campaigns.edit")}
+                          </Button>
+                        </Link>
+                        <Button variant="outline" size="sm" disabled={busyId === c.id} onClick={() => toggle(c)}>
+                          {busyId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
+                          {active ? t("campaigns.deactivate") : t("campaigns.activate")}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
 

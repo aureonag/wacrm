@@ -11,9 +11,18 @@
 
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireRole, type AccountContext } from "@/lib/auth/account";
+import { ForbiddenError, requireRole, UnauthorizedError, type AccountContext } from "@/lib/auth/account";
+import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { BadInput } from "./campaigns";
+import {
+  effectivePermissions,
+  FULL_ACCESS,
+  isStoreRole,
+  satisfies,
+  type Need,
+  type StorePermissions,
+} from "./store-access";
 
 export interface StaffContext {
   ctx: AccountContext;
@@ -23,6 +32,66 @@ export interface StaffContext {
 export async function requireStaff(): Promise<StaffContext> {
   const ctx = await requireRole("admin");
   return { ctx, admin: supabaseAdmin() };
+}
+
+/** Who is acting — written to the audit trail. */
+export interface AuditActor {
+  userId: string;
+  name: string | null;
+  kind: "staff" | "client";
+}
+
+export interface ClientAccess {
+  /** Same shape the routes always used: `ctx.userId` is the acting person. */
+  ctx: AuditActor;
+  admin: SupabaseClient;
+  kind: "staff" | "client";
+  permissions: StorePermissions;
+}
+
+/**
+ * Guard for the routes of ONE client (loja): the Aureon team (owner/admin of
+ * the CRM) can do everything; a person of that store can do what their role
+ * and overrides allow (store-access.ts). Anyone else gets 401/403. A portal
+ * user can only ever reach the client they belong to — the id in the URL is
+ * always checked against aff_client_users, never trusted.
+ */
+export async function requireClientAccess(clientId: string, need: Need): Promise<ClientAccess> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) throw new UnauthorizedError();
+  const admin = supabaseAdmin();
+
+  if (user.app_metadata?.aff_portal !== true) {
+    // A CRM user: only owner/admin (the Aureon team) get in.
+    const ctx = await requireRole("admin");
+    return {
+      ctx: { userId: ctx.userId, name: ctx.account?.name ?? null, kind: "staff" },
+      admin,
+      kind: "staff",
+      permissions: FULL_ACCESS,
+    };
+  }
+
+  const { data, error: lookupErr } = await admin
+    .from("aff_client_users")
+    .select("name, role, permissions, status, aff_clients(status)")
+    .eq("client_id", clientId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (lookupErr) {
+    console.error("[affiliates] store user lookup failed:", lookupErr.message);
+    throw new ForbiddenError("Could not load access");
+  }
+  const clientStatus = (data?.aff_clients as unknown as { status: string } | null)?.status;
+  if (!data || data.status !== "active" || clientStatus !== "active") throw new ForbiddenError("No access to this account");
+
+  const permissions = effectivePermissions(isStoreRole(data.role) ? data.role : "viewer", data.permissions);
+  if (!satisfies(permissions, need)) throw new ForbiddenError("Your access does not allow this");
+  return { ctx: { userId: user.id, name: data.name, kind: "client" }, admin, kind: "client", permissions };
 }
 
 /** Postgres "undefined_table": the aff_* migrations are not applied yet. */
@@ -36,14 +105,16 @@ export function moduleNotReadyResponse(): NextResponse {
 
 export async function writeAudit(
   admin: SupabaseClient,
-  ctx: AccountContext,
+  ctx: AccountContext | AuditActor,
   entry: { clientId: string | null; action: string; objectType: string; objectId: string },
 ): Promise<void> {
+  const actor: AuditActor =
+    "kind" in ctx ? ctx : { userId: ctx.userId, name: ctx.account?.name ?? null, kind: "staff" };
   const { error } = await admin.from("aff_audit").insert({
     client_id: entry.clientId,
-    actor_user_id: ctx.userId,
-    actor_name: ctx.account?.name ?? null,
-    actor_kind: "staff",
+    actor_user_id: actor.userId,
+    actor_name: actor.name,
+    actor_kind: actor.kind,
     action: entry.action,
     object_type: entry.objectType,
     object_id: entry.objectId,

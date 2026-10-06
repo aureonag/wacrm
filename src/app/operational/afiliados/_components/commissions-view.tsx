@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/dashboard/skeleton";
 import { cn } from "@/lib/utils";
 import type { Commission, CommissionStatus } from "@/lib/affiliates/commissions";
 import { InvoiceDialog, formatPeriod, money } from "./invoice-dialog";
+import { useWorkspace } from "./workspace";
 
 export type CommissionsMode = "all" | "invoices" | "payments";
 
@@ -51,12 +52,12 @@ const STATUS_STYLE: Record<CommissionStatus, string> = {
 
 const currentMonth = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date()).slice(0, 7);
 
-export function CommissionsView({ clientId, mode }: { clientId: string; mode: CommissionsMode }) {
+export function CommissionsView({ mode }: { clientId?: string; mode: CommissionsMode }) {
   const t = useTranslations("Operational.affiliates");
+  const { apiBase: api, can } = useWorkspace();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [dialog, setDialog] = useState<Dialogs>(null);
   const [busy, setBusy] = useState(false);
-  const api = `/api/operational/affiliates/clients/${clientId}`;
 
   const load = useCallback(async () => {
     const [c, a, k] = await Promise.all([
@@ -64,9 +65,12 @@ export function CommissionsView({ clientId, mode }: { clientId: string; mode: Co
       fetch(`${api}/affiliates`),
       fetch(api),
     ]);
-    if (!c.ok || !a.ok || !k.ok) return setState({ kind: "error" });
+    if (!c.ok || !k.ok) return setState({ kind: "error" });
     const commissions = ((await c.json()) as { commissions: Commission[] }).commissions;
-    const memberships = ((await a.json()) as { memberships: { status: string; affiliate: Participant | null }[] }).memberships;
+    // Participants only feed the "close commission" dialog; without access to the list there are none.
+    const memberships = a.ok
+      ? ((await a.json()) as { memberships: { status: string; affiliate: Participant | null }[] }).memberships
+      : [];
     const clientName = ((await k.json()) as { client: { name: string } }).client.name;
     const seen = new Map<string, Participant>();
     for (const m of memberships) {
@@ -160,16 +164,18 @@ export function CommissionsView({ clientId, mode }: { clientId: string; mode: Co
               <p className="text-xs text-muted-foreground">{t("commissions.paymentsHint")}</p>
             </div>
           </div>
-          <a href={`${api}/commissions/export`}>
-            <Button variant="outline" size="sm">
-              <Download className="h-3.5 w-3.5" />
-              {t("commissions.export")}
-            </Button>
-          </a>
+          {(can("payments", "edit") || can("reports", "edit")) && (
+            <a href={`${api}/commissions/export`}>
+              <Button variant="outline" size="sm">
+                <Download className="h-3.5 w-3.5" />
+                {t("commissions.export")}
+              </Button>
+            </a>
+          )}
         </div>
       )}
 
-      {mode === "all" && (
+      {mode === "all" && can("commissions", "edit") && (
         <div className="flex justify-end">
           <Button onClick={() => setDialog({ type: "close" })} disabled={state.participants.length === 0}>
             <Plus className="h-4 w-4" />
@@ -177,7 +183,7 @@ export function CommissionsView({ clientId, mode }: { clientId: string; mode: Co
           </Button>
         </div>
       )}
-      {mode === "all" && state.participants.length === 0 && (
+      {mode === "all" && can("commissions", "edit") && state.participants.length === 0 && (
         <p className="text-xs text-muted-foreground">{t("commissions.needAffiliate")}</p>
       )}
 
@@ -221,17 +227,17 @@ export function CommissionsView({ clientId, mode }: { clientId: string; mode: Co
                     {t("commissions.receipt")}
                   </Button>
                 )}
-                {(c.status === "awaiting_invoice" || c.status === "invoice_rejected") && (
+                {can("invoices", "edit") && (c.status === "awaiting_invoice" || c.status === "invoice_rejected") && (
                   <Button variant="outline" size="sm" onClick={() => setDialog({ type: "invoice", item: c })}>
                     {t("commissions.sendInvoice")}
                   </Button>
                 )}
-                {c.status === "invoice_review" && (
+                {can("invoices", "edit") && c.status === "invoice_review" && (
                   <Button size="sm" onClick={() => setDialog({ type: "review", item: c })}>
                     {t("commissions.review")}
                   </Button>
                 )}
-                {c.status === "available" && (
+                {can("payments", "edit") && c.status === "available" && (
                   <Button size="sm" onClick={() => setDialog({ type: "payment", item: c })}>
                     {t("commissions.registerPayment")}
                   </Button>

@@ -405,7 +405,8 @@
           "payments": "Payments"
         },
         "contextBar": "Administration · selected account",
-        "selectClient": "Select client"
+        "selectClient": "Select client",
+        "viewAsClient": "View as client"
       },
       "campaigns": {
         "add": "New campaign",
@@ -598,7 +599,8 @@
         "payments": "Payments",
         "reports": "Reports",
         "integrations": "Integrations",
-        "development": "Development"
+        "development": "Development",
+        "team": "Team"
       },
       "headings": {
         "clients": {
@@ -640,6 +642,10 @@
         "development": {
           "title": "Development",
           "description": "Technical settings kept apart from financial operations."
+        },
+        "team": {
+          "title": "Store team",
+          "description": "Who can open the store account and what each person can do."
         }
       },
       "dashboard": {
@@ -765,6 +771,50 @@
             "fail": "SMTP not configured: the confirmation code does not reach the affiliate."
           }
         }
+      },
+      "team": {
+        "add": "Add person",
+        "empty": "Nobody added yet.",
+        "emptyHint": "Add who will follow this store's affiliate program.",
+        "edit": "Edit",
+        "disable": "Disable",
+        "reactivate": "Reactivate",
+        "statusDisabled": "Disabled",
+        "addTitle": "Add person",
+        "editTitle": "Edit person",
+        "formHint": "The person signs in to the portal with e-mail and password. The role defines what they see and do; you can adjust module by module.",
+        "fieldName": "Name",
+        "fieldEmail": "E-mail",
+        "fieldRole": "Role",
+        "fieldPassword": "Initial password",
+        "passwordHint": "At least 10 characters. Only needed if the person does not have portal access yet. Send it through a secure channel.",
+        "permissionsTitle": "Permissions per module",
+        "permissionsHint": "\"Role default\" uses what the chosen role allows. Pick another value only to open an exception.",
+        "added": "Person added.",
+        "updated": "Access updated.",
+        "disabled": "Person disabled. Access blocked.",
+        "reactivated": "Person reactivated.",
+        "notReady": "Portal user sign-up is not enabled in the database yet (migrations 101 and 104).",
+        "role_owner": "Owner",
+        "role_manager": "Campaign manager",
+        "role_finance": "Finance",
+        "role_viewer": "Read only",
+        "roleHint_owner": "Everything, including team and payments.",
+        "roleHint_manager": "Manages campaigns and affiliates; only views finance.",
+        "roleHint_finance": "Invoices, payments and export; only views campaigns and affiliates.",
+        "roleHint_viewer": "View only; no data export and no payments.",
+        "module_campaigns": "Campaigns",
+        "module_affiliates": "Affiliates",
+        "module_commissions": "Commissions",
+        "module_invoices": "Invoices",
+        "module_payments": "Payments",
+        "module_reports": "Reports and export",
+        "module_integrations": "Integrations",
+        "module_team": "Team",
+        "level_inherit": "Role default",
+        "level_none": "No access",
+        "level_view": "View only",
+        "level_edit": "View and edit"
       }
     },
     "dashboard": {
@@ -3604,6 +3654,29 @@
       "resend": "Resend code",
       "resendIn": "Resend in {s}s",
       "editData": "Fix my details"
+    },
+    "store": {
+      "noAccessTitle": "No access to this store",
+      "noAccessHint": "Your account has no access to this store, or the access was disabled.",
+      "backToPortal": "Back to the portal",
+      "menuLabel": "My portal",
+      "signOut": "Sign out",
+      "selectStore": "Select store",
+      "viewingAs": "Viewing as client · {name}",
+      "backToAdmin": "Back to administration",
+      "role_owner": "Owner",
+      "role_manager": "Campaign manager",
+      "role_finance": "Finance",
+      "role_viewer": "Read only"
+    },
+    "chooser": {
+      "loading": "Loading…",
+      "title": "Where do you want to go?",
+      "subtitle": "Your account has more than one access.",
+      "noAccessTitle": "No access found",
+      "noAccessHint": "This account is not linked to any store or affiliate registration. Talk to whoever invited you.",
+      "asAffiliate": "My affiliate registration",
+      "signOut": "Sign out"
     }
   }
 }

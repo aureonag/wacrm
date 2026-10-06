@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Clock, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import { Badge, Panel, money } from "../../../_components/metric";
+import { useWorkspace } from "../../../_components/workspace";
 
 interface Reports {
   orders: {
@@ -29,9 +29,8 @@ const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyl
 
 export default function AffiliateReportsPage() {
   const t = useTranslations("Operational.affiliates");
-  const { clientId } = useParams<{ clientId: string }>();
+  const { apiBase: api, can } = useWorkspace();
   const [state, setState] = useState<State>({ kind: "loading" });
-  const api = `/api/operational/affiliates/clients/${clientId}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -62,14 +61,16 @@ export default function AffiliateReportsPage() {
 
   return (
     <div className="space-y-4">
-      <Panel title={t("reports.exportTitle")} hint={t("reports.exportHint")}>
-        <a href={`${api}/commissions/export`}>
-          <Button type="button">
-            <Download className="h-4 w-4" />
-            {t("reports.exportCsv")}
-          </Button>
-        </a>
-      </Panel>
+      {can("reports", "edit") && (
+        <Panel title={t("reports.exportTitle")} hint={t("reports.exportHint")}>
+          <a href={`${api}/commissions/export`}>
+            <Button type="button">
+              <Download className="h-4 w-4" />
+              {t("reports.exportCsv")}
+            </Button>
+          </a>
+        </Panel>
+      )}
 
       <section className="overflow-hidden rounded-xl border border-border bg-card">
         <h2 className="px-5 py-4 text-sm font-semibold text-foreground">{t("reports.ordersTitle")}</h2>

@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
-import { isModuleNotReady, moduleNotReadyResponse, requireStaff, writeAudit } from "@/lib/affiliates/admin";
+import { isModuleNotReady, moduleNotReadyResponse, requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 
 const ACTION: Record<string, string> = {
@@ -17,9 +17,9 @@ const ACTION: Record<string, string> = {
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; membershipId: string }> }) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id, membershipId } = await params;
     if (!isUuid(id) || !isUuid(membershipId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["affiliates", "edit"]]);
 
     const body = (await req.json().catch(() => null)) as { status?: unknown } | null;
     const status = body?.status;

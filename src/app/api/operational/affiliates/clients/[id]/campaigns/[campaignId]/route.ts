@@ -6,7 +6,7 @@
 //       previous version in `history`, so commissions already closed under an
 //       older rule stay explainable.
 //
-// Staff only (owner/admin) — see src/lib/affiliates/admin.ts.
+// Aureon staff, or a store user with the right permission — see requireClientAccess in src/lib/affiliates/admin.ts.
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
@@ -14,7 +14,7 @@ import {
   BadInput,
   isModuleNotReady,
   moduleNotReadyResponse,
-  requireStaff,
+  requireClientAccess,
   writeAudit,
 } from "@/lib/affiliates/admin";
 import { isUuid, parseCampaignInput, type Campaign, type CampaignHistoryEntry } from "@/lib/affiliates/campaigns";
@@ -26,9 +26,9 @@ type Ctx = { params: Promise<{ id: string; campaignId: string }> };
 
 export async function GET(_req: Request, { params }: Ctx) {
   try {
-    const { admin } = await requireStaff();
     const { id, campaignId } = await params;
     if (!isUuid(id) || !isUuid(campaignId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { admin } = await requireClientAccess(id, [["campaigns", "view"]]);
 
     const { data, error } = await admin
       .from("aff_campaigns")
@@ -50,9 +50,9 @@ export async function GET(_req: Request, { params }: Ctx) {
 
 export async function PATCH(req: Request, { params }: Ctx) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id, campaignId } = await params;
     if (!isUuid(id) || !isUuid(campaignId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["campaigns", "edit"]]);
 
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body) return NextResponse.json({ error: "Solicitação inválida." }, { status: 400 });

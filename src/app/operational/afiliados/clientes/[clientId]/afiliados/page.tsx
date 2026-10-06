@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useWorkspace } from "../../../_components/workspace";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, Loader2, Plus, Power, Search, X } from "lucide-react";
@@ -61,7 +61,8 @@ function norm(s: string): string {
 
 export default function AffiliateMembersPage() {
   const t = useTranslations("Operational.affiliates");
-  const { clientId } = useParams<{ clientId: string }>();
+  const { apiBase, can } = useWorkspace();
+  const canEdit = can("affiliates", "edit");
   const [state, setState] = useState<State>({ kind: "loading" });
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -71,14 +72,14 @@ export default function AffiliateMembersPage() {
 
   const load = useCallback(async () => {
     const [m, c] = await Promise.all([
-      fetch(`/api/operational/affiliates/clients/${clientId}/affiliates`),
-      fetch(`/api/operational/affiliates/clients/${clientId}/campaigns`),
+      fetch(`${apiBase}/affiliates`),
+      fetch(`${apiBase}/campaigns`),
     ]);
     if (!m.ok || !c.ok) return setState({ kind: "error" });
     const members = (await m.json()) as { memberships: Membership[] };
     const camps = (await c.json()) as { campaigns: Campaign[] };
     setState({ kind: "ready", memberships: members.memberships, campaigns: camps.campaigns });
-  }, [clientId]);
+  }, [apiBase]);
 
   useEffect(() => {
     // Initial fetch; setState happens after the await, not synchronously.
@@ -109,7 +110,7 @@ export default function AffiliateMembersPage() {
 
   async function create() {
     setSaving(true);
-    const res = await fetch(`/api/operational/affiliates/clients/${clientId}/affiliates`, {
+    const res = await fetch(`${apiBase}/affiliates`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -127,7 +128,7 @@ export default function AffiliateMembersPage() {
 
   async function setStatus(m: Membership, status: "approved" | "rejected" | "inactive") {
     setBusyId(m.id);
-    const res = await fetch(`/api/operational/affiliates/clients/${clientId}/affiliates/${m.id}`, {
+    const res = await fetch(`${apiBase}/affiliates/${m.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -163,12 +164,14 @@ export default function AffiliateMembersPage() {
             className="h-9 border-border bg-muted pl-8 text-sm text-foreground"
           />
         </div>
-        <Button onClick={openNew} disabled={activeCampaigns.length === 0}>
-          <Plus className="h-4 w-4" />
-          {t("members.add")}
-        </Button>
+        {canEdit && (
+          <Button onClick={openNew} disabled={activeCampaigns.length === 0}>
+            <Plus className="h-4 w-4" />
+            {t("members.add")}
+          </Button>
+        )}
       </div>
-      {activeCampaigns.length === 0 && <p className="text-xs text-muted-foreground">{t("members.needCampaign")}</p>}
+      {canEdit && activeCampaigns.length === 0 && <p className="text-xs text-muted-foreground">{t("members.needCampaign")}</p>}
 
       {rows.length === 0 ? (
         <EmptyState title={query.trim() ? t("members.noResults") : t("members.empty")} className="min-h-40" />
@@ -193,7 +196,7 @@ export default function AffiliateMembersPage() {
                   <code className="rounded bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">{m.code}</code>
                   <span className="text-[11px] text-muted-foreground">{t("members.notSynced")}</span>
                 </div>
-                <div className="flex shrink-0 gap-1">
+                <div className={cn("flex shrink-0 gap-1", !canEdit && "hidden")}>
                   {m.status === "pending" && (
                     <>
                       <Button size="sm" disabled={busy} onClick={() => setStatus(m, "approved")}>

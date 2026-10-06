@@ -5,5 +5,5 @@ import { CampaignEditor } from "@/app/operational/afiliados/_components/campaign
 
 export default function NewAffiliateCampaignPage() {
   const { clientId } = useParams<{ clientId: string }>();
-  return <CampaignEditor clientId={clientId} campaign={null} />;
+  return <CampaignEditor campaign={null} />;
 }

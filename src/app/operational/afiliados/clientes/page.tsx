@@ -206,7 +206,12 @@ export default function AffiliateClientsPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2 text-[11px] font-medium text-muted-foreground">
-                  <span className="rounded-full bg-muted px-2.5 py-1">{t("clients.nUsers", { count: c.users })}</span>
+                  <Link
+                    href={`/operational/afiliados/clientes/${c.id}/equipe`}
+                    className="rounded-full bg-muted px-2.5 py-1 transition-colors hover:bg-primary/10 hover:text-primary"
+                  >
+                    {t("clients.nUsers", { count: c.users })}
+                  </Link>
                   <span className="rounded-full bg-muted px-2.5 py-1">{t("clients.nCampaigns", { count: c.campaigns })}</span>
                   <span className="rounded-full bg-muted px-2.5 py-1">{t("clients.nAffiliates", { count: c.affiliates })}</span>
                 </div>

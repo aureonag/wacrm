@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Activity, AlertCircle, ArrowUpRight, ChevronRight, FileText, Gift, Plug, Users } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import type { CommissionStatus } from "@/lib/affiliates/commissions";
 import { Badge, Metric, Panel, formatPeriod, money } from "../../../_components/metric";
+import { useWorkspace } from "../../../_components/workspace";
 
 interface Dashboard {
   client: { id: string; name: string; status: string };
@@ -39,14 +39,13 @@ const TONE: Record<CommissionStatus, "warn" | "info" | "bad" | "good"> = {
 
 export default function AffiliateDashboardPage() {
   const t = useTranslations("Operational.affiliates");
-  const { clientId } = useParams<{ clientId: string }>();
+  const { apiBase, pageBase: base } = useWorkspace();
   const [state, setState] = useState<State>({ kind: "loading" });
-  const base = `/operational/afiliados/clientes/${clientId}`;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch(`/api/operational/affiliates/clients/${clientId}/dashboard`);
+      const res = await fetch(`${apiBase}/dashboard`);
       if (cancelled) return;
       if (res.status === 503) return setState({ kind: "not_ready" });
       if (!res.ok) return setState({ kind: "error" });
@@ -55,7 +54,7 @@ export default function AffiliateDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [clientId]);
+  }, [apiBase]);
 
   if (state.kind === "loading") {
     return (

@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Portal do afiliado",
+  title: "Portal Aureon",
   referrer: "no-referrer",
   robots: { index: false, follow: false },
 };

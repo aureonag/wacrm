@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
-import { BadInput, requireStaff, writeAudit } from "@/lib/affiliates/admin";
+import { BadInput, requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 import { parsePaymentReference } from "@/lib/affiliates/commissions";
 import {
@@ -20,9 +20,9 @@ import { readUpload, removeDoc, storeDoc } from "@/lib/affiliates/documents";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; commissionId: string }> }) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id, commissionId } = await params;
     if (!isUuid(id) || !isUuid(commissionId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["payments", "edit"]]);
 
     const form = await req.formData().catch(() => null);
     if (!form) return NextResponse.json({ error: "Solicitação inválida." }, { status: 400 });

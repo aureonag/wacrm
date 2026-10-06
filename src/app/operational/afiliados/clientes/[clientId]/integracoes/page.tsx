@@ -1,12 +1,12 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAffiliateClients } from "../../../_components/use-affiliate-clients";
 import { Badge } from "../../../_components/metric";
+import { useWorkspace } from "../../../_components/workspace";
 
 // The store / payment connectors are not built yet: every card says so
 // honestly. "CRM Aureon" is the one that is real — the team is using it now.
@@ -19,10 +19,21 @@ const CONNECTORS = [
 
 export default function AffiliateIntegrationsPage() {
   const t = useTranslations("Operational.affiliates");
-  const { clientId } = useParams<{ clientId: string }>();
-  const { state } = useAffiliateClients();
+  const { apiBase } = useWorkspace();
+  const [platform, setPlatform] = useState<string | null>(null);
 
-  const platform = state.kind === "ready" ? state.clients.find((c) => c.id === clientId)?.platform : null;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(apiBase);
+      if (cancelled || !res.ok) return;
+      const data = (await res.json()) as { client: { platform: string | null } };
+      setPlatform(data.client.platform);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBase]);
 
   return (
     <div className="space-y-4">

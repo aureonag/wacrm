@@ -6,11 +6,11 @@
 // still samples until the store integration exists, so "Resultados" is empty
 // for a client with no orders.
 //
-// Staff only (owner/admin) — see src/lib/affiliates/admin.ts.
+// Aureon staff, or a store user with the right permission — see requireClientAccess in src/lib/affiliates/admin.ts.
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
-import { isModuleNotReady, moduleNotReadyResponse, requireStaff } from "@/lib/affiliates/admin";
+import { isModuleNotReady, moduleNotReadyResponse, requireClientAccess } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 
 const RECENT = 8;
@@ -18,9 +18,9 @@ const TOP_PARTNERS = 8;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { admin } = await requireClientAccess(id, "any-view");
 
     const [client, commissions, memberships, orders] = await Promise.all([
       admin.from("aff_clients").select("id, name, status").eq("id", id).neq("status", "removed").maybeSingle(),

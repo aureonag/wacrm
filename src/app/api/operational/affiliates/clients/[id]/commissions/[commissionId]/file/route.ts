@@ -5,16 +5,16 @@
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
-import { requireStaff, writeAudit } from "@/lib/affiliates/admin";
+import { requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 import { loadCommissionFiles } from "@/lib/affiliates/commissions-server";
 import { signedDocUrl } from "@/lib/affiliates/documents";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string; commissionId: string }> }) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id, commissionId } = await params;
     if (!isUuid(id) || !isUuid(commissionId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["commissions", "view"], ["invoices", "view"], ["payments", "view"]]);
 
     const kind = new URL(req.url).searchParams.get("kind");
     if (kind !== "invoice" && kind !== "receipt") return NextResponse.json({ error: "Solicitação inválida." }, { status: 400 });

@@ -4,7 +4,7 @@
 //
 // "Remover" is a soft delete (status = 'removed'): the client loses access and
 // disappears from the list, but campaigns/commissions/audit are preserved.
-// Staff only (owner/admin) — see src/lib/affiliates/admin.ts.
+// GET: Aureon staff or any person of the store. PATCH: Aureon staff only (requireStaff in src/lib/affiliates/admin.ts).
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
@@ -13,15 +13,17 @@ import {
   isModuleNotReady,
   moduleNotReadyResponse,
   parseClientInput,
+  requireClientAccess,
   requireStaff,
   writeAudit,
 } from "@/lib/affiliates/admin";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { admin } = await requireStaff();
     const { id } = await params;
     if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Name / platform / status only: safe for the store itself to read.
+    const { admin } = await requireClientAccess(id, "any-view");
 
     const { data, error } = await admin
       .from("aff_clients")

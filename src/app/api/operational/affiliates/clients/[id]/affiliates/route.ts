@@ -13,7 +13,7 @@ import {
   BadInput,
   isModuleNotReady,
   moduleNotReadyResponse,
-  requireStaff,
+  requireClientAccess,
   writeAudit,
 } from "@/lib/affiliates/admin";
 import { isUuid, parseAffiliateInput } from "@/lib/affiliates/campaigns";
@@ -39,9 +39,9 @@ interface MembershipRow {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { admin } = await requireClientAccess(id, [["affiliates", "view"]]);
 
     const { data, error } = await admin
       .from("aff_memberships")
@@ -86,9 +86,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["affiliates", "edit"]]);
     const input = parseAffiliateInput(await req.json().catch(() => null));
 
     const campaign = await admin

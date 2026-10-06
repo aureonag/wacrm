@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Eye, ShieldCheck } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
@@ -14,7 +15,7 @@ import { useAffiliateClients } from "../../_components/use-affiliate-clients";
 // team operates the client's account from here. The sections live in the
 // sidebar submenu; this layout shows which account is selected (and lets the
 // team switch it) plus the heading of the current section.
-const SECTIONS = ["dashboard", "campanhas", "afiliados", "comissoes", "notas-fiscais", "pagamentos", "relatorios", "integracoes"] as const;
+const SECTIONS = ["dashboard", "campanhas", "afiliados", "comissoes", "notas-fiscais", "pagamentos", "relatorios", "integracoes", "equipe"] as const;
 type Section = (typeof SECTIONS)[number];
 
 const HEADING_KEY: Record<Section, string> = {
@@ -26,6 +27,7 @@ const HEADING_KEY: Record<Section, string> = {
   pagamentos: "payments",
   relatorios: "reports",
   integracoes: "integrations",
+  equipe: "team",
 };
 
 export default function AffiliateClientLayout({ children }: { children: React.ReactNode }) {
@@ -65,6 +67,14 @@ export default function AffiliateClientLayout({ children }: { children: React.Re
           <ShieldCheck className="h-4 w-4 shrink-0" />
           <span className="truncate">{t("workspace.contextBar")}</span>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/portal/loja/${clientId}/dashboard`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            {t("workspace.viewAsClient")}
+          </Link>
         <Select value={clientId} onValueChange={switchClient}>
           <SelectTrigger aria-label={t("workspace.selectClient")} className="h-9 w-full min-w-56 sm:w-64">
             <SelectValue>{current.name}</SelectValue>
@@ -78,6 +88,7 @@ export default function AffiliateClientLayout({ children }: { children: React.Re
             ))}
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {showHeading && section && (

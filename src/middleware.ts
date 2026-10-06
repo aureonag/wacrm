@@ -42,34 +42,40 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Afiliados portal. Portal users (affiliates; app_metadata.aff_portal, set
-  // only by the server — migration 101) have NO CRM profile and must stay in
-  // the portal; everyone else is sent to the portal login when they open a
-  // portal page without a session.
+  // Afiliados portal. Portal users (affiliates and the people of a store;
+  // app_metadata.aff_portal, set only by the server — migration 101) have NO
+  // CRM profile and must stay in the portal; everyone else is sent to the
+  // portal login when they open a portal page without a session. Store users
+  // also call the per-client Afiliados API (one client id in the path); every
+  // handler re-checks that the person really belongs to that client.
   const pathname = request.nextUrl.pathname
   if (user?.app_metadata?.aff_portal === true) {
     const inPortalArea =
       pathname.startsWith('/portal') ||
       pathname.startsWith('/inscricao') ||
       pathname.startsWith('/api/portal') ||
-      pathname.startsWith('/api/public')
+      pathname.startsWith('/api/public') ||
+      /^\/api\/operational\/affiliates\/clients\/[0-9a-f-]{36}(\/|$)/i.test(pathname)
     if (!inPortalArea) {
       if (pathname.startsWith('/api/')) {
         return withRefreshedCookies(NextResponse.json({ error: 'Forbidden' }, { status: 403 }))
       }
       const url = request.nextUrl.clone()
-      url.pathname = '/portal/afiliado'
+      url.pathname = '/portal'
       url.search = ''
       return withRefreshedCookies(NextResponse.redirect(url))
     }
     if (pathname === '/portal/entrar') {
       const url = request.nextUrl.clone()
-      url.pathname = '/portal/afiliado'
+      url.pathname = '/portal'
       url.search = ''
       return withRefreshedCookies(NextResponse.redirect(url))
     }
   }
-  if (!user && pathname.startsWith('/portal/afiliado')) {
+  if (
+    !user &&
+    (pathname === '/portal' || pathname.startsWith('/portal/afiliado') || pathname.startsWith('/portal/loja'))
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = '/portal/entrar'
     url.search = ''

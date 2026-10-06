@@ -3,7 +3,7 @@
 //      (affiliate × competência × valor bruto). Manual closing for now: orders
 //      are not synced from the store yet, so nothing is computed automatically.
 //
-// Staff only (owner/admin) — see src/lib/affiliates/admin.ts.
+// Aureon staff, or a store user with the right permission — see requireClientAccess in src/lib/affiliates/admin.ts.
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
@@ -11,7 +11,7 @@ import {
   BadInput,
   isModuleNotReady,
   moduleNotReadyResponse,
-  requireStaff,
+  requireClientAccess,
   writeAudit,
 } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
@@ -20,9 +20,9 @@ import { COMMISSION_COLUMNS, toCommission, type CommissionRow } from "@/lib/affi
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { admin } = await requireClientAccess(id, [["commissions", "view"], ["invoices", "view"], ["payments", "view"]]);
 
     const { data, error } = await admin
       .from("aff_commissions")
@@ -43,9 +43,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["commissions", "edit"]]);
     const input = parseCommissionInput(await req.json().catch(() => null));
 
     // The affiliate must be an approved participant of THIS client.

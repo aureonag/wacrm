@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
-import { isModuleNotReady, moduleNotReadyResponse, requireStaff, writeAudit } from "@/lib/affiliates/admin";
+import { isModuleNotReady, moduleNotReadyResponse, requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 
 interface Row {
@@ -29,9 +29,9 @@ function brl(cents: number): string {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["payments", "edit"], ["reports", "edit"]]);
 
     const { data, error } = await admin
       .from("aff_commissions")

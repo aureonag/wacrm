@@ -1,7 +1,7 @@
 // GET  /api/operational/affiliates/clients/:id/campaigns — campaigns of one client.
 // POST /api/operational/affiliates/clients/:id/campaigns — create a campaign.
 //
-// Staff only (owner/admin) — see src/lib/affiliates/admin.ts.
+// Aureon staff, or a store user with the right permission — see requireClientAccess in src/lib/affiliates/admin.ts.
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
@@ -9,7 +9,7 @@ import {
   BadInput,
   isModuleNotReady,
   moduleNotReadyResponse,
-  requireStaff,
+  requireClientAccess,
   writeAudit,
 } from "@/lib/affiliates/admin";
 import { isUuid, parseCampaignInput } from "@/lib/affiliates/campaigns";
@@ -19,9 +19,9 @@ const COLUMNS =
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { admin } = await requireClientAccess(id, [["campaigns", "view"], ["affiliates", "view"]]);
 
     const [campaigns, memberships] = await Promise.all([
       admin.from("aff_campaigns").select(COLUMNS).eq("client_id", id).order("created_at", { ascending: false }),
@@ -46,9 +46,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { ctx, admin } = await requireStaff();
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { ctx, admin } = await requireClientAccess(id, [["campaigns", "edit"]]);
     const input = parseCampaignInput(await req.json().catch(() => null));
 
     const client = await admin.from("aff_clients").select("id").eq("id", id).neq("status", "removed").maybeSingle();
