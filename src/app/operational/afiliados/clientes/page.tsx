@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Building2, Loader2, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, ChevronRight, Loader2, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -151,6 +151,11 @@ export default function AffiliateClientsPage() {
 
   return (
     <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">{t("headings.clients.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("headings.clients.description")}</p>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -180,7 +185,7 @@ export default function AffiliateClientsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/operational/afiliados/clientes/${c.id}`}
+                      href={`/operational/afiliados/clientes/${c.id}/dashboard`}
                       className="truncate text-sm font-semibold text-foreground hover:text-primary hover:underline"
                     >
                       {c.name}
@@ -205,7 +210,14 @@ export default function AffiliateClientsPage() {
                   <span className="rounded-full bg-muted px-2.5 py-1">{t("clients.nCampaigns", { count: c.campaigns })}</span>
                   <span className="rounded-full bg-muted px-2.5 py-1">{t("clients.nAffiliates", { count: c.affiliates })}</span>
                 </div>
-                <div className="flex shrink-0 gap-1">
+                <div className="flex shrink-0 items-center gap-1">
+                  <Link
+                    href={`/operational/afiliados/clientes/${c.id}/dashboard`}
+                    className="mr-1 inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
+                  >
+                    {t("clients.openAccount")}
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
                   <Button variant="ghost" size="icon" aria-label={t("clients.edit")} onClick={() => openEdit(c)}>
                     <Pencil className="h-4 w-4" />
                   </Button>

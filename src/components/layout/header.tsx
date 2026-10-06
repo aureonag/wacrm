@@ -40,6 +40,28 @@ function getPageTitleKey(pathname: string): string {
   return match ? match[1] : "dashboard";
 }
 
+// Operacional → Afiliados: the top bar names the section, like the sidebar
+// submenu does (/operational/afiliados/clientes/:id/<section>).
+const AFFILIATE_SECTION_KEYS: Record<string, string> = {
+  dashboard: "dashboard",
+  campanhas: "campaigns",
+  afiliados: "affiliates",
+  comissoes: "commissions",
+  "notas-fiscais": "invoices",
+  pagamentos: "payments",
+  relatorios: "reports",
+  integracoes: "integrations",
+};
+
+function affiliatesTitleKey(pathname: string): string | null {
+  if (!pathname.startsWith("/operational/afiliados")) return null;
+  const segs = pathname.split("/");
+  if (segs[3] === "desenvolvimento") return "development";
+  if (segs[3] !== "clientes") return "title";
+  if (!segs[4]) return "clients";
+  return AFFILIATE_SECTION_KEYS[segs[5] ?? ""] ?? "title";
+}
+
 interface HeaderProps {
   /** Wired to the shell's drawer state. Used only on mobile — the
    *  hamburger button is hidden on lg+. */
@@ -52,7 +74,9 @@ export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
+  const tAff = useTranslations("Operational.affiliates.nav");
   const titleKey = getPageTitleKey(pathname);
+  const affiliatesKey = affiliatesTitleKey(pathname);
 
   const initial =
     profile?.full_name?.charAt(0)?.toUpperCase() ??
@@ -72,7 +96,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </button>
         <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
-          {t(titleKey as string)}
+          {affiliatesKey ? tAff(affiliatesKey) : t(titleKey as string)}
         </h1>
       </div>
 

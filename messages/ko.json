@@ -390,7 +390,8 @@
         "platform_outra": "Other",
         "nUsers": "{count, plural, one {# user} other {# users}}",
         "nCampaigns": "{count, plural, one {# campaign} other {# campaigns}}",
-        "nAffiliates": "{count, plural, one {# affiliate} other {# affiliates}}"
+        "nAffiliates": "{count, plural, one {# affiliate} other {# affiliates}}",
+        "openAccount": "Open account"
       },
       "workspace": {
         "notFound": "Client not found.",
@@ -402,7 +403,9 @@
           "commissions": "Commissions",
           "invoices": "Invoices",
           "payments": "Payments"
-        }
+        },
+        "contextBar": "Administration · selected account",
+        "selectClient": "Select client"
       },
       "campaigns": {
         "add": "New campaign",
@@ -580,6 +583,188 @@
         "paymentRegistered": "External payment recorded with receipt.",
         "downloadError": "Could not download the file.",
         "storageNotReady": "File storage has not been enabled in the database yet (migration 102)."
+      },
+      "nav": {
+        "title": "Affiliates",
+        "administration": "Administration",
+        "operation": "Operation",
+        "system": "System",
+        "clients": "Client accounts",
+        "dashboard": "Dashboard",
+        "campaigns": "Campaigns",
+        "affiliates": "Affiliates",
+        "commissions": "Commissions",
+        "invoices": "Invoices",
+        "payments": "Payments",
+        "reports": "Reports",
+        "integrations": "Integrations",
+        "development": "Development"
+      },
+      "headings": {
+        "clients": {
+          "title": "Client accounts",
+          "description": "Global view of the accounts Aureon serves."
+        },
+        "dashboard": {
+          "title": "Affiliate dashboard",
+          "description": "Follow sales, partners and what needs your attention."
+        },
+        "campaigns": {
+          "title": "Campaigns",
+          "description": "Create opportunities and set the rules of your program."
+        },
+        "affiliates": {
+          "title": "Affiliates",
+          "description": "Manage participants, approvals and promotion codes."
+        },
+        "commissions": {
+          "title": "Commissions",
+          "description": "Commissions by affiliate and period, with release history."
+        },
+        "invoices": {
+          "title": "Invoices",
+          "description": "Check the documents before releasing each payment."
+        },
+        "payments": {
+          "title": "Payments",
+          "description": "Only pay commissions with approved documents."
+        },
+        "reports": {
+          "title": "Reports",
+          "description": "See results and export approved payments."
+        },
+        "integrations": {
+          "title": "Integrations",
+          "description": "Connect the store to create coupons and follow orders."
+        },
+        "development": {
+          "title": "Development",
+          "description": "Technical settings kept apart from financial operations."
+        }
+      },
+      "dashboard": {
+        "attentionTitle": "Program attention",
+        "attentionHint": "What needs to be solved to release commissions.",
+        "awaitingInvoice": "Awaiting invoice",
+        "invoiceReview": "Invoices to review",
+        "availablePayments": "Payments available",
+        "pendingAffiliates": "Pending affiliates",
+        "resultsTitle": "Results",
+        "paidSales": "Paid sales",
+        "paidOrders": "Paid orders",
+        "affiliates": "Affiliates",
+        "commissionsTitle": "Commissions",
+        "accrued": "Accrued",
+        "available": "Available",
+        "paid": "Paid externally",
+        "partnersTitle": "Partner performance",
+        "partnersHint": "Revenue from paid orders attributed to each affiliate.",
+        "partnersEmpty": "No paid orders attributed to affiliates yet.",
+        "nextTitle": "Next actions",
+        "next": {
+          "invoices": {
+            "title": "Review invoices",
+            "hint": "Check documents and release payments."
+          },
+          "affiliates": {
+            "title": "Approve partners",
+            "hint": "Review campaign participants."
+          },
+          "integrations": {
+            "title": "Connect your store",
+            "hint": "Coupons and orders depend on the integration."
+          }
+        },
+        "recentTitle": "Recent commissions",
+        "seeAll": "See all",
+        "recentEmpty": "No commission closed yet.",
+        "colAffiliate": "Affiliate",
+        "colPeriod": "Period",
+        "colCommission": "Commission",
+        "colInvoice": "Invoice",
+        "colStatus": "Status",
+        "invoiceNotSent": "Not sent"
+      },
+      "reports": {
+        "exportTitle": "Available payments",
+        "exportHint": "The export only has commissions with an approved invoice. Downloading the file does not register a payment.",
+        "exportCsv": "Export CSV",
+        "ordersTitle": "Orders",
+        "ordersEmpty": "No order attributed to affiliates yet. They appear once the store is integrated.",
+        "colOrder": "Order",
+        "colAffiliate": "Affiliate",
+        "colCoupon": "Coupon",
+        "colTotal": "Amount",
+        "colStatus": "Status",
+        "order_paid": "Paid",
+        "order_cancelled": "Cancelled",
+        "order_pending": "Pending",
+        "auditTitle": "Account history",
+        "auditEmpty": "No action recorded yet."
+      },
+      "integrations": {
+        "noticeTitle": "Connectors not active yet",
+        "noticeBody": "This tool does not create coupons in the store or send any Pix yet. Affiliate codes are only reserved here.",
+        "clientPlatform": "Platform registered for this client: {platform}.",
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "viewStatus": "View status",
+        "nuvemshop": {
+          "name": "Nuvemshop",
+          "description": "Coupon creation and order lookup.",
+          "status": "Nuvemshop: not connected. Per-store connection is a next step."
+        },
+        "tray": {
+          "name": "Tray",
+          "description": "Native coupons and sales sync.",
+          "status": "Tray: not connected. Per-store connection is a next step."
+        },
+        "asaas": {
+          "name": "Asaas",
+          "description": "Commission payment by Pix after invoice approval.",
+          "status": "Asaas: not connected. Payment is currently registered as external, with a receipt."
+        },
+        "crm": {
+          "name": "Aureon CRM",
+          "description": "Team sign-in with integrated identity and permissions.",
+          "status": "Aureon CRM: connected. You are already using the module inside the CRM."
+        }
+      },
+      "development": {
+        "title": "Development environment",
+        "environment": "Environment: {env}.",
+        "env_production": "production",
+        "env_development": "local development",
+        "ok": "OK",
+        "attention": "Attention",
+        "providerNote": "The connection will be configured on the server, never in the browser.",
+        "checks": {
+          "database": {
+            "title": "Database",
+            "ok": "The module tables respond.",
+            "fail": "Could not query the module tables (migration 100)."
+          },
+          "portal_users": {
+            "title": "Portal users",
+            "ok": "Affiliates and clients do not get a CRM account (migration 101).",
+            "fail": "Migration 101 not applied: public sign-up stays blocked."
+          },
+          "storage": {
+            "title": "Document storage",
+            "ok": "Private bucket for invoices and receipts is ready.",
+            "fail": "Private documents bucket missing or public (migration 102)."
+          },
+          "signup_codes": {
+            "title": "E-mail confirmation code",
+            "ok": "Sign-up code table is ready.",
+            "fail": "Code table missing (migration 103)."
+          },
+          "email": {
+            "title": "E-mail sending (SMTP)",
+            "ok": "SMTP configured: confirmation codes can be sent.",
+            "fail": "SMTP not configured: the confirmation code does not reach the affiliate."
+          }
+        }
       }
     },
     "dashboard": {

@@ -1,96 +1,91 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ShieldCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { rememberClient } from "../../_components/selected-client";
+import { useAffiliateClients } from "../../_components/use-affiliate-clients";
 
 // Workspace of ONE client (loja) inside Operacional → Afiliados: the Aureon
-// team operates the client's account from here (campaigns, participants, ...).
-const TABS = [
-  { slug: "campanhas", key: "campaigns" },
-  { slug: "afiliados", key: "affiliates" },
-  { slug: "comissoes", key: "commissions" },
-  { slug: "notas-fiscais", key: "invoices" },
-  { slug: "pagamentos", key: "payments" },
-] as const;
+// team operates the client's account from here. The sections live in the
+// sidebar submenu; this layout shows which account is selected (and lets the
+// team switch it) plus the heading of the current section.
+const SECTIONS = ["dashboard", "campanhas", "afiliados", "comissoes", "notas-fiscais", "pagamentos", "relatorios", "integracoes"] as const;
+type Section = (typeof SECTIONS)[number];
 
-type ClientState =
-  | { kind: "loading" }
-  | { kind: "missing" }
-  | { kind: "error" }
-  | { kind: "ready"; name: string };
+const HEADING_KEY: Record<Section, string> = {
+  dashboard: "dashboard",
+  campanhas: "campaigns",
+  afiliados: "affiliates",
+  comissoes: "commissions",
+  "notas-fiscais": "invoices",
+  pagamentos: "payments",
+  relatorios: "reports",
+  integracoes: "integrations",
+};
 
 export default function AffiliateClientLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Operational.affiliates");
   const { clientId } = useParams<{ clientId: string }>();
   const pathname = usePathname();
-  const [state, setState] = useState<ClientState>({ kind: "loading" });
+  const router = useRouter();
+  const { state } = useAffiliateClients();
 
+  const rest = pathname.split(`/clientes/${clientId}`)[1]?.split("/").filter(Boolean) ?? [];
+  const section = (SECTIONS as readonly string[]).includes(rest[0]) ? (rest[0] as Section) : null;
+  // The campaign editor (campanhas/nova, campanhas/:id) draws its own heading.
+  const showHeading = section !== null && rest.length === 1;
+
+  const known = state.kind === "ready" && state.clients.some((c) => c.id === clientId);
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const res = await fetch(`/api/operational/affiliates/clients/${clientId}`);
-      if (cancelled) return;
-      if (res.status === 404) return setState({ kind: "missing" });
-      if (!res.ok) return setState({ kind: "error" });
-      const data = (await res.json()) as { client: { name: string } };
-      setState({ kind: "ready", name: data.client.name });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [clientId]);
+    if (known) rememberClient(clientId);
+  }, [known, clientId]);
 
   if (state.kind === "loading") return <Skeleton className="h-24" />;
-  if (state.kind === "missing") {
-    return <EmptyState title={t("workspace.notFound")} className="min-h-40" />;
-  }
+  if (state.kind === "not_ready") return <EmptyState title={t("notReadyTitle")} hint={t("notReadyHint")} className="min-h-40" />;
   if (state.kind === "error") return <EmptyState title={t("error")} className="min-h-40" />;
+  if (!known) return <EmptyState title={t("workspace.notFound")} className="min-h-40" />;
 
-  const base = `/operational/afiliados/clientes/${clientId}`;
+  const current = state.clients.find((c) => c.id === clientId)!;
+
+  function switchClient(nextId: string | null) {
+    if (!nextId || nextId === clientId) return;
+    // Same section on the other account; editor pages fall back to the list.
+    router.push(`/operational/afiliados/clientes/${nextId}/${section ?? "dashboard"}`);
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2 text-sm text-foreground">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
-          <span className="truncate">{t("workspace.banner", { name: state.name })}</span>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2 text-sm text-primary">
+          <ShieldCheck className="h-4 w-4 shrink-0" />
+          <span className="truncate">{t("workspace.contextBar")}</span>
         </div>
-        <Link
-          href="/operational/afiliados/clientes"
-          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {t("workspace.allClients")}
-        </Link>
+        <Select value={clientId} onValueChange={switchClient}>
+          <SelectTrigger aria-label={t("workspace.selectClient")} className="h-9 w-full min-w-56 sm:w-64">
+            <SelectValue>{current.name}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {state.clients.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+                {c.status === "suspended" ? ` · ${t("clients.suspended")}` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <nav className="flex flex-wrap gap-1" aria-label={state.name}>
-        {TABS.map((tab) => {
-          const href = `${base}/${tab.slug}`;
-          const active = pathname.startsWith(href);
-          return (
-            <Link
-              key={tab.slug}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {t(`workspace.tabs.${tab.key}`)}
-            </Link>
-          );
-        })}
-      </nav>
+      {showHeading && section && (
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t(`headings.${HEADING_KEY[section]}.title`)}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t(`headings.${HEADING_KEY[section]}.description`)}</p>
+        </div>
+      )}
 
       {children}
     </div>

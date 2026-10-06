@@ -390,7 +390,8 @@
         "platform_outra": "Outra",
         "nUsers": "{count, plural, one {# usuário} other {# usuários}}",
         "nCampaigns": "{count, plural, one {# campanha} other {# campanhas}}",
-        "nAffiliates": "{count, plural, one {# afiliado} other {# afiliados}}"
+        "nAffiliates": "{count, plural, one {# afiliado} other {# afiliados}}",
+        "openAccount": "Acessar conta"
       },
       "workspace": {
         "notFound": "Cliente não encontrado.",
@@ -402,7 +403,9 @@
           "commissions": "Comissões",
           "invoices": "Notas fiscais",
           "payments": "Pagamentos"
-        }
+        },
+        "contextBar": "Administração · conta selecionada",
+        "selectClient": "Selecionar cliente"
       },
       "campaigns": {
         "add": "Nova campanha",
@@ -580,6 +583,188 @@
         "paymentRegistered": "Pagamento externo registrado com comprovante.",
         "downloadError": "Não foi possível baixar o arquivo.",
         "storageNotReady": "O armazenamento de arquivos ainda não foi ativado no banco de dados (migration 102)."
+      },
+      "nav": {
+        "title": "Afiliados",
+        "administration": "Administração",
+        "operation": "Operação",
+        "system": "Sistema",
+        "clients": "Contas de clientes",
+        "dashboard": "Dashboard",
+        "campaigns": "Campanhas",
+        "affiliates": "Afiliados",
+        "commissions": "Comissões",
+        "invoices": "Notas fiscais",
+        "payments": "Pagamentos",
+        "reports": "Relatórios",
+        "integrations": "Integrações",
+        "development": "Desenvolvimento"
+      },
+      "headings": {
+        "clients": {
+          "title": "Contas de clientes",
+          "description": "Visão global das contas atendidas pela Aureon."
+        },
+        "dashboard": {
+          "title": "Dashboard de afiliados",
+          "description": "Acompanhe vendas, parceiros e o que precisa da sua atenção."
+        },
+        "campaigns": {
+          "title": "Campanhas",
+          "description": "Crie oportunidades e defina as regras do seu programa."
+        },
+        "affiliates": {
+          "title": "Afiliados",
+          "description": "Gerencie participantes, aprovações e códigos de divulgação."
+        },
+        "commissions": {
+          "title": "Comissões",
+          "description": "Comissões por afiliado e competência, com histórico de liberação."
+        },
+        "invoices": {
+          "title": "Notas fiscais",
+          "description": "Confira os documentos antes de liberar cada pagamento."
+        },
+        "payments": {
+          "title": "Pagamentos",
+          "description": "Pague somente comissões com documentação aprovada."
+        },
+        "reports": {
+          "title": "Relatórios",
+          "description": "Consulte resultados e exporte pagamentos aprovados."
+        },
+        "integrations": {
+          "title": "Integrações",
+          "description": "Conecte a loja para criar cupons e acompanhar pedidos."
+        },
+        "development": {
+          "title": "Desenvolvimento",
+          "description": "Configurações técnicas separadas das operações financeiras."
+        }
+      },
+      "dashboard": {
+        "attentionTitle": "Atenção ao programa",
+        "attentionHint": "O que precisa ser resolvido para liberar as comissões.",
+        "awaitingInvoice": "Aguardando nota",
+        "invoiceReview": "Notas para analisar",
+        "availablePayments": "Pagamentos disponíveis",
+        "pendingAffiliates": "Afiliados pendentes",
+        "resultsTitle": "Resultados",
+        "paidSales": "Vendas pagas",
+        "paidOrders": "Pedidos pagos",
+        "affiliates": "Afiliados",
+        "commissionsTitle": "Comissões",
+        "accrued": "Apuradas",
+        "available": "Disponíveis",
+        "paid": "Pagas externamente",
+        "partnersTitle": "Desempenho dos parceiros",
+        "partnersHint": "Receita de pedidos pagos atribuídos a cada afiliado.",
+        "partnersEmpty": "Ainda não há pedidos pagos atribuídos a afiliados.",
+        "nextTitle": "Próximas ações",
+        "next": {
+          "invoices": {
+            "title": "Analisar notas fiscais",
+            "hint": "Confira documentos e libere pagamentos."
+          },
+          "affiliates": {
+            "title": "Aprovar parceiros",
+            "hint": "Revise participantes das campanhas."
+          },
+          "integrations": {
+            "title": "Conectar sua loja",
+            "hint": "Cupons e pedidos dependem da integração."
+          }
+        },
+        "recentTitle": "Comissões recentes",
+        "seeAll": "Ver todas",
+        "recentEmpty": "Nenhuma comissão fechada ainda.",
+        "colAffiliate": "Afiliado",
+        "colPeriod": "Competência",
+        "colCommission": "Comissão",
+        "colInvoice": "Nota fiscal",
+        "colStatus": "Situação",
+        "invoiceNotSent": "Não enviada"
+      },
+      "reports": {
+        "exportTitle": "Pagamentos disponíveis",
+        "exportHint": "A exportação contém somente comissões com nota aprovada. Baixar o arquivo não registra pagamento.",
+        "exportCsv": "Exportar CSV",
+        "ordersTitle": "Pedidos",
+        "ordersEmpty": "Nenhum pedido atribuído a afiliados ainda. Eles aparecem quando a loja estiver integrada.",
+        "colOrder": "Pedido",
+        "colAffiliate": "Afiliado",
+        "colCoupon": "Cupom",
+        "colTotal": "Valor",
+        "colStatus": "Situação",
+        "order_paid": "Pago",
+        "order_cancelled": "Cancelado",
+        "order_pending": "Pendente",
+        "auditTitle": "Histórico da conta",
+        "auditEmpty": "Nenhuma ação registrada ainda."
+      },
+      "integrations": {
+        "noticeTitle": "Conectores ainda não ativados",
+        "noticeBody": "Nenhum cupom é criado na loja e nenhum Pix é enviado por esta ferramenta ainda. Os códigos dos afiliados ficam reservados só aqui.",
+        "clientPlatform": "Plataforma cadastrada para este cliente: {platform}.",
+        "connected": "Conectado",
+        "notConnected": "Não conectado",
+        "viewStatus": "Ver situação",
+        "nuvemshop": {
+          "name": "Nuvemshop",
+          "description": "Criação de cupons e consulta de pedidos.",
+          "status": "Nuvemshop: não conectado. A conexão por loja é uma próxima etapa."
+        },
+        "tray": {
+          "name": "Tray",
+          "description": "Cupons nativos e sincronização de vendas.",
+          "status": "Tray: não conectado. A conexão por loja é uma próxima etapa."
+        },
+        "asaas": {
+          "name": "Asaas",
+          "description": "Pagamento de comissões por Pix após aprovação fiscal.",
+          "status": "Asaas: não conectado. Hoje o pagamento é registrado como externo, com comprovante."
+        },
+        "crm": {
+          "name": "CRM Aureon",
+          "description": "Entrada da equipe com identidade e permissões integradas.",
+          "status": "CRM Aureon: conectado. Você já está usando o módulo por dentro do CRM."
+        }
+      },
+      "development": {
+        "title": "Ambiente de desenvolvimento",
+        "environment": "Ambiente: {env}.",
+        "env_production": "produção",
+        "env_development": "desenvolvimento local",
+        "ok": "OK",
+        "attention": "Atenção",
+        "providerNote": "A conexão será configurada no servidor, nunca no navegador.",
+        "checks": {
+          "database": {
+            "title": "Banco de dados",
+            "ok": "As tabelas do módulo respondem.",
+            "fail": "Não foi possível consultar as tabelas do módulo (migration 100)."
+          },
+          "portal_users": {
+            "title": "Usuários do portal",
+            "ok": "Afiliados e clientes não recebem conta do CRM (migration 101).",
+            "fail": "Migration 101 não aplicada: o cadastro público fica bloqueado."
+          },
+          "storage": {
+            "title": "Armazenamento de documentos",
+            "ok": "Bucket privado das notas fiscais e comprovantes pronto.",
+            "fail": "Bucket privado de documentos ausente ou público (migration 102)."
+          },
+          "signup_codes": {
+            "title": "Código de confirmação por e-mail",
+            "ok": "Tabela de códigos de inscrição pronta.",
+            "fail": "Tabela de códigos ausente (migration 103)."
+          },
+          "email": {
+            "title": "Envio de e-mail (SMTP)",
+            "ok": "SMTP configurado: os códigos de confirmação podem ser enviados.",
+            "fail": "SMTP não configurado: o código de confirmação não chega ao afiliado."
+          }
+        }
       }
     },
     "dashboard": {

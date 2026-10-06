@@ -70,6 +70,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useTranslations } from "next-intl";
+import { AffiliatesNav } from "@/components/layout/affiliates-nav";
 
 // ============================================================
 // Unified primary sidebar (Allan, 2026-09-30) — replaces the old
@@ -519,16 +520,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     )}
                     {canManageMembers && (
                       <li>
-                        <Link
-                          href="/operational/afiliados"
-                          className={cn(
-                            navRowBase,
-                            pathname.startsWith("/operational/afiliados") ? navRowActive : navRowInactive,
-                          )}
-                        >
-                          <UsersRound className="h-4 w-4" />
-                          <span className="flex-1">{tOp("affiliates")}</span>
-                        </Link>
+                        <AffiliatesNav />
                       </li>
                     )}
                   </ul>
