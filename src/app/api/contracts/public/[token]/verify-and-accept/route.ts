@@ -27,6 +27,7 @@ import { hashOtp, OTP_MAX_ATTEMPTS } from "@/lib/contracts/otp";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { ensureSignedContractPdf } from "@/lib/contracts/signed-pdf-storage";
+import { syncSignedContractClients } from "@/lib/operational/sync-contract-clients";
 import { sendEmail, isEmailConfigured } from "@/lib/contracts/email";
 import {
   signedContractEmailSubject,
@@ -135,6 +136,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       .from("deal_contract_events")
       .insert({ contract_id: contract.id, account_id: contract.account_id, event_type: "signed" });
     if (eventError) console.error("[contracts/verify-and-accept] failed to log 'signed' event:", eventError.message);
+
+    // A signed contract is a client of the operation (Operacional → Clientes).
+    try {
+      await syncSignedContractClients(admin, contract.account_id, contract.id);
+    } catch (err) {
+      console.error("[contracts/verify-and-accept] client sync failed:", err);
+    }
 
     const { data: full } = await admin
       .from("deal_contracts")

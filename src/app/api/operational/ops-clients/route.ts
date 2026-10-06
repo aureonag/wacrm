@@ -7,6 +7,8 @@
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
+import { supabaseAdmin } from "@/lib/contracts/admin-client";
+import { syncSignedContractClients } from "@/lib/operational/sync-contract-clients";
 import {
   countTasks,
   EMPTY_COUNTS,
@@ -19,6 +21,14 @@ export async function GET(req: Request) {
   try {
     const ctx = await requirePermission("operational", "tasks", "view_tasks");
     const status = new URL(req.url).searchParams.get("status") ?? "active";
+
+    // Every signed contract is a client: create / link the missing ones first.
+    // Never blocks the list if it fails.
+    try {
+      await syncSignedContractClients(supabaseAdmin(), ctx.accountId);
+    } catch (err) {
+      console.error("[GET ops-clients] contract sync failed:", err instanceof Error ? err.message : err);
+    }
 
     let q = ctx.supabase
       .from("ops_clients")
