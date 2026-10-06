@@ -1,16 +1,39 @@
 "use client";
 
-import { useEffect } from "react";
-import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
+import { useEffect, useRef } from "react";
+import { useEditor, EditorContent, Mark, mergeAttributes, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import { Bold, Italic, List, ListOrdered, LinkIcon, ImageIcon, Heading2 } from "lucide-react";
+import { Bold, Highlighter, Italic, List, ListOrdered, LinkIcon, ImageIcon, Heading2, SquareCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 // Briefing (item 5 do pedido): texto formatado, títulos, listas, links,
 // imagens — salvo como JSON nativo do Tiptap (tasks.briefing jsonb),
 // não como HTML/markdown, para não precisar de um parser próprio depois.
+//
+// Também: lista de tarefas com checkbox clicável (TaskList/TaskItem, igual a
+// um documento Word) e marca-texto ("grifar"). Os dois são nós/marcas novos
+// no mesmo JSON; briefings antigos continuam abrindo normalmente.
+
+/** Marca-texto: <mark> laranja, alternado por botão ou Ctrl/Cmd+Shift+H. */
+const Highlight = Mark.create({
+  name: "highlight",
+  parseHTML() {
+    return [{ tag: "mark" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["mark", mergeAttributes(HTMLAttributes), 0];
+  },
+  addKeyboardShortcuts() {
+    return { "Mod-Shift-h": () => this.editor.commands.toggleMark(this.name) };
+  },
+});
+
+// Checkbox/auto-save: marcar uma caixa não tira o foco do editor, então salvar
+// só no blur perderia o clique se a pessoa fechasse a tarefa logo depois.
+const AUTOSAVE_MS = 800;
 
 interface BriefingEditorProps {
   content: JSONContent | null | undefined;
@@ -21,9 +44,18 @@ interface BriefingEditorProps {
 export function BriefingEditor({ content, editable, onSave }: BriefingEditorProps) {
   const t = useTranslations("Operational.briefing");
 
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onSaveRef = useRef(onSave);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Highlight,
       Link.configure({ openOnClick: false, autolink: true }),
       Image,
     ],
@@ -40,12 +72,27 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
           "min-h-32 rounded-b-lg border border-t-0 border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none " +
           "[&_h1]:mt-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:mt-2 [&_h2]:text-base [&_h2]:font-bold [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold " +
           "[&_ul]:ml-4 [&_ul]:list-disc [&_ol]:ml-4 [&_ol]:list-decimal [&_li]:my-0.5 " +
+          "[&_ul[data-type=taskList]]:ml-0 [&_ul[data-type=taskList]]:list-none [&_li[data-checked]]:flex [&_li[data-checked]]:items-start [&_li[data-checked]]:gap-2 " +
+          "[&_li[data-checked]>label]:mt-[3px] [&_li[data-checked]>label]:shrink-0 [&_li[data-checked]>div]:min-w-0 [&_li[data-checked]>div]:flex-1 " +
+          "[&_li[data-checked]_input]:h-4 [&_li[data-checked]_input]:w-4 [&_li[data-checked]_input]:cursor-pointer [&_li[data-checked]_input]:accent-primary " +
+          "[&_mark]:rounded-sm [&_mark]:bg-orange-400/70 [&_mark]:px-0.5 [&_mark]:text-foreground " +
           "[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground " +
           "[&_code]:rounded [&_code]:bg-card [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_p]:my-1 [&_img]:my-2 [&_img]:max-w-full [&_img]:rounded-md",
       },
     },
+    onUpdate: ({ editor: e }) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        saveTimer.current = null;
+        onSaveRef.current(e.getJSON());
+      }, AUTOSAVE_MS);
+    },
     onBlur: ({ editor: e }) => {
-      onSave(e.getJSON());
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      onSaveRef.current(e.getJSON());
     },
     immediatelyRender: false,
   });
@@ -54,6 +101,17 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
     if (!editor) return;
     editor.setEditable(editable);
   }, [editable, editor]);
+
+  // Closing the task right after a click: write the pending change now.
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current && editor && !editor.isDestroyed) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        onSaveRef.current(editor.getJSON());
+      }
+    };
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -87,6 +145,12 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} label={t("orderedList")}>
             <ListOrdered className="h-3.5 w-3.5" />
+          </ToolbarButton>
+          <ToolbarButton active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} label={t("taskList")}>
+            <SquareCheck className="h-3.5 w-3.5" />
+          </ToolbarButton>
+          <ToolbarButton active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleMark("highlight").run()} label={t("highlight")}>
+            <Highlighter className="h-3.5 w-3.5" />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("link")} onClick={addLink} label={t("link")}>
             <LinkIcon className="h-3.5 w-3.5" />

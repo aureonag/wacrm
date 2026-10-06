@@ -1024,7 +1024,9 @@
       "link": "링크",
       "image": "이미지",
       "linkPrompt": "링크 URL",
-      "imagePrompt": "이미지 URL"
+      "imagePrompt": "이미지 URL",
+      "taskList": "Task list (checkbox)",
+      "highlight": "Highlight text"
     },
     "comments": {
       "toastFailed": "댓글을 저장할 수 없습니다",

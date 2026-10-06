@@ -1024,7 +1024,9 @@
       "link": "Link",
       "image": "Image",
       "linkPrompt": "Link URL",
-      "imagePrompt": "Image URL"
+      "imagePrompt": "Image URL",
+      "taskList": "Task list (checkbox)",
+      "highlight": "Highlight text"
     },
     "comments": {
       "toastFailed": "Could not save the comment",

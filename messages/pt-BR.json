@@ -1024,7 +1024,9 @@
       "link": "Link",
       "image": "Imagem",
       "linkPrompt": "URL do link",
-      "imagePrompt": "URL da imagem"
+      "imagePrompt": "URL da imagem",
+      "taskList": "Lista de tarefas (checkbox)",
+      "highlight": "Grifar texto"
     },
     "comments": {
       "toastFailed": "Não foi possível salvar o comentário",
