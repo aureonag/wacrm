@@ -112,6 +112,7 @@ type Draft = Partial<{
   assignee_id: string | null;
   sector_id: string | null;
   contact_id: string | null;
+  project_id: string | null;
   start_date: string | null;
   due_date: string | null;
   estimated_minutes: number | null;
@@ -137,6 +138,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [boardsList, setBoardsList] = useState<Board[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
+  // Active projects of active clients, for the "Projeto" picker (migration 106).
+  const [projects, setProjects] = useState<{ id: string; name: string; client_name: string }[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>([]);
   const [approvals, setApprovals] = useState<TaskApproval[]>([]);
@@ -271,12 +274,16 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     if (!open || !accountId) return;
     let cancelled = false;
     (async () => {
-      const [profileRows, sectorRows, boardRows] = await Promise.all([
+      const [profileRows, sectorRows, boardRows, projectRes] = await Promise.all([
         loadAccountProfiles(supabase, accountId),
         supabase.from("sectors").select("*").eq("account_id", accountId).order("name"),
         loadBoards(supabase),
+        fetch("/api/operational/ops-projects").catch(() => null),
       ]);
       if (cancelled) return;
+      if (projectRes?.ok) {
+        setProjects(((await projectRes.json()) as { projects: { id: string; name: string; client_name: string }[] }).projects);
+      }
       setProfiles(profileRows);
       setSectors((sectorRows.data ?? []) as Sector[]);
       setBoardsList(boardRows);
@@ -650,6 +657,22 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                 disabled={!canEdit}
                 options={[{ value: "__none", label: t("none") }, ...sectors.map((s) => ({ value: s.id, label: s.name }))]}
               />
+              <div className="col-span-2">
+                <FieldSelect
+                  label={t("project")}
+                  value={(field("project_id") as string | null) ?? "__none"}
+                  onChange={(v) => setField("project_id", v === "__none" ? null : v)}
+                  disabled={!canEdit}
+                  options={[
+                    { value: "__none", label: t("none") },
+                    // The saved project may be archived / of an inactive client: keep it visible.
+                    ...(field("project_id") && !projects.some((p) => p.id === field("project_id"))
+                      ? [{ value: field("project_id") as string, label: t("projectCurrent") }]
+                      : []),
+                    ...projects.map((p) => ({ value: p.id, label: `${p.client_name} — ${p.name}` })),
+                  ]}
+                />
+              </div>
               <div className="col-span-2 grid gap-1">
                 <Label className="text-[11px] text-muted-foreground">{t("client")}</Label>
                 <ContactPicker

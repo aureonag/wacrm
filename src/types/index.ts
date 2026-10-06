@@ -1060,6 +1060,8 @@ export interface Task {
   title: string;
   contact_id?: string | null;
   sector_id?: string | null;
+  /** Operational project (migration 106). */
+  project_id?: string | null;
   assignee_id?: string | null;
   priority: TaskPriority;
   is_urgent: boolean;

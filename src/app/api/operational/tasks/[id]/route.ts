@@ -126,6 +126,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (typeof body.position === "number") update.position = body.position;
     if (typeof body.contact_id === "string" || body.contact_id === null) update.contact_id = body.contact_id;
     if (typeof body.sector_id === "string" || body.sector_id === null) update.sector_id = body.sector_id;
+    if (typeof body.project_id === "string" || body.project_id === null) {
+      if (body.project_id) {
+        // RLS scopes ops_projects to the caller's account: another account's project reads as missing.
+        const found = await ctx.supabase.from("ops_projects").select("id").eq("id", body.project_id).maybeSingle();
+        if (!found.data) return NextResponse.json({ error: "Projeto não encontrado." }, { status: 400 });
+      }
+      update.project_id = body.project_id;
+    }
     if (typeof body.assignee_id === "string" || body.assignee_id === null) update.assignee_id = body.assignee_id;
     if (typeof body.priority === "string" && PRIORITIES.includes(body.priority as TaskPriority)) {
       update.priority = body.priority;
