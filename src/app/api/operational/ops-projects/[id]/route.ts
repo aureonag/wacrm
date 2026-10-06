@@ -17,7 +17,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const project = await ctx.supabase
       .from("ops_projects")
-      .select("id, name, description, status, start_date, due_date, client_id, ops_clients(id, name, status)")
+      .select("id, name, description, status, start_date, due_date, client_id, ops_clients(id, name, code, status)")
       .eq("id", id)
       .eq("account_id", ctx.accountId)
       .maybeSingle();
@@ -57,7 +57,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const today = todayInSaoPaulo();
     const counts = countTasks(rows.map((t) => ({ key: id, status: t.status as string, due_date: t.due_date as string | null })), today).get(id) ?? EMPTY_COUNTS;
 
-    const client = project.data.ops_clients as unknown as { id: string; name: string; status: string } | null;
+    const client = project.data.ops_clients as unknown as { id: string; name: string; code: string | null; status: string } | null;
     return NextResponse.json({
       project: {
         id: project.data.id,

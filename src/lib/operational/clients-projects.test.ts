@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countTasks, parseClientInput, parseProjectInput, ValidationError } from "./clients-projects";
+import { countTasks, extractCodeFromTitle, normalizeClientCode, parseClientInput, parseProjectInput, ValidationError } from "./clients-projects";
 
 describe("parseClientInput", () => {
   it("requires a name and defaults to active", () => {
@@ -49,5 +49,30 @@ describe("countTasks", () => {
     expect(m.get("p1")).toEqual({ total: 4, open: 3, done: 1, overdue: 1 });
     expect(m.get("p2")).toEqual({ total: 1, open: 1, done: 0, overdue: 1 });
     expect(m.get("p3")).toBeUndefined();
+  });
+});
+
+describe("client / contract code", () => {
+  it("standardizes numeric codes to 5 digits and keeps the rest", () => {
+    expect(normalizeClientCode("0080")).toBe("00080");
+    expect(normalizeClientCode(" 351 ")).toBe("00351");
+    expect(normalizeClientCode("00351")).toBe("00351");
+    expect(normalizeClientCode("123456")).toBe("123456");
+    expect(normalizeClientCode("AB-12")).toBe("AB-12");
+    expect(normalizeClientCode("   ")).toBeNull();
+    expect(normalizeClientCode(undefined)).toBeNull();
+  });
+
+  it("reads the contract number from a deal or kickoff task title", () => {
+    expect(extractCodeFromTitle("00351 - CG Complemento")).toBe("00351");
+    expect(extractCodeFromTitle("Kickoff - 00353 - Scarliet Estrias")).toBe("00353");
+    expect(extractCodeFromTitle("kickoff - 351 - Fulano")).toBe("00351");
+    expect(extractCodeFromTitle("DAILY MÍDIA - TAREFAS DO DIA")).toBeNull();
+    expect(extractCodeFromTitle("2026 planning")).toBeNull();
+    expect(extractCodeFromTitle(null)).toBeNull();
+  });
+
+  it("the client form saves the standardized code", () => {
+    expect(parseClientInput({ name: "Ala Turca", code: "80" }).code).toBe("00080");
   });
 });

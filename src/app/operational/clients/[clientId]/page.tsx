@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { ClientCode } from "@/components/operational/client-code";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { cn } from "@/lib/utils";
 import type { ClientStatus, ProjectStatus, TaskCounts } from "@/lib/operational/clients-projects";
@@ -128,13 +129,19 @@ export default function OperationalClientPage() {
           {t("title")}
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="font-medium text-foreground">{client.name}</span>
+        <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+          <ClientCode code={client.code} />
+          {client.name}
+        </span>
       </nav>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground">{client.name}</h1>
+            <h1 className="flex items-center gap-2.5 text-2xl font-bold text-foreground">
+              <ClientCode code={client.code} />
+              {client.name}
+            </h1>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-medium",
@@ -145,7 +152,6 @@ export default function OperationalClientPage() {
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {client.code ? `${t("colCode")} ${client.code} · ` : ""}
             {t("projectsCount", { count: state.projects.filter((p) => p.status === "active").length })}
           </p>
           {client.notes && <p className="mt-2 max-w-2xl whitespace-pre-line text-sm text-muted-foreground">{client.notes}</p>}

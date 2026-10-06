@@ -10,7 +10,7 @@ export async function GET() {
     const ctx = await requirePermission("operational", "tasks", "view_tasks");
     const { data, error } = await ctx.supabase
       .from("ops_projects")
-      .select("id, name, client_id, ops_clients!inner(name, status)")
+      .select("id, name, client_id, ops_clients!inner(name, code, status)")
       .eq("account_id", ctx.accountId)
       .eq("status", "active")
       .eq("ops_clients.status", "active");
@@ -18,8 +18,8 @@ export async function GET() {
       console.error("[GET ops-projects]", error.message);
       return NextResponse.json({ error: "Failed to load projects" }, { status: 500 });
     }
-    const rows = ((data ?? []) as unknown as { id: string; name: string; client_id: string; ops_clients: { name: string } }[])
-      .map((p) => ({ id: p.id, name: p.name, client_id: p.client_id, client_name: p.ops_clients.name }))
+    const rows = ((data ?? []) as unknown as { id: string; name: string; client_id: string; ops_clients: { name: string; code: string | null } }[])
+      .map((p) => ({ id: p.id, name: p.name, client_id: p.client_id, client_name: p.ops_clients.name, client_code: p.ops_clients.code }))
       .sort((a, b) => a.client_name.localeCompare(b.client_name, "pt-BR") || a.name.localeCompare(b.name, "pt-BR"));
     return NextResponse.json({ projects: rows });
   } catch (err) {

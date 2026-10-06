@@ -7,11 +7,13 @@ import type { ScopeSection } from "@/lib/contracts/scope";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { ClientCode } from "@/components/operational/client-code";
 import { ClientsTabs } from "@/components/operational/clients-tabs";
 
 interface ActiveClient {
   id: string;
   title: string | null;
+  code: string | null;
   razaoSocial: string;
   cnpj: string;
   signedAt: string | null;
@@ -54,7 +56,7 @@ export default function ActiveClientsPage() {
   const clients = useMemo(() => {
     if (!Array.isArray(state)) return [];
     const q = norm(query.trim());
-    return q ? state.filter((c) => norm(`${c.razaoSocial} ${c.cnpj}`).includes(q)) : state;
+    return q ? state.filter((c) => norm(`${c.code ?? ""} ${c.razaoSocial} ${c.cnpj}`).includes(q)) : state;
   }, [state, query]);
 
   return (
@@ -101,7 +103,10 @@ export default function ActiveClientsPage() {
                 >
                   <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">{c.razaoSocial}</p>
+                    <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
+                      <ClientCode code={c.code} />
+                      <span className="truncate">{c.razaoSocial}</span>
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {c.cnpj} · {t("signedAt", { date: brDate(c.signedAt) })}
                     </p>

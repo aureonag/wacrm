@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { ClientCode } from "@/components/operational/client-code";
 import { ClientsTabs } from "@/components/operational/clients-tabs";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { cn } from "@/lib/utils";
@@ -165,8 +166,7 @@ export default function OperationalClientsPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-2.5 font-medium">{t("colCode")}</th>
-                    <th className="px-3 py-2.5 font-medium">{t("colClient")}</th>
+                    <th className="px-4 py-2.5 font-medium">{t("colClient")}</th>
                     <th className="px-3 py-2.5 text-right font-medium">{t("colProjects")}</th>
                     <th className="px-3 py-2.5 text-right font-medium">{t("colOpen")}</th>
                     <th className="px-3 py-2.5 text-right font-medium">{t("colDone")}</th>
@@ -185,10 +185,10 @@ export default function OperationalClientsPage() {
                         onClick={() => router.push(`/operational/clients/${r.id}`)}
                         className={cn("cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-muted/40", r.status === "inactive" && "opacity-60")}
                       >
-                        <td className="px-4 py-3 text-muted-foreground">{r.code ?? "—"}</td>
-                        <td className="px-3 py-3">
+                        <td className="px-4 py-3">
                           <span className="flex items-center gap-2 font-medium text-foreground">
                             <Building2 className="h-4 w-4 shrink-0 text-primary" />
+                            <ClientCode code={r.code} />
                             {r.name}
                           </span>
                         </td>

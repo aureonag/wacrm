@@ -40,6 +40,25 @@ function date(v: unknown, field: string): string | null {
   return v;
 }
 
+/**
+ * Client / contract number, standardized: digits only become 5 digits with
+ * leading zeros ("80" -> "00080", "351" -> "00351"); anything else is kept
+ * trimmed; empty -> null. Same format as the number in the kickoff task title
+ * ("Kickoff - 00351 - CG Complemento") and as the Runrun client code.
+ */
+export function normalizeClientCode(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+  return /^\d{1,5}$/.test(s) ? s.padStart(5, "0") : s;
+}
+
+/** The contract number at the start of a deal / task title: "00351 - CG Complemento", "Kickoff - 00351 - ...". */
+export function extractCodeFromTitle(title: string | null | undefined): string | null {
+  const m = /^\s*(?:kickoff\s*-\s*)?(\d{3,6})\s*-\s*\S/i.exec(title ?? "");
+  return m ? normalizeClientCode(m[1]) : null;
+}
+
 export interface ClientInput {
   name: string;
   code: string | null;
@@ -52,7 +71,7 @@ export function parseClientInput(body: unknown, partial = false): Partial<Client
   const b = (body ?? {}) as Record<string, unknown>;
   const out: Partial<ClientInput> = {};
   if (!partial || "name" in b) out.name = text(b.name, 200, "o nome do cliente", true)!;
-  if (!partial || "code" in b) out.code = text(b.code, 40, "o código");
+  if (!partial || "code" in b) out.code = normalizeClientCode(text(b.code, 40, "o código"));
   if ("status" in b) {
     if (b.status !== "active" && b.status !== "inactive") throw new ValidationError("Situação inválida.");
     out.status = b.status;

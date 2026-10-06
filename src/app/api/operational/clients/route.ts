@@ -8,6 +8,7 @@ import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { extractScopeSections } from "@/lib/contracts/scope";
+import { extractCodeFromTitle } from "@/lib/operational/clients-projects";
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
 
     const { data: contracts, error } = await admin
       .from("deal_contracts")
-      .select("id, deal_id, razao_social, cnpj, signed_at, rendered_content, deal:deals(contact_id), template:contract_templates(name)")
+      .select("id, deal_id, razao_social, cnpj, signed_at, rendered_content, deal:deals(contact_id, title), template:contract_templates(name)")
       .eq("account_id", ctx.accountId)
       .eq("status", "signed")
       .is("terminated_at", null)
@@ -42,13 +43,15 @@ export async function GET() {
     const clients = [];
     // One row per signed contract: a client with two fronts shows both.
     for (const c of contracts ?? []) {
-      const deal = (Array.isArray(c.deal) ? c.deal[0] : c.deal) as { contact_id: string | null } | null;
+      const deal = (Array.isArray(c.deal) ? c.deal[0] : c.deal) as { contact_id: string | null; title: string | null } | null;
       const contactId = deal?.contact_id ?? null;
       const contactTasks = contactId ? (byContact.get(contactId) ?? 0) : 0;
       const dealOnlyTasks = byDeal.get(c.deal_id as string) ?? 0;
       clients.push({
         id: c.id,
         title: ((Array.isArray(c.template) ? c.template[0] : c.template) as { name?: string | null } | null)?.name ?? null,
+        // The contract number lives in the deal title ("00351 - CG Complemento").
+        code: extractCodeFromTitle(deal?.title) ?? extractCodeFromTitle(c.razao_social),
         razaoSocial: c.razao_social,
         cnpj: c.cnpj,
         signedAt: c.signed_at,

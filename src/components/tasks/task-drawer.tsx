@@ -139,7 +139,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   // Active projects of active clients, for the "Projeto" picker (migration 106).
-  const [projects, setProjects] = useState<{ id: string; name: string; client_name: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; client_name: string; client_code: string | null }[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>([]);
   const [approvals, setApprovals] = useState<TaskApproval[]>([]);
@@ -282,7 +282,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
       ]);
       if (cancelled) return;
       if (projectRes?.ok) {
-        setProjects(((await projectRes.json()) as { projects: { id: string; name: string; client_name: string }[] }).projects);
+        setProjects(((await projectRes.json()) as { projects: { id: string; name: string; client_name: string; client_code: string | null }[] }).projects);
       }
       setProfiles(profileRows);
       setSectors((sectorRows.data ?? []) as Sector[]);
@@ -669,7 +669,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                     ...(field("project_id") && !projects.some((p) => p.id === field("project_id"))
                       ? [{ value: field("project_id") as string, label: t("projectCurrent") }]
                       : []),
-                    ...projects.map((p) => ({ value: p.id, label: `${p.client_name} — ${p.name}` })),
+                    ...projects.map((p) => ({ value: p.id, label: `${p.client_code ? `${p.client_code} · ` : ""}${p.client_name} — ${p.name}` })),
                   ]}
                 />
               </div>

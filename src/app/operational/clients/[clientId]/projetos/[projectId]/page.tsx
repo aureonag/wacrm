@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { ClientCode } from "@/components/operational/client-code";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { cn } from "@/lib/utils";
 import type { ProjectStatus, TaskCounts } from "@/lib/operational/clients-projects";
@@ -33,7 +34,7 @@ interface TaskRow {
 }
 interface Data {
   project: { id: string; name: string; description: string | null; status: ProjectStatus; start_date: string | null; due_date: string | null };
-  client: { id: string; name: string; status: string } | null;
+  client: { id: string; name: string; code: string | null; status: string } | null;
   counts: TaskCounts;
   tasks: TaskRow[];
 }
@@ -128,7 +129,8 @@ export default function OperationalProjectPage() {
           {t("title")}
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href={`/operational/clients/${clientId}`} className="hover:text-foreground">
+        <Link href={`/operational/clients/${clientId}`} className="inline-flex items-center gap-1.5 hover:text-foreground">
+          <ClientCode code={client?.code} />
           {client?.name ?? "—"}
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
