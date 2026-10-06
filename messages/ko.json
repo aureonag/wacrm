@@ -525,7 +525,9 @@
         "pix_cnpj": "CNPJ",
         "pix_email": "E-mail",
         "pix_phone": "Phone",
-        "pix_random": "Random key"
+        "pix_random": "Random key",
+        "tabParticipants": "Participants",
+        "tabRanking": "Ranking"
       },
       "commissions": {
         "closeTitle": "Close commission",
@@ -815,6 +817,48 @@
         "level_none": "No access",
         "level_view": "View only",
         "level_edit": "View and edit"
+      },
+      "ranking": {
+        "title": "Affiliate ranking",
+        "description": "Who sold the most in the month, per campaign. Cancelled orders are not counted.",
+        "month": "Period",
+        "campaign": "Campaign",
+        "allCampaigns": "All campaigns",
+        "colPosition": "Position",
+        "colAffiliate": "Affiliate",
+        "colCampaign": "Campaign",
+        "colSales": "Sold",
+        "colOrders": "Orders",
+        "colCancelled": "Cancelled",
+        "empty": "No approved affiliate yet.",
+        "emptyHint": "Approve participants in the Participants tab to see them here.",
+        "note": "The ranking can change after the month closes if there are cancellations or returns. Orders arrive once the store is integrated."
+      },
+      "profile": {
+        "title": "Affiliate profile",
+        "hint": "Contact, campaigns, sales and commissions of this person in this store.",
+        "email": "E-mail",
+        "phone": "Phone",
+        "instagram": "Instagram",
+        "place": "City / State",
+        "since": "Registered on",
+        "pix": "Pix key",
+        "pixGiven": "Provided (visible to finance only)",
+        "pixMissing": "Not provided",
+        "pixType_cpf": "CPF",
+        "pixType_cnpj": "CNPJ",
+        "pixType_email": "E-mail",
+        "pixType_phone": "Phone",
+        "pixType_random": "Random",
+        "campaigns": "Campaigns and coupons",
+        "results": "Results",
+        "sales": "Sold",
+        "orders": "Paid orders",
+        "cancelled": "Cancelled",
+        "commissionsTotal": "Commissions",
+        "commissionsPaid": "Paid",
+        "commissions": "Recent commissions",
+        "noCommissions": "No commission closed yet."
       }
     },
     "dashboard": {

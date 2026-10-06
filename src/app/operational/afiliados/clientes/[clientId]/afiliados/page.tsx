@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "../../../_components/workspace";
+import { AffiliateProfileDialog } from "../../../_components/affiliate-profile-dialog";
+import { AffiliatesTabs } from "../../../_components/affiliates-tabs";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, Loader2, Plus, Power, Search, X } from "lucide-react";
@@ -69,6 +71,7 @@ export default function AffiliateMembersPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [m, c] = await Promise.all([
@@ -154,6 +157,7 @@ export default function AffiliateMembersPage() {
 
   return (
     <div className="space-y-4">
+      <AffiliatesTabs />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -183,7 +187,13 @@ export default function AffiliateMembersPage() {
               <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-foreground">{m.affiliate?.name ?? "—"}</p>
+                    <button
+                      type="button"
+                      onClick={() => setProfileId(m.id)}
+                      className="truncate text-left text-sm font-semibold text-foreground hover:text-primary hover:underline"
+                    >
+                      {m.affiliate?.name ?? "—"}
+                    </button>
                     <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", STATUS_STYLE[m.status])}>
                       {t(`members.status_${m.status}`)}
                     </span>
@@ -227,6 +237,8 @@ export default function AffiliateMembersPage() {
           })}
         </ul>
       )}
+
+      <AffiliateProfileDialog membershipId={profileId} onClose={() => setProfileId(null)} />
 
       <Dialog open={open} onOpenChange={(o) => !o && !saving && setOpen(false)}>
         <DialogContent className="sm:max-w-lg">

@@ -525,7 +525,9 @@
         "pix_cnpj": "CNPJ",
         "pix_email": "E-mail",
         "pix_phone": "Telefone",
-        "pix_random": "Chave aleatória"
+        "pix_random": "Chave aleatória",
+        "tabParticipants": "Participantes",
+        "tabRanking": "Ranking"
       },
       "commissions": {
         "closeTitle": "Fechar comissão",
@@ -815,6 +817,48 @@
         "level_none": "Sem acesso",
         "level_view": "Só ver",
         "level_edit": "Ver e editar"
+      },
+      "ranking": {
+        "title": "Ranking de afiliados",
+        "description": "Quem mais vendeu no mês, por campanha. Pedidos cancelados não entram na soma.",
+        "month": "Competência",
+        "campaign": "Campanha",
+        "allCampaigns": "Todas as campanhas",
+        "colPosition": "Posição",
+        "colAffiliate": "Afiliado",
+        "colCampaign": "Campanha",
+        "colSales": "Vendido",
+        "colOrders": "Pedidos",
+        "colCancelled": "Cancelados",
+        "empty": "Nenhum afiliado aprovado ainda.",
+        "emptyHint": "Aprove participantes na aba Participantes para vê-los aqui.",
+        "note": "O ranking pode mudar depois do fechamento do mês se houver cancelamentos ou devoluções. Pedidos chegam quando a loja estiver integrada."
+      },
+      "profile": {
+        "title": "Perfil do afiliado",
+        "hint": "Contato, campanhas, vendas e comissões desta pessoa nesta loja.",
+        "email": "E-mail",
+        "phone": "Telefone",
+        "instagram": "Instagram",
+        "place": "Cidade / UF",
+        "since": "Cadastro em",
+        "pix": "Chave Pix",
+        "pixGiven": "Informada (visível só para o financeiro)",
+        "pixMissing": "Não informada",
+        "pixType_cpf": "CPF",
+        "pixType_cnpj": "CNPJ",
+        "pixType_email": "E-mail",
+        "pixType_phone": "Telefone",
+        "pixType_random": "Aleatória",
+        "campaigns": "Campanhas e cupons",
+        "results": "Resultados",
+        "sales": "Vendido",
+        "orders": "Pedidos pagos",
+        "cancelled": "Cancelados",
+        "commissionsTotal": "Comissões",
+        "commissionsPaid": "Pagas",
+        "commissions": "Comissões recentes",
+        "noCommissions": "Nenhuma comissão fechada ainda."
       }
     },
     "dashboard": {
