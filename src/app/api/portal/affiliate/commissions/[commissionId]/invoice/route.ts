@@ -12,6 +12,7 @@ import { StorageNotReady, storageNotReadyResponse } from "@/lib/affiliates/commi
 import { readUpload } from "@/lib/affiliates/documents";
 import { submitInvoice } from "@/lib/affiliates/invoices-server";
 import { requireAffiliate, writeAffiliateAudit } from "@/lib/affiliates/portal";
+import { notifyStore } from "@/lib/affiliates/notifications";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(req: Request, { params }: { params: Promise<{ commissionId: string }> }) {
@@ -26,7 +27,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ commiss
     // Resolve the commission's client from the affiliate's OWN row.
     const own = await ctx.admin
       .from("aff_commissions")
-      .select("client_id")
+      .select("client_id, period")
       .eq("id", commissionId)
       .eq("affiliate_id", ctx.affiliate.id)
       .maybeSingle();
@@ -52,6 +53,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ commiss
       action: "Enviou nota fiscal",
       objectType: "commission",
       objectId: commissionId,
+    });
+    notifyStore(ctx.admin, req, {
+      clientId: own.data.client_id,
+      event: { kind: "invoice_submitted", affiliate: ctx.affiliate.name, period: own.data.period },
     });
     return NextResponse.json({ ok: true });
   } catch (err) {

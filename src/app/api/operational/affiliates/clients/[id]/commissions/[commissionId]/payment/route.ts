@@ -17,6 +17,7 @@ import {
   storageNotReadyResponse,
 } from "@/lib/affiliates/commissions-server";
 import { readUpload, removeDoc, storeDoc } from "@/lib/affiliates/documents";
+import { notifyAffiliate } from "@/lib/affiliates/notifications";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; commissionId: string }> }) {
   try {
@@ -50,7 +51,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .eq("id", commissionId)
       .eq("client_id", id)
       .eq("status", "available")
-      .select("id")
+      .select("id, gross_cents, withholding_cents")
       .maybeSingle();
     if (error || !data) {
       await removeDoc(admin, path);
@@ -66,6 +67,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       action: "Registrou pagamento externo",
       objectType: "commission",
       objectId: commissionId,
+    });
+    const net = (Number(data.gross_cents) - Number(data.withholding_cents)) / 100;
+    notifyAffiliate(admin, req, {
+      clientId: id,
+      affiliateId: current.affiliate_id,
+      event: {
+        kind: "payment_registered",
+        period: current.period,
+        net: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(net),
+      },
     });
     return NextResponse.json({ ok: true });
   } catch (err) {

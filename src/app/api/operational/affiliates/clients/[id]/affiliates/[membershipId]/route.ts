@@ -13,6 +13,7 @@ import { toErrorResponse } from "@/lib/auth/account";
 import { isModuleNotReady, moduleNotReadyResponse, requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 import { can } from "@/lib/affiliates/store-access";
+import { notifyAffiliate } from "@/lib/affiliates/notifications";
 
 const ACTION: Record<string, string> = {
   approved: "Aprovou afiliado",
@@ -125,6 +126,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Status inválido." }, { status: 400 });
     }
 
+    const before = await admin
+      .from("aff_memberships")
+      .select("status, affiliate_id, code, aff_campaigns(name)")
+      .eq("id", membershipId)
+      .eq("client_id", id)
+      .maybeSingle();
+
     const { data, error } = await admin
       .from("aff_memberships")
       .update({ status })
@@ -145,6 +153,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       objectType: "membership",
       objectId: membershipId,
     });
+
+    // Tell the affiliate only when the decision really changed.
+    if (before.data && before.data.status !== status && (status === "approved" || status === "rejected")) {
+      const campaign = (before.data.aff_campaigns as unknown as { name: string } | null)?.name ?? "";
+      notifyAffiliate(admin, req, {
+        clientId: id,
+        affiliateId: before.data.affiliate_id,
+        event:
+          status === "approved"
+            ? { kind: "membership_approved", code: before.data.code, campaign }
+            : { kind: "membership_rejected", campaign },
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     return toErrorResponse(err);

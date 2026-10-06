@@ -331,3 +331,28 @@ export function portalInviteEmailHtml(args: { name: string; store: string | null
   `;
   return emailShell(body);
 }
+
+/** E-mail de aviso do módulo Afiliados (nota, pagamento, aprovação). Texto curto + botão opcional. */
+export function portalNotificationEmailHtml(args: {
+  title: string;
+  paragraphs: string[];
+  ctaLabel?: string;
+  ctaUrl?: string;
+}): string {
+  const paragraphs = args.paragraphs
+    .map(
+      (p) =>
+        `<p style="margin:0 0 16px;font-size:14px;color:${COLORS.muted};line-height:1.6;">${escapeHtml(p)}</p>`,
+    )
+    .join("");
+  const cta =
+    args.ctaLabel && args.ctaUrl
+      ? `<p style="margin:0 0 20px;"><a href="${escapeHtml(args.ctaUrl)}" style="display:inline-block;padding:10px 20px;background:${COLORS.primary};color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">${escapeHtml(args.ctaLabel)}</a></p>`
+      : "";
+  const body = `
+    <h1 style="margin:0 0 16px;font-size:20px;color:${COLORS.foreground};">${escapeHtml(args.title)}</h1>
+    ${paragraphs}
+    ${cta}
+  `;
+  return emailShell(body);
+}

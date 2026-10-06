@@ -10,6 +10,7 @@ import { BadInput, requireClientAccess, writeAudit } from "@/lib/affiliates/admi
 import { isUuid } from "@/lib/affiliates/campaigns";
 import { parseReviewInput } from "@/lib/affiliates/commissions";
 import { conflictResponse, loadCommissionFiles } from "@/lib/affiliates/commissions-server";
+import { notifyAffiliate } from "@/lib/affiliates/notifications";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; commissionId: string }> }) {
   try {
@@ -47,6 +48,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       action: input.approve ? "Aprovou nota fiscal" : "Rejeitou nota fiscal",
       objectType: "commission",
       objectId: commissionId,
+    });
+    notifyAffiliate(admin, req, {
+      clientId: id,
+      affiliateId: current.affiliate_id,
+      event: input.approve
+        ? { kind: "invoice_approved", period: current.period }
+        : { kind: "invoice_rejected", period: current.period, reason: input.reason ?? "" },
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
