@@ -62,6 +62,8 @@ export function TaskCard({
 
   const time = summarizeTaskTime(task.time_entries, now);
   const runningByMe = !!currentUserId && time.people.some((p) => p.userId === currentUserId && p.running);
+  const myTime = time.people.find((p) => p.userId === currentUserId)?.seconds ?? 0;
+  const timerLabel = runningByMe ? t("timerPause") : myTime > 0 ? t("timerResume") : t("timerStart");
   const showTime = canTrack || time.totalSeconds > 0 || time.running;
 
   return (
@@ -136,8 +138,8 @@ export function TaskCard({
                   onToggleTimer?.(task.id, runningByMe);
                 }}
                 onKeyDown={(e) => e.stopPropagation()}
-                aria-label={runningByMe ? t("timerPause") : t("timerStart")}
-                title={runningByMe ? t("timerPause") : t("timerStart")}
+                aria-label={timerLabel}
+                title={timerLabel}
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50 ${
                   runningByMe
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"

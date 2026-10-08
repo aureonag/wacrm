@@ -1023,6 +1023,7 @@
       "card": {
         "timerStart": "Start timer",
         "timerPause": "Pause timer",
+        "timerResume": "Resume timer",
         "timeTotal": "Total time on the task",
         "priority": {
           "low": "P3",
@@ -1203,6 +1204,9 @@
     "timesheet": {
       "start": "Start",
       "stop": "Pause",
+      "resume": "Resume",
+      "myTime": "Your time on this task",
+      "taskTotal": "Task total",
       "empty": "You don't have permission to track time.",
       "runningElsewhere": "You have a timer running on \"{title}\".",
       "goThere": "Go there",

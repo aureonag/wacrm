@@ -1023,6 +1023,7 @@
       "card": {
         "timerStart": "Iniciar cronômetro",
         "timerPause": "Pausar cronômetro",
+        "timerResume": "Continuar cronômetro",
         "timeTotal": "Tempo total da tarefa",
         "priority": {
           "low": "P3",
@@ -1203,6 +1204,9 @@
     "timesheet": {
       "start": "Iniciar",
       "stop": "Pausar",
+      "resume": "Continuar",
+      "myTime": "Seu tempo nesta tarefa",
+      "taskTotal": "Total da tarefa",
       "empty": "Você não tem permissão para cronometrar tempo.",
       "runningElsewhere": "Você tem um cronômetro rodando em \"{title}\".",
       "goThere": "Ir até lá",

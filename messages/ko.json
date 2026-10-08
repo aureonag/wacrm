@@ -1023,6 +1023,7 @@
       "card": {
         "timerStart": "Start timer",
         "timerPause": "Pause timer",
+        "timerResume": "Resume timer",
         "timeTotal": "Total time on the task",
         "priority": {
           "low": "P3",
@@ -1203,6 +1204,9 @@
     "timesheet": {
       "start": "시작",
       "stop": "일시정지",
+      "resume": "Resume",
+      "myTime": "Your time on this task",
+      "taskTotal": "Task total",
       "empty": "시간을 기록할 권한이 없습니다.",
       "runningElsewhere": "\"{title}\"에서 타이머가 실행 중입니다.",
       "goThere": "이동하기",

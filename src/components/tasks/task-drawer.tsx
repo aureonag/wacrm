@@ -81,7 +81,7 @@ import {
   Clock,
   FolderOpen,
   Play,
-  Square,
+  Pause,
   LayoutGrid,
   ArrowRightLeft,
   Gauge,
@@ -100,7 +100,7 @@ import { useTranslations } from "next-intl";
 import type { JSONContent } from "@tiptap/react";
 import { useActiveTimer } from "@/hooks/use-active-timer";
 import { useClockTick } from "@/hooks/use-clock-tick";
-import { formatElapsedClock } from "@/lib/tasks/timesheet";
+import { formatClockSeconds, summarizeTaskTime } from "@/lib/tasks/timesheet";
 
 interface TaskDrawerProps {
   taskId: string | null;
@@ -185,6 +185,25 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const runningHere = task && activeTimer?.task_id === task.id ? activeTimer : null;
   const runningElsewhere = task && activeTimer && activeTimer.task_id !== task.id ? activeTimer : null;
   const clockNow = useClockTick(!!runningHere);
+
+  // Time on THIS task: what the signed-in person has worked (closed periods
+  // + the one running now, which pauses/resumes without ever going back to
+  // zero) and the total of everyone. My own running period comes from the live
+  // timer row, so the clock stays exact even if the list below is a bit old.
+  const myUserId = user?.id;
+  const clockEntries = [
+    ...timesheet.filter((e) => !(e.user_id === myUserId && !e.ended_at)),
+    ...(runningHere ? [runningHere] : []),
+  ].map((e) => ({
+    user_id: e.user_id ?? null,
+    started_at: e.started_at,
+    ended_at: e.ended_at ?? null,
+    name: e.author?.full_name ?? null,
+  }));
+  const timeSummary = summarizeTaskTime(clockEntries, clockNow);
+  const mySeconds = timeSummary.people.find((p) => p.userId === myUserId)?.seconds ?? 0;
+  const totalSeconds = timeSummary.totalSeconds;
+  const othersWorked = totalSeconds > mySeconds;
 
   async function handleTimerStart() {
     if (!task) return;
@@ -528,37 +547,53 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {canTrackTime &&
-                    (runningHere ? (
-                      <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 py-1 pr-1 pl-3 text-sm">
-                        <span className="relative flex h-2 w-2">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                        </span>
-                        <span className="font-mono tabular-nums text-foreground">
-                          {formatElapsedClock(runningHere.started_at, clockNow)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleTimerStop}
-                          disabled={timerBusy}
-                          aria-label={tTimesheet("stop")}
-                          title={tTimesheet("stop")}
-                          className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+                  {(canTrackTime || totalSeconds > 0) && (
+                    <div className="flex items-center gap-3">
+                      {/* Time on this task: stays visible while paused and picks up from there. */}
+                      <div className="text-right leading-tight" title={tTimesheet("myTime")}>
+                        <p
+                          className={`flex items-center justify-end gap-1.5 font-mono text-sm tabular-nums ${
+                            runningHere ? "font-semibold text-primary" : "text-foreground"
+                          }`}
                         >
-                          <Square className="h-3 w-3 fill-current" />
-                        </button>
+                          {runningHere && (
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                            </span>
+                          )}
+                          {formatClockSeconds(canTrackTime ? mySeconds : totalSeconds)}
+                        </p>
+                        {canTrackTime && othersWorked && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {tTimesheet("taskTotal")}: {formatClockSeconds(totalSeconds)}
+                          </p>
+                        )}
                       </div>
-                    ) : runningElsewhere ? (
-                      <p className="max-w-[16rem] truncate text-xs text-muted-foreground">
-                        {tTimesheet("runningElsewhere", { title: runningElsewhere.task?.title ?? tTimesheet("untitledTask") })}
-                      </p>
-                    ) : (
-                      <Button size="sm" variant="outline" onClick={handleTimerStart} disabled={timerBusy}>
-                        <Play className="mr-1.5 h-3.5 w-3.5" />
-                        {tTimesheet("start")}
-                      </Button>
-                    ))}
+                      {canTrackTime &&
+                        (runningHere ? (
+                          <button
+                            type="button"
+                            onClick={handleTimerStop}
+                            disabled={timerBusy}
+                            aria-label={tTimesheet("stop")}
+                            title={tTimesheet("stop")}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                          >
+                            <Pause className="h-3.5 w-3.5 fill-current" />
+                          </button>
+                        ) : runningElsewhere ? (
+                          <p className="max-w-[14rem] truncate text-xs text-muted-foreground">
+                            {tTimesheet("runningElsewhere", { title: runningElsewhere.task?.title ?? tTimesheet("untitledTask") })}
+                          </p>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={handleTimerStart} disabled={timerBusy}>
+                            <Play className="mr-1.5 h-3.5 w-3.5" />
+                            {mySeconds > 0 ? tTimesheet("resume") : tTimesheet("start")}
+                          </Button>
+                        ))}
+                    </div>
+                  )}
                   {canEdit && (
                     <Button
                       size="sm"
