@@ -21,7 +21,14 @@ interface HighlightColorPickerProps {
   /** Color of the highlight under the cursor / selection, if any. */
   color: string | null;
   onPick: (hex: string) => void;
-  onClear: () => void;
+  /** Without it the "remove" button is not shown. */
+  onClear?: () => void;
+  /** Called on every change, so a parent can show the color live (labels use it with no "Aplicar" button). */
+  onPreview?: (hex: string) => void;
+  /** Hides the "Aplicar" button when the parent saves on its own. */
+  hideApply?: boolean;
+  /** Text of the "remove" button (default: remove highlight). */
+  clearLabel?: string;
 }
 
 interface EyeDropperCtor {
@@ -78,7 +85,7 @@ function DragArea({
   );
 }
 
-export function HighlightColorPicker({ color, onPick, onClear }: HighlightColorPickerProps) {
+export function HighlightColorPicker({ color, onPick, onClear, onPreview, hideApply, clearLabel }: HighlightColorPickerProps) {
   const t = useTranslations("Operational.briefing");
   const initial = normalizeHex(color) ?? DEFAULT_HIGHLIGHT;
   const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(initial));
@@ -94,6 +101,7 @@ export function HighlightColorPicker({ color, onPick, onClear }: HighlightColorP
     hsvRef.current = next;
     setHsv(next);
     setHexText(hsvToHex(next));
+    onPreview?.(hsvToHex(next));
   }
 
   function apply() {
@@ -211,24 +219,30 @@ export function HighlightColorPicker({ color, onPick, onClear }: HighlightColorP
         ))}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={onClear}
-          className="flex items-center justify-center gap-2 rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <Eraser className="h-3.5 w-3.5" />
-          {t("highlightRemove")}
-        </button>
-        <button
-          type="button"
-          onClick={apply}
-          className="flex items-center justify-center gap-2 rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Check className="h-3.5 w-3.5" />
-          {t("highlightApply")}
-        </button>
-      </div>
+      {(onClear || !hideApply) && (
+        <div className="flex flex-col gap-2">
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="flex items-center justify-center gap-2 rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <Eraser className="h-3.5 w-3.5" />
+              {clearLabel ?? t("highlightRemove")}
+            </button>
+          )}
+          {!hideApply && (
+            <button
+              type="button"
+              onClick={apply}
+              className="flex items-center justify-center gap-2 rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              <Check className="h-3.5 w-3.5" />
+              {t("highlightApply")}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

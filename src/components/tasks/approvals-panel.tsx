@@ -11,6 +11,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithEmoji } from "@/components/ui/textarea-with-emoji";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -85,7 +86,7 @@ export function ApprovalsPanel({ taskId, approvals, profiles, currentUserId, can
               </SelectContent>
             </Select>
           </div>
-          <Textarea
+          <TextareaWithEmoji
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder={t("commentPlaceholder")}

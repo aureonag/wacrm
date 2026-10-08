@@ -23,6 +23,7 @@ import {
   MessageSquareDashed,
   Zap,
 } from "lucide-react";
+import { EmojiButton } from "@/components/ui/emoji-popover";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
 import {
@@ -725,6 +726,8 @@ export function MessageComposer({
               <Sparkles className="h-4 w-4" />
             )}
           </GatedButton>
+
+          <EmojiButton targetRef={textareaRef} disabled={sessionExpired || readOnly} className="h-9 w-9" />
 
           <textarea
             ref={textareaRef}

@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithEmoji } from "@/components/ui/textarea-with-emoji";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -850,7 +851,7 @@ export default function DealDetailPage() {
 
               <div className="grid gap-1.5">
                 <Label className="text-muted-foreground">{t("description")}</Label>
-                <Textarea
+                <TextareaWithEmoji
                   defaultValue={deal.notes ?? ""}
                   disabled={!canEdit}
                   placeholder={t("descriptionPlaceholder")}
@@ -893,7 +894,7 @@ export default function DealDetailPage() {
               {canEdit && (
                 <>
                   <div className="flex gap-2">
-                    <Textarea
+                    <TextareaWithEmoji
                       value={commentDraft}
                       onChange={(e) => setCommentDraft(e.target.value)}
                       placeholder={t("commentPlaceholder")}
@@ -937,7 +938,7 @@ export default function DealDetailPage() {
                         </div>
                         {isEditing ? (
                           <div className="mt-1.5 space-y-2">
-                            <Textarea
+                            <TextareaWithEmoji
                               autoFocus
                               value={editingCommentBody}
                               onChange={(e) => setEditingCommentBody(e.target.value)}

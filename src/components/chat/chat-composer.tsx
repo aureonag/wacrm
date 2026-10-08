@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Loader2, Paperclip, Send, X } from "lucide-react";
+import { EmojiButton } from "@/components/ui/emoji-popover";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -141,6 +142,8 @@ export function ChatComposer({ disabled = false, onSend }: ChatComposerProps) {
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
         </button>
+
+        <EmojiButton targetRef={textareaRef} disabled={disabled} className="h-9 w-9" />
 
         <textarea
           ref={textareaRef}

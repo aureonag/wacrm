@@ -70,10 +70,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       );
     }
 
-    const { data: tags } = await ctx.supabase.from("task_tags").select("label, color").eq("task_id", taskId);
+    const { data: tags } = await ctx.supabase.from("task_tags").select("label, color, label_id").eq("task_id", taskId);
     if (tags && tags.length > 0) {
       await ctx.supabase.from("task_tags").insert(
-        tags.map((t) => ({ task_id: clone.id, account_id: ctx.accountId, label: t.label, color: t.color })),
+        tags.map((t) => ({ task_id: clone.id, account_id: ctx.accountId, label: t.label, color: t.color, label_id: t.label_id })),
       );
     }
 

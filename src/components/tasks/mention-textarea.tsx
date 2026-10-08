@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { EmojiButton } from "@/components/ui/emoji-popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { activeMention, insertMention, type MentionMember } from "@/lib/tasks/mentions";
 
@@ -97,8 +98,9 @@ export function MentionTextarea({ value, onChange, members, placeholder, autoFoc
             setDismissed(true);
           }
         }}
-        className={className}
+        className={`pr-9 ${className ?? ""}`}
       />
+      <EmojiButton targetRef={ref} className="absolute bottom-1.5 right-1.5" />
 
       {mention && (
         <ul

@@ -1089,6 +1089,8 @@ export interface Task {
   sector?: Sector | null;
   tags?: TaskTag[];
   subtask_count?: number;
+  /** Project and client of the task (Operacional > Clientes), hydrated for the Kanban card. */
+  project?: { id: string; name: string; client_name: string | null; client_code: string | null } | null;
   /** Time tracked on the task, per person (timesheet_entries), for the Kanban card. */
   time_entries?: {
     user_id: string | null;
@@ -1148,13 +1150,25 @@ export interface OperationalHandoffDefaults {
   updated_at: string;
 }
 
+/** A task's label: a link to the shared library (task_labels). label/color are a copy kept by the database. */
 export interface TaskTag {
   id: string;
   task_id: string;
   account_id: string;
+  label_id: string | null;
   label: string;
   color: string;
   created_at: string;
+}
+
+/** A label of the account's library (Operacional), reusable across tasks. */
+export interface TaskLabel {
+  id: string;
+  account_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TaskChecklistItem {

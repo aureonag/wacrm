@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DEFAULT_HIGHLIGHT, normalizeHex, readableTextColor } from "@/lib/tasks/color";
 import { HighlightColorPicker } from "./highlight-color-picker";
+import { EmojiPopover } from "@/components/ui/emoji-popover";
 
 // Briefing (item 5 do pedido): texto formatado, títulos, listas, links,
 // imagens — salvo como JSON nativo do Tiptap (tasks.briefing jsonb),
@@ -222,6 +223,7 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
           <ToolbarButton active={false} onClick={addImage} label={t("image")}>
             <ImageIcon className="h-3.5 w-3.5" />
           </ToolbarButton>
+          <EmojiPopover side="bottom" onPick={(emoji) => editor.chain().focus().insertContent(emoji).run()} />
         </div>
       )}
       <div

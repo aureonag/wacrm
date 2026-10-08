@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { TextareaWithEmoji } from "@/components/ui/textarea-with-emoji";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -603,7 +604,7 @@ export function ContactDetailView({
               {/* Notes Tab */}
               <TabsContent value="notes" className="flex-1 flex flex-col min-h-0 px-4 py-3">
                 <div className="space-y-2 mb-3">
-                  <Textarea
+                  <TextareaWithEmoji
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder={t('notesTab.placeholder')}

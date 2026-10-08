@@ -23,6 +23,7 @@ export async function POST(request: Request) {
           title?: unknown;
           parent_task_id?: unknown;
           contact_id?: unknown;
+          project_id?: unknown;
           sector_id?: unknown;
           assignee_id?: unknown;
           priority?: unknown;
@@ -69,6 +70,19 @@ export async function POST(request: Request) {
         ? (body.priority as TaskPriority)
         : "medium";
 
+    // Optional project (Operacional > Clientes). Only one the caller can see.
+    let projectId: string | null = null;
+    if (typeof body?.project_id === "string" && body.project_id) {
+      const { data: project } = await ctx.supabase
+        .from("ops_projects")
+        .select("id")
+        .eq("id", body.project_id)
+        .eq("account_id", ctx.accountId)
+        .maybeSingle();
+      if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      projectId = project.id as string;
+    }
+
     const { count } = await ctx.supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
@@ -83,6 +97,7 @@ export async function POST(request: Request) {
         title,
         parent_task_id: typeof body?.parent_task_id === "string" ? body.parent_task_id : null,
         contact_id: typeof body?.contact_id === "string" ? body.contact_id : null,
+        project_id: projectId,
         sector_id: typeof body?.sector_id === "string" ? body.sector_id : null,
         assignee_id: typeof body?.assignee_id === "string" ? body.assignee_id : null,
         priority,

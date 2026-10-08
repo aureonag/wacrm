@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { EmojiButton } from "@/components/ui/emoji-popover";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function ContactSidebar({ contact, conversationId }: ContactSidebarProps)
   const [notes, setNotes] = useState<ContactNote[]>([]);
   const [tags, setTags] = useState<(Tag & { contact_tag_id: string })[]>([]);
   const [newNote, setNewNote] = useState("");
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const [addingNote, setAddingNote] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
 
@@ -278,13 +280,17 @@ export function ContactSidebar({ contact, conversationId }: ContactSidebarProps)
             </div>
             <div className="mt-2">
               <div className="flex gap-2">
+                <div className="relative flex-1">
                 <textarea
+                  ref={noteRef}
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder={tSidebar("addNotePlaceholder")}
                   rows={2}
-                  className="flex-1 resize-none rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder-muted-foreground outline-none focus:border-primary/50"
+                  className="w-full resize-none rounded-lg border border-border bg-muted py-2 pl-3 pr-9 text-xs text-foreground placeholder-muted-foreground outline-none focus:border-primary/50"
                 />
+                <EmojiButton targetRef={noteRef} className="absolute bottom-1 right-1" />
+                </div>
                 <Button
                   size="sm"
                   className="h-auto bg-primary px-2 hover:bg-primary/90"

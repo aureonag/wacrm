@@ -16,7 +16,7 @@ import {
   loadTaskRecurrenceRule,
   loadTaskTimesheet,
 } from "@/lib/tasks/queries";
-import { DEAL_TAG_COLORS } from "@/lib/deals/tag-colors";
+import { TaskLabelsField } from "./task-labels";
 import type {
   Board,
   BoardStage,
@@ -58,7 +58,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ContactPicker, type PickedContact } from "./contact-picker";
+import { ClientProjectFields, type ClientProjectFieldProps } from "./client-project-fields";
 import { TaskContractCard } from "./task-contract-card";
 import { formatTaskCode } from "@/lib/tasks/code";
 import { BriefingEditor } from "./briefing-editor";
@@ -150,8 +150,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [boardsList, setBoardsList] = useState<Board[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
-  // Active projects of active clients, for the "Projeto" picker (migration 106).
-  const [projects, setProjects] = useState<{ id: string; name: string; client_name: string; client_code: string | null }[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>([]);
   const [approvals, setApprovals] = useState<TaskApproval[]>([]);
@@ -162,7 +160,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [recurrenceRule, setRecurrenceRule] = useState<TaskRecurrenceRule | null>(null);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>({});
-  const [draftContact, setDraftContact] = useState<PickedContact | null>(null);
   const [saving, setSaving] = useState(false);
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
   const [activeTab, setActiveTab] = useState("briefing");
@@ -290,7 +287,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     setLoading(true);
     setActiveTab("briefing");
     setDraft({});
-    setDraftContact(null);
     let cancelled = false;
     (async () => {
       await reloadAll();
@@ -305,16 +301,12 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     if (!open || !accountId) return;
     let cancelled = false;
     (async () => {
-      const [profileRows, sectorRows, boardRows, projectRes] = await Promise.all([
+      const [profileRows, sectorRows, boardRows] = await Promise.all([
         loadAccountProfiles(supabase, accountId),
         supabase.from("sectors").select("*").eq("account_id", accountId).order("name"),
         loadBoards(supabase),
-        fetch("/api/operational/ops-projects").catch(() => null),
       ]);
       if (cancelled) return;
-      if (projectRes?.ok) {
-        setProjects(((await projectRes.json()) as { projects: { id: string; name: string; client_name: string; client_code: string | null }[] }).projects);
-      }
       setProfiles(profileRows);
       setSectors((sectorRows.data ?? []) as Sector[]);
       setBoardsList(boardRows);
@@ -364,15 +356,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     });
   }
 
-  const shownContact: PickedContact | null =
-    "contact_id" in draft
-      ? draft.contact_id
-        ? draftContact
-        : null
-      : task?.contact
-        ? { id: task.contact.id, name: task.contact.name || task.contact.phone }
-        : null;
-
   async function handleSaveChanges(): Promise<boolean> {
     if (!task || !dirty || titleEmpty || saving) return !dirty;
     setSaving(true);
@@ -382,7 +365,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     setSaving(false);
     if (ok) {
       setDraft({});
-      setDraftContact(null);
       toast.success(t("toastSaved"));
     }
     return !!ok;
@@ -444,17 +426,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
     setMoveTargetStage("");
     const rows = await loadBoardStages(supabase, boardId);
     setMoveTargetStages(rows);
-  }
-
-  async function handleAddTag(label: string, color: string) {
-    if (!task || !accountId) return;
-    await supabase.from("task_tags").insert({ task_id: task.id, account_id: accountId, label, color });
-    await reloadAll();
-  }
-
-  async function handleRemoveTag(tagId: string) {
-    await supabase.from("task_tags").delete().eq("id", tagId);
-    await reloadAll();
   }
 
   async function handleSaveRecurrence() {
@@ -806,51 +777,25 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                     />
                   </PropRow>
                   <PropRow icon={Tag} label={t("tagsLabel")}>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {(task.tags ?? []).map((tag) => (
-                        <span
-                          key={tag.id}
-                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-                          style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
-                        >
-                          {tag.label}
-                          {canEdit && (
-                            <button type="button" onClick={() => handleRemoveTag(tag.id)} aria-label={t("removeTag")}>
-                              <X className="h-2.5 w-2.5" />
-                            </button>
-                          )}
-                        </span>
-                      ))}
-                      {canEdit && <TagAdder onAdd={handleAddTag} />}
-                    </div>
-                  </PropRow>
-                  <PropRow icon={FolderKanban} label={t("project")}>
-                    <FieldSelect
-                      bare
-                      label={t("project")}
-                      value={(field("project_id") as string | null) ?? "__none"}
-                      onChange={(v) => setField("project_id", v === "__none" ? null : v)}
-                      disabled={!canEdit}
-                      options={[
-                        { value: "__none", label: t("none") },
-                        // The saved project may be archived / of an inactive client: keep it visible.
-                        ...(field("project_id") && !projects.some((p) => p.id === field("project_id"))
-                          ? [{ value: field("project_id") as string, label: t("projectCurrent") }]
-                          : []),
-                        ...projects.map((p) => ({ value: p.id, label: `${p.client_code ? `${p.client_code} · ` : ""}${p.client_name} — ${p.name}` })),
-                      ]}
+                    <TaskLabelsField
+                      taskId={task.id}
+                      accountId={accountId}
+                      tags={task.tags ?? []}
+                      canEdit={canEdit}
+                      onChanged={reloadAll}
                     />
                   </PropRow>
-                  <PropRow icon={Briefcase} label={t("client")}>
-                    <ContactPicker
-                      value={shownContact}
-                      disabled={!canEdit}
-                      onChange={(c) => {
-                        setDraftContact(c);
-                        setField("contact_id", c?.id ?? null);
-                      }}
-                    />
-                  </PropRow>
+                  <ClientProjectFields
+                    projectId={(field("project_id") as string | null) ?? null}
+                    onChange={(id) => setField("project_id", id)}
+                    disabled={!canEdit}
+                    Field={PanelClientField}
+                  />
+                  {task.contact && (
+                    <PropRow icon={Briefcase} label={t("crmContact")}>
+                      <span className="block truncate text-xs text-muted-foreground">{task.contact.name || task.contact.phone}</span>
+                    </PropRow>
+                  )}
                   <PropRow icon={CalendarPlus} label={t("startDate")}>
                     <Input
                       type="date"
@@ -940,7 +885,6 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
               onClick={() => {
                 const go = pendingLeave;
                 setDraft({});
-                setDraftContact(null);
                 setPendingLeave(null);
                 go?.();
               }}
@@ -1073,6 +1017,15 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   );
 }
 
+/** Cliente / Projeto of the panel: one labelled field of the properties column each. */
+function PanelClientField({ label, icon, children }: ClientProjectFieldProps) {
+  return (
+    <PropRow icon={icon === "client" ? Building2 : FolderKanban} label={label}>
+      {children}
+    </PropRow>
+  );
+}
+
 /** One field of the properties column: icon + label on top, the control below it, full width. */
 function PropRow({
   icon: Icon,
@@ -1125,57 +1078,6 @@ function FieldSelect({
           ))}
         </SelectContent>
       </Select>
-    </div>
-  );
-}
-
-function TagAdder({ onAdd }: { onAdd: (label: string, color: string) => void }) {
-  const t = useTranslations("Operational.taskDrawer");
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
-  const [color, setColor] = useState<string>(DEAL_TAG_COLORS[0].value);
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-border px-2 py-0.5 text-[10.5px] text-muted-foreground hover:border-border hover:text-foreground"
-      >
-        + {t("addTag")}
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card p-1.5">
-      <input
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={t("tagPlaceholder")}
-        className="h-6 w-24 rounded-md border border-border bg-muted px-1.5 text-xs text-foreground outline-none focus:border-primary"
-      />
-      {DEAL_TAG_COLORS.slice(0, 5).map((c) => (
-        <button
-          key={c.value}
-          type="button"
-          onClick={() => setColor(c.value)}
-          className={`h-3.5 w-3.5 rounded-full ${color === c.value ? "outline outline-2 outline-offset-1 outline-foreground" : ""}`}
-          style={{ backgroundColor: c.value }}
-        />
-      ))}
-      <button
-        type="button"
-        onClick={() => {
-          if (text.trim()) onAdd(text.trim(), color);
-          setText("");
-          setOpen(false);
-        }}
-        className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground"
-      >
-        {t("add")}
-      </button>
     </div>
   );
 }

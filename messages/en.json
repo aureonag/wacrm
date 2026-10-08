@@ -1042,6 +1042,38 @@
         }
       }
     },
+    "labels": {
+      "title": "Labels",
+      "search": "Search labels...",
+      "create": "Create a new label",
+      "newTitle": "New label",
+      "editTitle": "Edit label",
+      "editAria": "Edit label {name}",
+      "name": "Title",
+      "save": "Save",
+      "createConfirm": "Create",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this label? It will be removed from every task that uses it.",
+      "deleteYes": "Yes, delete",
+      "cancel": "Cancel",
+      "back": "Back",
+      "close": "Close",
+      "add": "Add label",
+      "empty": "No labels yet. Create the first one.",
+      "noMatch": "No labels found.",
+      "errorSave": "Could not save the label."
+    },
+    "clientProject": {
+      "client": "Client",
+      "project": "Project",
+      "noClient": "No client",
+      "noProject": "No project",
+      "pickClientFirst": "Pick the client first",
+      "pickProject": "Select the project",
+      "noProjects": "Client has no projects",
+      "noProjectsHint": "This client has no projects yet, so the task will not be linked to it.",
+      "openClient": "Create a project in Clients"
+    },
     "briefing": {
       "bold": "Bold",
       "italic": "Italic",
@@ -1119,6 +1151,7 @@
       "dueDate": "Due date",
       "estimatedMinutes": "Estimated time (min)",
       "tagsLabel": "Tags",
+      "crmContact": "CRM contact",
       "addTag": "Tag",
       "tagPlaceholder": "Tag name",
       "add": "Add",
@@ -1162,9 +1195,9 @@
       "weekday4": "Thursday",
       "weekday5": "Friday",
       "weekday6": "Saturday",
-      "driveFolder": "Drive folder",
-      "driveFolderPlaceholder": "Paste the Google Drive folder link",
-      "driveFolderOpen": "Open folder",
+      "driveFolder": "Materials delivery link",
+      "driveFolderPlaceholder": "Paste the link of the materials delivery folder here",
+      "driveFolderOpen": "Open link",
       "toastStageRequirements": "Can't move: missing {items}",
       "stageRequirement_file": "file",
       "stageRequirement_checklist": "complete checklist",
@@ -2253,6 +2286,18 @@
       "toastDone": "Contract cancelled and the notice was sent to the client.",
       "toastDoneNoEmail": "Contract cancelled, but the email was NOT sent. Let the client know another way.",
       "toastError": "Could not cancel the contract."
+    }
+  },
+  "Emoji": {
+    "label": "Emojis",
+    "recent": "Recently used",
+    "categories": {
+      "faces": "Faces",
+      "gestures": "Gestures and hands",
+      "symbols": "Symbols and status",
+      "hearts": "Hearts",
+      "work": "Work and office",
+      "nature": "Food and nature"
     }
   },
   "Notifications": {

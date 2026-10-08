@@ -24,10 +24,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ContactPicker, type PickedContact } from "./contact-picker";
+import { ClientProjectFields, type ClientProjectFieldProps } from "./client-project-fields";
 import { Sparkles } from "lucide-react";
 import { draftTaskFromDescription } from "@/lib/tasks/internal-agent";
 import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithEmoji } from "@/components/ui/textarea-with-emoji";
 import {
   TASK_TEMPLATES,
   checklistFromText,
@@ -67,7 +68,8 @@ export function CreateTaskDialog({
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [isUrgent, setIsUrgent] = useState(false);
   const [dueDate, setDueDate] = useState("");
-  const [contact, setContact] = useState<PickedContact | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [saving, setSaving] = useState(false);
@@ -87,7 +89,8 @@ export function CreateTaskDialog({
     setPriority("medium");
     setIsUrgent(false);
     setDueDate("");
-    setContact(null);
+    setProjectId(null);
+    setClientName(null);
     setTemplateId(null);
     setEstimatedMinutes(null);
     setBriefingText("");
@@ -132,7 +135,7 @@ export function CreateTaskDialog({
   /** Internal assistant: runs entirely in the browser, no external service. */
   function handleAssistantFill() {
     if (!aiDescription.trim()) return;
-    const d = draftTaskFromDescription(aiDescription, { templateId, clientName: contact?.name ?? null });
+    const d = draftTaskFromDescription(aiDescription, { templateId, clientName });
     setTemplateId(d.templateId);
     setTitle(d.title);
     setBriefingText(d.briefing);
@@ -161,7 +164,7 @@ export function CreateTaskDialog({
         priority,
         is_urgent: isUrgent,
         due_date: dueDate || null,
-        contact_id: contact?.id ?? null,
+        project_id: projectId,
         estimated_minutes: estimatedMinutes,
         briefing: briefingText.trim() ? textToBriefing(briefingText) : null,
         checklist: checklistFromText(checklistText),
@@ -212,7 +215,7 @@ export function CreateTaskDialog({
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               {t("aiLabel")}
             </Label>
-            <Textarea
+            <TextareaWithEmoji
               spellCheck
               lang="pt-BR"
               value={aiDescription}
@@ -315,16 +318,13 @@ export function CreateTaskDialog({
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label className="text-muted-foreground">{t("client")}</Label>
-            <ContactPicker value={contact} onChange={setContact} />
-          </div>
+          <ClientProjectFields projectId={projectId} onChange={setProjectId} onClientName={setClientName} Field={DialogField} />
 
           {(templateId || briefingText || checklistText) && (
             <div className="grid gap-3">
               <div className="grid gap-2">
                 <Label className="text-muted-foreground">{t("briefing")}</Label>
-                <Textarea
+                <TextareaWithEmoji
                   spellCheck
                   lang="pt-BR"
                   value={briefingText}
@@ -373,5 +373,14 @@ export function CreateTaskDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DialogField({ label, children }: ClientProjectFieldProps) {
+  return (
+    <div className="grid gap-2">
+      <Label className="text-muted-foreground">{label}</Label>
+      {children}
+    </div>
   );
 }

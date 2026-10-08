@@ -1,8 +1,9 @@
 "use client";
 
 import type { BoardStage, Task } from "@/types";
-import { Calendar, Flag, Pause, Play, User } from "lucide-react";
+import { Building2, Calendar, Flag, Pause, Play, User } from "lucide-react";
 import { formatTaskCode } from "@/lib/tasks/code";
+import { LabelPill } from "./task-labels";
 import { formatClockSeconds, summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { useTranslations } from "next-intl";
 
@@ -100,11 +101,21 @@ export function TaskCard({
         />
       </div>
 
-      {task.contact && (
-        <p className="mt-1.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
-          <User className="h-3 w-3 shrink-0" />
-          <span className="truncate">{task.contact.name || task.contact.phone}</span>
+      {task.project?.client_name ? (
+        <p className="mt-1.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground" title={`${task.project.client_name} — ${task.project.name}`}>
+          <Building2 className="h-3 w-3 shrink-0" />
+          <span className="truncate">
+            {task.project.client_name}
+            <span className="text-muted-foreground/70"> · {task.project.name}</span>
+          </span>
         </p>
+      ) : (
+        task.contact && (
+          <p className="mt-1.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate">{task.contact.name || task.contact.phone}</span>
+          </p>
+        )
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -112,17 +123,7 @@ export function TaskCard({
           {t(`priority.${task.priority}`)}
         </span>
         {(task.tags ?? []).map((tag) => (
-          <span
-            key={tag.id}
-            className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-            style={{
-              backgroundColor: `${tag.color}20`,
-              color: tag.color,
-              border: `1px solid ${tag.color}40`,
-            }}
-          >
-            {tag.label}
-          </span>
+          <LabelPill key={tag.id} name={tag.label} color={tag.color} />
         ))}
       </div>
 

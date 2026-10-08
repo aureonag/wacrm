@@ -54,7 +54,35 @@ export async function loadBoardTasks(db: SupabaseClient, boardId: string): Promi
     console.error("Failed to load board tasks:", error.message);
     return [];
   }
-  return hydrateTaskTime(db, await hydrateTaskTags(db, (data ?? []) as Task[]));
+  return hydrateTaskProject(db, await hydrateTaskTime(db, await hydrateTaskTags(db, (data ?? []) as Task[])));
+}
+
+/** Batch-attaches `project` (name + client) with two plain queries (no embed that could break the board). */
+async function hydrateTaskProject(db: SupabaseClient, tasks: Task[]): Promise<Task[]> {
+  const projectIds = [...new Set(tasks.map((t) => t.project_id).filter((v): v is string => !!v))];
+  if (projectIds.length === 0) return tasks;
+
+  const { data: projects, error } = await db.from("ops_projects").select("id, name, client_id").in("id", projectIds);
+  if (error) {
+    console.error("Failed to load task projects:", error.message);
+    return tasks;
+  }
+  const rows = (projects ?? []) as { id: string; name: string; client_id: string }[];
+  const clientIds = [...new Set(rows.map((p) => p.client_id))];
+  const clientById = new Map<string, { name: string; code: string | null }>();
+  if (clientIds.length > 0) {
+    const { data: clients } = await db.from("ops_clients").select("id, name, code").in("id", clientIds);
+    for (const c of (clients ?? []) as { id: string; name: string; code: string | null }[]) {
+      clientById.set(c.id, { name: c.name, code: c.code });
+    }
+  }
+  const projectById = new Map(
+    rows.map((p) => [
+      p.id,
+      { id: p.id, name: p.name, client_name: clientById.get(p.client_id)?.name ?? null, client_code: clientById.get(p.client_id)?.code ?? null },
+    ]),
+  );
+  return tasks.map((t) => (t.project_id ? { ...t, project: projectById.get(t.project_id) ?? null } : t));
 }
 
 /** Batch-attaches `time_entries` (who tracked what, with names) in two extra

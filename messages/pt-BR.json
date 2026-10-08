@@ -1042,6 +1042,38 @@
         }
       }
     },
+    "labels": {
+      "title": "Etiquetas",
+      "search": "Buscar etiquetas...",
+      "create": "Criar nova etiqueta",
+      "newTitle": "Nova etiqueta",
+      "editTitle": "Editar etiqueta",
+      "editAria": "Editar etiqueta {name}",
+      "name": "Título",
+      "save": "Salvar",
+      "createConfirm": "Criar",
+      "delete": "Excluir",
+      "deleteConfirm": "Excluir esta etiqueta? Ela será removida de todas as tarefas que a usam.",
+      "deleteYes": "Sim, excluir",
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "close": "Fechar",
+      "add": "Adicionar etiqueta",
+      "empty": "Nenhuma etiqueta ainda. Crie a primeira.",
+      "noMatch": "Nenhuma etiqueta encontrada.",
+      "errorSave": "Não foi possível salvar a etiqueta."
+    },
+    "clientProject": {
+      "client": "Cliente",
+      "project": "Projeto",
+      "noClient": "Sem cliente",
+      "noProject": "Sem projeto",
+      "pickClientFirst": "Escolha o cliente primeiro",
+      "pickProject": "Selecione o projeto",
+      "noProjects": "Cliente sem projetos",
+      "noProjectsHint": "Este cliente ainda não tem projetos, então a tarefa não ficará ligada a ele.",
+      "openClient": "Criar projeto em Clientes"
+    },
     "briefing": {
       "bold": "Negrito",
       "italic": "Itálico",
@@ -1119,6 +1151,7 @@
       "dueDate": "Prazo",
       "estimatedMinutes": "Tempo estimado (min)",
       "tagsLabel": "Tags",
+      "crmContact": "Contato do CRM",
       "addTag": "Tag",
       "tagPlaceholder": "Nome da tag",
       "add": "Adicionar",
@@ -1162,9 +1195,9 @@
       "weekday4": "Quinta-feira",
       "weekday5": "Sexta-feira",
       "weekday6": "Sábado",
-      "driveFolder": "Pasta do Drive",
-      "driveFolderPlaceholder": "Cole o link da pasta do Google Drive",
-      "driveFolderOpen": "Abrir pasta",
+      "driveFolder": "Link de entrega dos materiais",
+      "driveFolderPlaceholder": "Cole aqui o link da pasta de entrega dos materiais",
+      "driveFolderOpen": "Abrir link",
       "toastStageRequirements": "Não é possível mover: falta {items}",
       "stageRequirement_file": "arquivo",
       "stageRequirement_checklist": "checklist completo",
@@ -2253,6 +2286,18 @@
       "toastDone": "Contrato cancelado e minuta enviada ao cliente.",
       "toastDoneNoEmail": "Contrato cancelado, mas o e-mail NÃO foi enviado. Avise o cliente por outro canal.",
       "toastError": "Não foi possível cancelar o contrato."
+    }
+  },
+  "Emoji": {
+    "label": "Emojis",
+    "recent": "Usados recentemente",
+    "categories": {
+      "faces": "Rostos",
+      "gestures": "Gestos e mãos",
+      "symbols": "Símbolos e status",
+      "hearts": "Corações",
+      "work": "Trabalho e escritório",
+      "nature": "Comida e natureza"
     }
   },
   "Notifications": {

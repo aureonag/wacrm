@@ -1042,6 +1042,38 @@
         }
       }
     },
+    "labels": {
+      "title": "Labels",
+      "search": "Search labels...",
+      "create": "Create a new label",
+      "newTitle": "New label",
+      "editTitle": "Edit label",
+      "editAria": "Edit label {name}",
+      "name": "Title",
+      "save": "Save",
+      "createConfirm": "Create",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this label? It will be removed from every task that uses it.",
+      "deleteYes": "Yes, delete",
+      "cancel": "Cancel",
+      "back": "Back",
+      "close": "Close",
+      "add": "Add label",
+      "empty": "No labels yet. Create the first one.",
+      "noMatch": "No labels found.",
+      "errorSave": "Could not save the label."
+    },
+    "clientProject": {
+      "client": "Client",
+      "project": "Project",
+      "noClient": "No client",
+      "noProject": "No project",
+      "pickClientFirst": "Pick the client first",
+      "pickProject": "Select the project",
+      "noProjects": "Client has no projects",
+      "noProjectsHint": "This client has no projects yet, so the task will not be linked to it.",
+      "openClient": "Create a project in Clients"
+    },
     "briefing": {
       "bold": "굵게",
       "italic": "기울임꼴",
@@ -1119,6 +1151,7 @@
       "dueDate": "마감일",
       "estimatedMinutes": "예상 시간(분)",
       "tagsLabel": "Tags",
+      "crmContact": "CRM contact",
       "addTag": "태그",
       "tagPlaceholder": "태그 이름",
       "add": "추가",
@@ -1162,9 +1195,9 @@
       "weekday4": "목요일",
       "weekday5": "금요일",
       "weekday6": "토요일",
-      "driveFolder": "드라이브 폴더",
-      "driveFolderPlaceholder": "Google 드라이브 폴더 링크를 붙여넣으세요",
-      "driveFolderOpen": "폴더 열기",
+      "driveFolder": "Materials delivery link",
+      "driveFolderPlaceholder": "Paste the link of the materials delivery folder here",
+      "driveFolderOpen": "Open link",
       "toastStageRequirements": "이동할 수 없습니다: {items} 필요",
       "stageRequirement_file": "파일",
       "stageRequirement_checklist": "체크리스트 완료",
@@ -2253,6 +2286,18 @@
       "toastDone": "계약이 취소되었고 통지문이 고객에게 발송되었습니다.",
       "toastDoneNoEmail": "계약은 취소되었지만 이메일은 발송되지 않았습니다. 다른 방법으로 고객에게 알려 주세요.",
       "toastError": "계약을 취소할 수 없습니다."
+    }
+  },
+  "Emoji": {
+    "label": "Emojis",
+    "recent": "Recently used",
+    "categories": {
+      "faces": "Faces",
+      "gestures": "Gestures and hands",
+      "symbols": "Symbols and status",
+      "hearts": "Hearts",
+      "work": "Work and office",
+      "nature": "Food and nature"
     }
   },
   "Notifications": {
