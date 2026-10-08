@@ -142,7 +142,6 @@ export function MembersTab() {
   const t = useTranslations('Settings.members');
   const tRoles = useTranslations('Settings.roles');
   const tCargo = useTranslations('Settings.members.cargo');
-  const tSidebar = useTranslations('Sidebar');
   const { user, canManageMembers } = useAuth();
   const { getPresence, getRow, now } = usePresence();
 
@@ -856,35 +855,10 @@ export function MembersTab() {
             <div>
               <Label className="text-muted-foreground">{tCargo('permissionsSectionTitle')}</Label>
               <p className="mt-1 text-xs text-muted-foreground">{tCargo('permissionsDialogDesc')}</p>
-              {/* One card per menu section, items in the same order as the
-                  sidebar, the visibility choice on the right of each one. */}
-              <div className="mt-4 grid items-start gap-5 lg:grid-cols-2">
-                {NAV_SECTIONS.map((section) => (
-                  <section key={section.key} className="rounded-xl border border-border bg-card/40 p-5">
-                    <h4 className="text-sm font-semibold text-foreground">{tSidebar(section.titleKey)}</h4>
-                    {section.noteKey ? (
-                      <p className="mt-2 text-xs text-muted-foreground">{tSidebar(section.noteKey)}</p>
-                    ) : (
-                      <div className="mt-3 divide-y divide-border/60">
-                        <NavVisibilityRow
-                          label={tSidebar(section.master.labelKey)}
-                          strong
-                          value={draftNavOverrides.get(section.master.module) ?? 'default'}
-                          onChange={(v) => setDraftNavOverrides((prev) => new Map(prev).set(section.master.module, v))}
-                        />
-                        {section.items.map((item) => (
-                          <NavVisibilityRow
-                            key={item.module}
-                            label={tSidebar(item.labelKey)}
-                            value={draftNavOverrides.get(item.module) ?? 'default'}
-                            onChange={(v) => setDraftNavOverrides((prev) => new Map(prev).set(item.module, v))}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                ))}
-              </div>
+              <NavSectionsGrid
+                draft={draftNavOverrides}
+                onChange={(module, value) => setDraftNavOverrides((prev) => new Map(prev).set(module, value))}
+              />
             </div>
           </div>
 
@@ -910,34 +884,94 @@ export function MembersTab() {
   );
 }
 
-/** One menu item with its visibility choice (Padrão / Visível / Oculto) on the right. */
-function NavVisibilityRow({
-  label,
+/** Padrão / Visível / Oculto — compact, colored when it overrides the cargo. */
+function NavVisibilitySelect({
   value,
   onChange,
-  strong,
 }: {
-  label: string;
   value: NavOverrideState;
   onChange: (value: NavOverrideState) => void;
-  strong?: boolean;
 }) {
   const tCargo = useTranslations('Settings.members.cargo');
+  const tone =
+    value === 'visible' ? 'text-emerald-400' : value === 'hidden' ? 'text-red-400' : 'text-muted-foreground';
   return (
-    <div className="flex items-center justify-between gap-4 py-2.5">
-      <span className={strong ? 'text-sm font-medium text-foreground' : 'pl-3 text-sm text-foreground'}>{label}</span>
-      <Select value={value} onValueChange={(v) => v && onChange(v as NavOverrideState)}>
-        {/* Short labels in the trigger AND in the options: the open panel
-            matches the trigger width, so long texts clipped. */}
-        <SelectTrigger className="w-40 shrink-0 border-border bg-muted text-foreground">
-          <SelectValue>{tCargo(`permissionsStateShort.${value}`)}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="default">{tCargo('permissionsStateShort.default')}</SelectItem>
-          <SelectItem value="visible">{tCargo('permissionsStateShort.visible')}</SelectItem>
-          <SelectItem value="hidden">{tCargo('permissionsStateShort.hidden')}</SelectItem>
-        </SelectContent>
-      </Select>
+    <Select value={value} onValueChange={(v) => v && onChange(v as NavOverrideState)}>
+      {/* Short labels in the trigger AND in the options: the open panel
+          matches the trigger width, so long texts clipped. */}
+      <SelectTrigger className={`h-8 w-32 shrink-0 border-border bg-muted text-xs font-medium ${tone}`}>
+        <SelectValue>{tCargo(`permissionsStateShort.${value}`)}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="default">{tCargo('permissionsStateShort.default')}</SelectItem>
+        <SelectItem value="visible">{tCargo('permissionsStateShort.visible')}</SelectItem>
+        <SelectItem value="hidden">{tCargo('permissionsStateShort.hidden')}</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+/**
+ * The menu, one card per section in sidebar order: the section's own switch in
+ * the card header, its items below with the choice on the right. Cards go into
+ * two columns by height (each one into the shorter column), so there are no
+ * holes however many items a section has.
+ */
+function NavSectionsGrid({
+  draft,
+  onChange,
+}: {
+  draft: Map<string, NavOverrideState>;
+  onChange: (module: string, value: NavOverrideState) => void;
+}) {
+  const tSidebar = useTranslations('Sidebar');
+  const columns: (typeof NAV_SECTIONS)[] = [[], []];
+  const heights = [0, 0];
+  for (const section of NAV_SECTIONS) {
+    const target = heights[0] <= heights[1] ? 0 : 1;
+    columns[target].push(section);
+    // header + one row per item (+ a line for the note)
+    heights[target] += 2 + section.items.length + (section.noteKey ? 1 : 0);
+  }
+
+  return (
+    <div className="mt-4 grid items-start gap-5 lg:grid-cols-2">
+      {columns.map((sections, index) => (
+        <div key={index} className="flex flex-col gap-5">
+          {sections.map((section) => (
+            <section key={section.key} className="overflow-hidden rounded-xl border border-border bg-card/40">
+              <header className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
+                <h4 className="text-sm font-semibold text-foreground">{tSidebar(section.titleKey)}</h4>
+                {section.master.module && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">{tSidebar(section.master.labelKey)}</span>
+                    <NavVisibilitySelect
+                      value={draft.get(section.master.module) ?? 'default'}
+                      onChange={(v) => onChange(section.master.module, v)}
+                    />
+                  </div>
+                )}
+              </header>
+              {section.noteKey && (
+                <p className="px-4 py-3 text-xs text-muted-foreground">{tSidebar(section.noteKey)}</p>
+              )}
+              {section.items.length > 0 && (
+                <div className="divide-y divide-border/50 px-4">
+                  {section.items.map((item) => (
+                    <div key={item.module} className="flex items-center justify-between gap-3 py-1.5">
+                      <span className="text-sm text-foreground">{tSidebar(item.labelKey)}</span>
+                      <NavVisibilitySelect
+                        value={draft.get(item.module) ?? 'default'}
+                        onChange={(v) => onChange(item.module, v)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

@@ -38,6 +38,8 @@ export interface DesktopPrefs {
   enabled: boolean;
   /** Only the types the person changed from the default. */
   overrides: Partial<Record<NotificationType, boolean>>;
+  /** Also show the system pop-up when the CRM is the window in front (default: only a toast inside the CRM). */
+  alwaysSystem?: boolean;
 }
 
 export const DEFAULT_PREFS: DesktopPrefs = { enabled: true, overrides: {} };
@@ -63,6 +65,7 @@ export function readPrefs(userId: string): DesktopPrefs {
     return {
       enabled: parsed.enabled !== false,
       overrides: parsed.overrides && typeof parsed.overrides === "object" ? parsed.overrides : {},
+      alwaysSystem: parsed.alwaysSystem === true,
     };
   } catch {
     return DEFAULT_PREFS;

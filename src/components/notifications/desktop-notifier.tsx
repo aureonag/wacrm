@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { DEFAULT_PREFS, isTypeEnabled, popupBody, readPrefs, type DesktopPrefs } from "@/lib/notifications/desktop-prefs";
 import { notificationHref, notificationsListHref } from "@/components/notifications/notification-meta";
+import { showDesktopPopup } from "@/lib/notifications/desktop-popup";
 import type { Notification } from "@/types";
 
 // Headless. Every new row in `notifications` for this person (the database
@@ -20,9 +21,6 @@ import type { Notification } from "@/types";
 // It only works while the CRM is open in some tab.
 
 const WORKER = "/notification-sw.js";
-const ICON = "/brand/aureon-symbol.png";
-
-type ActionNotificationOptions = NotificationOptions & { actions?: { action: string; title: string }[] };
 
 export function DesktopNotifier() {
   const t = useTranslations("Notifications");
@@ -92,8 +90,10 @@ export function DesktopNotifier() {
       const href = notificationHref(n);
       const listHref = notificationsListHref(path.current);
 
-      // In front: a toast inside the CRM is enough.
-      if (document.visibilityState === "visible" && document.hasFocus()) {
+      // In front: a toast inside the CRM is enough (unless the person asked
+      // for the system pop-up in this case too).
+      const inFront = document.visibilityState === "visible" && document.hasFocus();
+      if (inFront && !prefs.current.alwaysSystem) {
         toast(n.title, {
           description: body || undefined,
           duration: 9000,
@@ -109,30 +109,23 @@ export function DesktopNotifier() {
       }
 
       if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-      const options: ActionNotificationOptions = {
-        body,
-        icon: ICON,
-        badge: ICON,
-        // The same id replaces instead of duplicating (several CRM tabs open).
-        tag: n.id,
-        data: { id: n.id, url: href, listUrl: listHref },
-        actions: [
-          ...(href ? [{ action: "open", title: labels.current.open }] : []),
-          { action: "list", title: labels.current.list },
-        ],
-      };
-      const registration = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
-      if (registration) {
-        await registration.showNotification(n.title, options);
-      } else {
-        // No worker (private window...): a plain pop-up without buttons.
-        const popup = new Notification(n.title, options);
-        popup.onclick = () => {
-          window.focus();
-          if (href) void markRead(n.id);
-          router.push(href ?? listHref);
-          popup.close();
-        };
+      try {
+        await showDesktopPopup({
+          title: n.title,
+          body,
+          // The same id replaces instead of duplicating (several CRM tabs open).
+          tag: n.id,
+          id: n.id,
+          url: href,
+          listUrl: listHref,
+          labels: labels.current,
+          onClick: () => {
+            if (href) void markRead(n.id);
+            router.push(href ?? listHref);
+          },
+        });
+      } catch (err) {
+        console.error("[desktop-notifier] could not show the pop-up:", err);
       }
     }
 

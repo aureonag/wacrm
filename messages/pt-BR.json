@@ -68,7 +68,7 @@
   },
   "Sidebar": {
     "menuAdmin": {
-      "wholeSection": "Menu inteiro desta seção",
+      "wholeSection": "Seção inteira",
       "opDashboard": "Dashboard",
       "opBoards": "Gestão de Tarefas",
       "opClients": "Clientes",
@@ -2270,6 +2270,10 @@
     "desktopChooseTitle": "Avisos na área de trabalho",
     "desktopChooseHint": "Escolha quais notificações aparecem como aviso no canto da tela. Vale para este navegador. As demais continuam no sino. Os avisos aparecem enquanto o CRM estiver aberto.",
     "desktopMaster": "Mostrar avisos na área de trabalho",
+    "testSentHint": "Aviso de teste enviado. Se não apareceu na área de trabalho, confira: no Mac, Ajustes do Sistema › Notificações › (seu navegador) precisa estar permitido, e o modo Foco/Não perturbe desligado; no Windows, Configurações › Sistema › Notificações.",
+    "testFailed": "Não foi possível mostrar o aviso: {reason}",
+    "desktopAlwaysSystem": "Mostrar também o pop-up do sistema quando o CRM estiver aberto na frente",
+    "desktopSystemHint": "Com o CRM na frente você vê um aviso dentro do CRM. Ligue esta opção se prefere o pop-up no canto da tela mesmo assim. Se nada aparecer no seu computador, use o botão Testar e confira as permissões de notificação do navegador no sistema.",
     "groups": {
       "mine": "Comigo",
       "status": "Andamento da tarefa",

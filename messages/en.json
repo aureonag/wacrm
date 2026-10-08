@@ -68,7 +68,7 @@
   },
   "Sidebar": {
     "menuAdmin": {
-      "wholeSection": "Whole section menu",
+      "wholeSection": "Whole section",
       "opDashboard": "Dashboard",
       "opBoards": "Task management",
       "opClients": "Clients",
@@ -2270,6 +2270,10 @@
     "desktopChooseTitle": "Desktop alerts",
     "desktopChooseHint": "Choose which notifications appear as an alert in the corner of the screen. Applies to this browser. The rest stay in the bell. Alerts show while the CRM is open.",
     "desktopMaster": "Show desktop alerts",
+    "testSentHint": "Test alert sent. If it did not show on your desktop, check: on Mac, System Settings › Notifications › (your browser) must be allowed and Focus/Do Not Disturb off; on Windows, Settings › System › Notifications.",
+    "testFailed": "Could not show the alert: {reason}",
+    "desktopAlwaysSystem": "Also show the system pop-up when the CRM is open in front",
+    "desktopSystemHint": "With the CRM in front you see an alert inside the CRM. Turn this on if you prefer the pop-up in the corner of the screen anyway. If nothing shows up on your computer, use the Test button and check the browser's notification permissions in the system.",
     "groups": {
       "mine": "About me",
       "status": "Task progress",

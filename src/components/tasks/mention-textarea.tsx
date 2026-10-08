@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { activeMention, insertMention, type MentionMember } from "@/lib/tasks/mentions";
@@ -31,6 +31,12 @@ export function MentionTextarea({ value, onChange, members, placeholder, autoFoc
 
   const mention = dismissed ? null : activeMention(value, caret, members);
   const selected = mention ? Math.min(index, mention.matches.length - 1) : 0;
+
+  // Arrow keys move through a list that scrolls: keep the highlighted person in view.
+  useEffect(() => {
+    if (!mention) return;
+    document.getElementById(`mention-option-${selected}`)?.scrollIntoView({ block: "nearest" });
+  }, [mention, selected]);
 
   function choose(i: number) {
     if (!mention) return;
@@ -97,10 +103,10 @@ export function MentionTextarea({ value, onChange, members, placeholder, autoFoc
       {mention && (
         <ul
           role="listbox"
-          className="absolute left-0 top-full z-30 mt-1 max-h-60 w-72 max-w-full overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-lg"
+          className="absolute left-0 top-full z-30 mt-1 max-h-80 w-72 max-w-full overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-lg"
         >
           {mention.matches.map((m, i) => (
-            <li key={m.id} role="option" aria-selected={i === selected}>
+            <li key={m.id} id={`mention-option-${i}`} role="option" aria-selected={i === selected}>
               <button
                 type="button"
                 // Keep the focus (and the caret) in the text box.

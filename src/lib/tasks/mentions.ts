@@ -29,9 +29,10 @@ export interface ActiveMention {
  * could be. Null when the caret is not in a mention (an "@" inside an e-mail
  * or a word does not count) or nobody matches. A match is a name (or any word
  * of it) that starts with what was typed, so "@fel" and "@cordeiro" both find
- * "Felipe Cordeiro Queiroz".
+ * "Felipe Cordeiro Queiroz". Everyone who matches is offered (the list scrolls);
+ * `limit` is only a safety cap.
  */
-export function activeMention(text: string, caret: number, members: MentionMember[], limit = 6): ActiveMention | null {
+export function activeMention(text: string, caret: number, members: MentionMember[], limit = 100): ActiveMention | null {
   const before = text.slice(0, caret);
   const at = before.lastIndexOf("@");
   if (at < 0) return null;
