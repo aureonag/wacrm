@@ -5,6 +5,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useServerOffset } from "@/hooks/use-clock-tick";
 import {
   derivePresence,
   type PresenceRow,
@@ -50,8 +51,12 @@ export function usePresence(enabled = true): UsePresenceResult {
   // recompute. No ref/version dance needed.
   const [rows, setRows] = useState<PresenceMap>(() => new Map());
 
-  // `now` ticks so derivePresence re-evaluates staleness over time.
-  const [now, setNow] = useState(() => Date.now());
+  // `now` ticks so derivePresence re-evaluates staleness over time. The
+  // heartbeat time is stamped by the database clock, so "now" is corrected by how
+  // far this PC's clock is from it (a PC 2 minutes ahead made everyone look offline).
+  const serverOffset = useServerOffset();
+  const [localNow, setNow] = useState(() => Date.now());
+  const now = localNow + serverOffset;
 
   const active = enabled && !!accountId;
 

@@ -30,6 +30,21 @@ async function loadServerOffset() {
   }
 }
 
+/** How far this browser's clock is from the database clock (ms; add it to Date.now()).
+ *  Anything compared against a database timestamp (presence, "last seen") must use
+ *  this, or a PC that is a couple of minutes off reads everyone as stale. */
+export function useServerOffset(): number {
+  const [offset, setOffset] = useState(serverOffsetMs);
+  useEffect(() => {
+    offsetListeners.add(setOffset);
+    void loadServerOffset();
+    return () => {
+      offsetListeners.delete(setOffset);
+    };
+  }, []);
+  return offset;
+}
+
 /** Re-renders the caller once a second while `active` and returns the
  *  current time in ms, corrected to the database clock. Used to tick a
  *  live-elapsed-time display (Header badge, task cards, running timer row)
