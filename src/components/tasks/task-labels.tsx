@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, Pencil, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -56,6 +56,9 @@ export function TaskLabelsField({ taskId, accountId, tags, canEdit, onChanged }:
   const [view, setView] = useState<View>({ kind: "list" });
   const [labels, setLabels] = useState<TaskLabel[]>([]);
   const [query, setQuery] = useState("");
+  // The panel hangs from the whole field (not from the small "+" button), so it
+  // opens straight down, as wide as the side column and aligned with its edge.
+  const fieldRef = useRef<HTMLDivElement>(null);
 
   async function loadLabels() {
     const { data } = await supabase.from("task_labels").select("*").order("created_at", { ascending: true });
@@ -144,7 +147,7 @@ export function TaskLabelsField({ taskId, accountId, tags, canEdit, onChanged }:
   const shown = labels.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div ref={fieldRef} className="flex flex-wrap items-center gap-1.5">
       {tags.map((tag) => (
         <LabelPill key={tag.id} name={tag.label} color={tag.color} />
       ))}
@@ -157,7 +160,13 @@ export function TaskLabelsField({ taskId, accountId, tags, canEdit, onChanged }:
           >
             <Plus className="h-3.5 w-3.5" />
           </PopoverTrigger>
-          <PopoverContent align="start" sideOffset={6} className="w-80 gap-3 p-3">
+          <PopoverContent
+            anchor={fieldRef}
+            side="bottom"
+            align="start"
+            sideOffset={8}
+            className="max-h-(--available-height) w-(--anchor-width) min-w-64 gap-3 overflow-y-auto p-3"
+          >
             {view.kind === "list" ? (
               <ListView
                 labels={shown}

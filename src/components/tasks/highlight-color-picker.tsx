@@ -201,7 +201,7 @@ export function HighlightColorPicker({ color, onPick, onClear, onPreview, hideAp
 
       <div className="flex flex-col gap-1.5 border-t border-border pt-3">
         {HIGHLIGHT_PRESETS.map((row, i) => (
-          <div key={i} className="flex flex-wrap gap-1.5">
+          <div key={i} className="grid grid-cols-8 gap-1.5">
             {row.map((hex) => (
               <button
                 key={hex}
@@ -209,7 +209,7 @@ export function HighlightColorPicker({ color, onPick, onClear, onPreview, hideAp
                 onClick={() => previewHex(hex)}
                 aria-label={hex}
                 title={hex}
-                className={`h-5 w-5 rounded-md border transition-transform hover:scale-110 ${
+                className={`aspect-square w-full rounded-md border transition-transform hover:scale-110 ${
                   shown === hex ? "border-primary ring-2 ring-primary/60" : "border-border"
                 }`}
                 style={{ backgroundColor: hex }}
