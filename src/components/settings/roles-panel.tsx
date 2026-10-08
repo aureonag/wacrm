@@ -30,7 +30,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { RequireRole } from '@/components/auth/require-role';
 import { SettingsPanelHead } from './settings-panel-head';
-import { NAV_MODULES } from './nav-modules';
+import { NAV_MODULES, navLabel } from './nav-modules';
 import type { PlatformEnvironment, Permission, Role } from '@/types';
 
 const ENVIRONMENTS: PlatformEnvironment[] = ['comercial', 'operational'];
@@ -139,7 +139,7 @@ export function RolesPanel() {
         toast.error(t('disableEverywhereError'));
         return;
       }
-      toast.success(t('disableEverywhereToast', { item: tSidebar(NAV_MODULES.find((m) => m.module === module)?.labelKey ?? module) }));
+      toast.success(t('disableEverywhereToast', { item: navLabel(tSidebar, module) }));
       await load();
     } catch (err) {
       console.error('[RolesPanel] disable-everywhere error:', err);
@@ -270,11 +270,11 @@ export function RolesPanel() {
               {t('menuVisibilityTitle')}
             </p>
             <p className="mb-2 text-xs text-muted-foreground">{t('menuVisibilityDesc')}</p>
-            {NAV_MODULES.map(({ module, labelKey }) => {
+            {NAV_MODULES.map(({ module }) => {
               const count = roleCountByModule.get(module) ?? 0;
               return (
                 <div key={module} className="flex items-center justify-between gap-3 py-1">
-                  <span className="text-sm text-foreground">{tSidebar(labelKey)}</span>
+                  <span className="text-sm text-foreground">{navLabel(tSidebar, module)}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
                       {t('grantedToCount', { count })}
@@ -415,7 +415,7 @@ export function RolesPanel() {
                           {navEntries.map(([module, perms]) => (
                             <div key={module} className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                               <span className="w-28 shrink-0 text-xs text-muted-foreground">
-                                {tSidebar(NAV_MODULES.find((m) => m.module === module)?.labelKey ?? module)}
+                                {navLabel(tSidebar, module)}
                               </span>
                               {perms.map((perm) => (
                                 <label key={perm.id} className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">

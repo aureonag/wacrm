@@ -67,6 +67,16 @@
     "requestNewLink": "Request new link"
   },
   "Sidebar": {
+    "menuAdmin": {
+      "wholeSection": "Whole section menu",
+      "opDashboard": "Dashboard",
+      "opBoards": "Task management",
+      "opClients": "Clients",
+      "opAffiliates": "Affiliates",
+      "matComercial": "Sales",
+      "matMidia": "Media",
+      "financeiroNote": "The Finance menu is only shown to the account owner and has no per-person option."
+    },
     "title": "CRM Template for WhatsApp",
     "dashboard": "Dashboard",
     "inbox": "Inbox",

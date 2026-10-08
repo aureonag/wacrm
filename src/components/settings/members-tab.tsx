@@ -79,7 +79,7 @@ import { InviteMemberDialog } from './invite-member-dialog';
 import { ResetPasswordDialog } from './reset-password-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
-import { NAV_MODULES } from './nav-modules';
+import { NAV_MODULES, NAV_SECTIONS } from './nav-modules';
 import type { Permission, Role, Sector } from '@/types';
 
 /** Tri-state per module: 'default' follows the member's cargo. */
@@ -799,14 +799,14 @@ export function MembersTab() {
           menu, consolidated into one dialog (see `managingMember` state
           comment above). */}
       <Dialog open={managingMember !== null} onOpenChange={(open) => !open && setManagingMember(null)}>
-        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-xl">
+        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">
               {tCargo('accessDialogTitle', { name: managingMember?.full_name || t('unnamed') })}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-4">
+          <div className="max-h-[72vh] space-y-7 overflow-y-auto pr-4">
             {/* Nível de acesso — base account role (admin/agent/viewer).
                 Distinct from Cargo, which stays editable inline in the
                 roster and only controls menu/module visibility. */}
@@ -856,35 +856,33 @@ export function MembersTab() {
             <div>
               <Label className="text-muted-foreground">{tCargo('permissionsSectionTitle')}</Label>
               <p className="mt-1 text-xs text-muted-foreground">{tCargo('permissionsDialogDesc')}</p>
-              <div className="mt-1.5 space-y-1">
-                {NAV_MODULES.map(({ module, labelKey }) => (
-                  <div key={module} className="flex items-center justify-between gap-3 py-1.5">
-                    <span className="text-sm text-foreground">{tSidebar(labelKey)}</span>
-                    <Select
-                      value={draftNavOverrides.get(module) ?? 'default'}
-                      onValueChange={(v) =>
-                        setDraftNavOverrides((prev) => new Map(prev).set(module, v as NavOverrideState))
-                      }
-                    >
-                      {/* Short labels everywhere (trigger AND options) —
-                          the dropdown's open panel matches the trigger's
-                          width, so the longer "Padrão (segue o cargo)"
-                          text was clipping there too, not just in the
-                          closed trigger. The section description above
-                          already explains what "Padrão" means, so the
-                          parenthetical was redundant anyway. */}
-                      <SelectTrigger className="w-44 shrink-0 bg-muted border-border text-foreground">
-                        <SelectValue>
-                          {tCargo(`permissionsStateShort.${draftNavOverrides.get(module) ?? 'default'}`)}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="default">{tCargo('permissionsStateShort.default')}</SelectItem>
-                        <SelectItem value="visible">{tCargo('permissionsStateShort.visible')}</SelectItem>
-                        <SelectItem value="hidden">{tCargo('permissionsStateShort.hidden')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              {/* One card per menu section, items in the same order as the
+                  sidebar, the visibility choice on the right of each one. */}
+              <div className="mt-4 grid items-start gap-5 lg:grid-cols-2">
+                {NAV_SECTIONS.map((section) => (
+                  <section key={section.key} className="rounded-xl border border-border bg-card/40 p-5">
+                    <h4 className="text-sm font-semibold text-foreground">{tSidebar(section.titleKey)}</h4>
+                    {section.noteKey ? (
+                      <p className="mt-2 text-xs text-muted-foreground">{tSidebar(section.noteKey)}</p>
+                    ) : (
+                      <div className="mt-3 divide-y divide-border/60">
+                        <NavVisibilityRow
+                          label={tSidebar(section.master.labelKey)}
+                          strong
+                          value={draftNavOverrides.get(section.master.module) ?? 'default'}
+                          onChange={(v) => setDraftNavOverrides((prev) => new Map(prev).set(section.master.module, v))}
+                        />
+                        {section.items.map((item) => (
+                          <NavVisibilityRow
+                            key={item.module}
+                            label={tSidebar(item.labelKey)}
+                            value={draftNavOverrides.get(item.module) ?? 'default'}
+                            onChange={(v) => setDraftNavOverrides((prev) => new Map(prev).set(item.module, v))}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </section>
                 ))}
               </div>
             </div>
@@ -909,5 +907,37 @@ export function MembersTab() {
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+/** One menu item with its visibility choice (Padrão / Visível / Oculto) on the right. */
+function NavVisibilityRow({
+  label,
+  value,
+  onChange,
+  strong,
+}: {
+  label: string;
+  value: NavOverrideState;
+  onChange: (value: NavOverrideState) => void;
+  strong?: boolean;
+}) {
+  const tCargo = useTranslations('Settings.members.cargo');
+  return (
+    <div className="flex items-center justify-between gap-4 py-2.5">
+      <span className={strong ? 'text-sm font-medium text-foreground' : 'pl-3 text-sm text-foreground'}>{label}</span>
+      <Select value={value} onValueChange={(v) => v && onChange(v as NavOverrideState)}>
+        {/* Short labels in the trigger AND in the options: the open panel
+            matches the trigger width, so long texts clipped. */}
+        <SelectTrigger className="w-40 shrink-0 border-border bg-muted text-foreground">
+          <SelectValue>{tCargo(`permissionsStateShort.${value}`)}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="default">{tCargo('permissionsStateShort.default')}</SelectItem>
+          <SelectItem value="visible">{tCargo('permissionsStateShort.visible')}</SelectItem>
+          <SelectItem value="hidden">{tCargo('permissionsStateShort.hidden')}</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

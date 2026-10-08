@@ -67,6 +67,16 @@
     "requestNewLink": "새 링크 요청"
   },
   "Sidebar": {
+    "menuAdmin": {
+      "wholeSection": "Whole section menu",
+      "opDashboard": "Dashboard",
+      "opBoards": "Task management",
+      "opClients": "Clients",
+      "opAffiliates": "Affiliates",
+      "matComercial": "Sales",
+      "matMidia": "Media",
+      "financeiroNote": "The Finance menu is only shown to the account owner and has no per-person option."
+    },
     "title": "WhatsApp용 CRM 템플릿",
     "dashboard": "대시보드",
     "inbox": "인박스",

@@ -67,6 +67,16 @@
     "requestNewLink": "Solicitar novo link"
   },
   "Sidebar": {
+    "menuAdmin": {
+      "wholeSection": "Menu inteiro desta seção",
+      "opDashboard": "Dashboard",
+      "opBoards": "Gestão de Tarefas",
+      "opClients": "Clientes",
+      "opAffiliates": "Afiliados",
+      "matComercial": "Comercial",
+      "matMidia": "Mídia",
+      "financeiroNote": "O menu Financeiro aparece só para o dono da conta e não tem opção por pessoa."
+    },
     "title": "CRM para WhatsApp",
     "dashboard": "Dashboard",
     "inbox": "Caixa de entrada",

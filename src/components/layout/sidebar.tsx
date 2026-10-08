@@ -140,7 +140,7 @@ interface ComercialNavItem {
 }
 
 const COMERCIAL_ITEMS: ComercialNavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, module: "dashboard" },
   { href: "/inbox", labelKey: "inbox", icon: MessageSquare, module: "inbox" },
   { href: "/notifications", labelKey: "notifications", icon: Bell, module: "notifications" },
   { href: "/contacts", labelKey: "contacts", icon: Users, module: "contacts" },
@@ -235,7 +235,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const canViewChat = isOwner || permissions.has("comercial:chat:view");
   const canViewOperationalMenu = isOwner || permissions.has("comercial:operational:view");
 
-  const showComercial = isOwner || hasComercialAccess;
+  // Migration 115: each item inside a section has its own visibility switch too
+  // (Gerenciar acesso / Cargos), layered on the existing gates.
+  const can = (module: string) => isOwner || permissions.has(`comercial:${module}:view`);
+  const canViewMatComercial = can("mat_comercial");
+  const canViewMatMidia = can("mat_midia");
+  const showComercial = isOwner || (hasComercialAccess && can("section_comercial"));
   const showOperational = isOwner || (hasOperationalAccess && canViewOperationalMenu);
   const showFinanceiro = isOwner;
 
@@ -478,19 +483,21 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 />
                 {openSections.has("operational") && (
                   <ul className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
-                    <li>
-                      <Link
-                        href="/operational/dashboard"
-                        className={cn(
-                          navRowBase,
-                          pathname === "/operational/dashboard" ? navRowActive : navRowInactive,
-                        )}
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        <span className="flex-1">{tOp("dashboard")}</span>
-                      </Link>
-                    </li>
-                    {canViewBoards && (
+                    {can("op_dashboard") && (
+                      <li>
+                        <Link
+                          href="/operational/dashboard"
+                          className={cn(
+                            navRowBase,
+                            pathname === "/operational/dashboard" ? navRowActive : navRowInactive,
+                          )}
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          <span className="flex-1">{tOp("dashboard")}</span>
+                        </Link>
+                      </li>
+                    )}
+                    {canViewBoards && can("op_boards") && (
                       <li>
                         <Link
                           href="/operational/boards"
@@ -504,7 +511,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         </Link>
                       </li>
                     )}
-                    {canViewBoards && (
+                    {canViewBoards && can("op_clients") && (
                       <li>
                         <Link
                           href="/operational/clients"
@@ -518,7 +525,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         </Link>
                       </li>
                     )}
-                    {canManageMembers && (
+                    {canManageMembers && can("op_affiliates") && (
                       <li>
                         <AffiliatesNav />
                       </li>
@@ -636,7 +643,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             )}
 
             {/* Materiais — Comercial (Playbook + Apresentação Comercial) + Mídia (kickoffs), ambos em cascata. */}
-            {canViewPlaybook && (
+            {canViewPlaybook && (canViewMatComercial || canViewMatMidia) && (
               <li>
                 <SectionButton
                   icon={Layers}
@@ -646,6 +653,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 />
                 {openSections.has("materiais") && (
                   <ul className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
+                    {canViewMatComercial && (
                     <li>
                       <SectionButton
                         icon={Briefcase}
@@ -680,6 +688,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         </ul>
                       )}
                     </li>
+                    )}
+                    {canViewMatMidia && (
                     <li>
                       <SectionButton
                         icon={Radio}
@@ -725,6 +735,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         </ul>
                       )}
                     </li>
+                    )}
                   </ul>
                 )}
               </li>
