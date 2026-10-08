@@ -588,34 +588,35 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                     <DropdownMenuTrigger className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
                       <MoreVertical className="h-4 w-4 text-muted-foreground" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" sideOffset={6} className="w-60 p-1.5">
                       {canEdit && (
-                        <DropdownMenuItem onClick={handleMoveToTop}>
-                          <ArrowUpToLine className="size-4" />
-                          {t("moveToTop")}
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem onClick={handleMoveToTop} className={MENU_ITEM}>
+                            <ArrowUpToLine className="size-4 text-muted-foreground" />
+                            {t("moveToTop")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setShowMoveBoard(true)} className={MENU_ITEM}>
+                            <FolderInput className="size-4 text-muted-foreground" />
+                            {t("moveToBoard")}
+                          </DropdownMenuItem>
+                        </>
                       )}
-                      {canEdit && (
-                        <DropdownMenuItem onClick={() => setShowMoveBoard(true)}>
-                          <FolderInput className="size-4" />
-                          {t("moveToBoard")}
-                        </DropdownMenuItem>
-                      )}
+                      {canEdit && (canCreateTasks || canEditTimesheet || canComment) && <DropdownMenuSeparator />}
                       {canCreateTasks && (
-                        <DropdownMenuItem onClick={handleClone}>
-                          <Copy className="size-4" />
+                        <DropdownMenuItem onClick={handleClone} className={MENU_ITEM}>
+                          <Copy className="size-4 text-muted-foreground" />
                           {t("clone")}
                         </DropdownMenuItem>
                       )}
                       {canEditTimesheet && (
-                        <DropdownMenuItem onClick={() => setActiveTab("timesheet")}>
-                          <Clock className="size-4" />
+                        <DropdownMenuItem onClick={() => setActiveTab("timesheet")} className={MENU_ITEM}>
+                          <Clock className="size-4 text-muted-foreground" />
                           {t("adjustHours")}
                         </DropdownMenuItem>
                       )}
                       {(canEdit || canComment) && (
-                        <DropdownMenuItem onClick={() => setActiveTab("approvals")}>
-                          <Users2 className="size-4" />
+                        <DropdownMenuItem onClick={() => setActiveTab("approvals")} className={MENU_ITEM}>
+                          <Users2 className="size-4 text-muted-foreground" />
                           {t("requestApproval")}
                         </DropdownMenuItem>
                       )}
@@ -623,8 +624,9 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
+                            variant="destructive"
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="text-red-400 focus:text-red-400"
+                            className={MENU_ITEM}
                           >
                             <Trash2 className="size-4" />
                             {t("delete")}
@@ -1027,6 +1029,9 @@ function PanelClientField({ label, icon, children }: ClientProjectFieldProps) {
 }
 
 /** One field of the properties column: icon + label on top, the control below it, full width. */
+/** Row style of the task "more actions" menu: roomy, one line, icon + label. */
+const MENU_ITEM = "gap-2.5 whitespace-nowrap px-2.5 py-2 text-[13px]";
+
 function PropRow({
   icon: Icon,
   label,
