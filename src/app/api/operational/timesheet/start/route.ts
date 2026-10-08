@@ -17,8 +17,11 @@ export async function POST(request: Request) {
     const limit = checkRateLimit(`operational:timesheetStart:${ctx.userId}`, RATE_LIMITS.taskWrite);
     if (!limit.success) return rateLimitResponse(limit);
 
-    const body = (await request.json().catch(() => null)) as { task_id?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { task_id?: unknown; switch?: unknown } | null;
     const taskId = typeof body?.task_id === "string" ? body.task_id : "";
+    // `switch: true` (Kanban card): if a timer is running on another task,
+    // close it (its time stays saved) and start this one.
+    const switchTask = body?.switch === true;
     if (!taskId) return NextResponse.json({ error: "'task_id' is required" }, { status: 400 });
 
     const { data: task } = await ctx.supabase
@@ -35,11 +38,27 @@ export async function POST(request: Request) {
       .eq("user_id", ctx.userId)
       .is("ended_at", null)
       .maybeSingle();
+    let pausedTitle: string | null = null;
     if (active) {
-      return NextResponse.json(
-        { error: "A timer is already running", active_entry: active },
-        { status: 409 },
-      );
+      if (!switchTask) {
+        return NextResponse.json(
+          { error: "A timer is already running", active_entry: active },
+          { status: 409 },
+        );
+      }
+      // Already running on this very task: nothing to do.
+      if (active.task_id === taskId) return NextResponse.json({ id: active.id, already_running: true });
+
+      const { error: stopError } = await ctx.supabase
+        .from("timesheet_entries")
+        .update({ ended_at: new Date().toISOString() })
+        .eq("id", active.id);
+      if (stopError) {
+        console.error("[POST .../timesheet/start] could not pause the running timer:", stopError);
+        return NextResponse.json({ error: "Failed to pause the running timer" }, { status: 500 });
+      }
+      const other = (Array.isArray(active.task) ? active.task[0] : active.task) as { title?: string } | null;
+      pausedTitle = other?.title ?? null;
     }
 
     const { data, error } = await ctx.supabase
@@ -53,7 +72,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to start timer" }, { status: 500 });
     }
 
-    return NextResponse.json({ id: data.id }, { status: 201 });
+    return NextResponse.json({ id: data.id, paused_task_title: pausedTitle }, { status: 201 });
   } catch (err) {
     return toErrorResponse(err);
   }

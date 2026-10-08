@@ -1089,6 +1089,14 @@ export interface Task {
   sector?: Sector | null;
   tags?: TaskTag[];
   subtask_count?: number;
+  /** Time tracked on the task, per person (timesheet_entries), for the Kanban card. */
+  time_entries?: {
+    user_id: string | null;
+    started_at: string;
+    /** null = a timer is running right now. */
+    ended_at: string | null;
+    name?: string | null;
+  }[];
 }
 
 export type TaskApprovalStatus = 'pending' | 'approved' | 'rejected';
@@ -1167,6 +1175,8 @@ export interface TaskComment {
   body: string;
   parent_comment_id?: string | null;
   created_at: string;
+  /** Set by the database when the text is edited (migration 108). */
+  edited_at?: string | null;
   author?: Profile;
 }
 

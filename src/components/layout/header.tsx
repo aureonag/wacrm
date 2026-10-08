@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "@/components/layout/mode-toggle";
 import { ActiveTimerIndicator } from "@/components/layout/active-timer-indicator";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { DesktopNotifier } from "@/components/notifications/desktop-notifier";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "dashboard",
@@ -102,6 +104,8 @@ export function Header({ onOpenSidebar }: HeaderProps) {
 
       <div className="flex items-center gap-1 sm:gap-2">
         <ActiveTimerIndicator />
+        <DesktopNotifier />
+        <NotificationBell />
         <ModeToggle />
 
         <DropdownMenu>

@@ -6,66 +6,12 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Notification } from "@/types";
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowRightLeft,
-  AtSign,
-  Bell,
-  CalendarClock,
-  CheckCheck,
-  CheckCircle2,
-  Clock,
-  FileCheck,
-  ListPlus,
-  Loader2,
-  MessageSquare,
-  Paperclip,
-  Rocket,
-  RotateCcw,
-  ShieldCheck,
-  ShieldQuestion,
-  ShieldX,
-  Trophy,
-  UserPlus,
-  Pencil,
-} from "lucide-react";
+import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-// Icon per notification type. Real i18n + task-aware routing for these
-// (beyond the icon) lands with the Etapa 3 notification triggers — this
-// keeps the type union and the UI in sync in the meantime.
-const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
-  conversation_assigned: UserPlus,
-  contract_signed: FileCheck,
-  task_assigned: UserPlus,
-  task_reassigned: UserPlus,
-  task_participant_added: UserPlus,
-  task_moved: ArrowRightLeft,
-  task_transferred: ArrowRightLeft,
-  task_completed: CheckCircle2,
-  task_reopened: RotateCcw,
-  task_urgent: AlertTriangle,
-  subtask_created: ListPlus,
-  subtask_completed: CheckCircle2,
-  due_date_set: CalendarClock,
-  due_date_changed: CalendarClock,
-  due_date_approaching: Clock,
-  task_overdue: AlertCircle,
-  task_comment: MessageSquare,
-  task_mention: AtSign,
-  comment_reply: MessageSquare,
-  task_file_added: Paperclip,
-  approval_requested: ShieldQuestion,
-  approval_approved: ShieldCheck,
-  approval_rejected: ShieldX,
-  deal_won: Trophy,
-  kickoff_task_created: Rocket,
-  task_updated: Pencil,
-};
+import { TYPE_ICON, notificationHref } from "@/components/notifications/notification-meta";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -165,13 +111,8 @@ export default function NotificationsPage() {
   const handleClick = useCallback(
     (n: Notification) => {
       if (!n.read_at) markRead(n.id);
-      if (n.conversation_id) {
-        router.push(`/inbox?c=${n.conversation_id}`);
-      } else if (n.deal_id) {
-        router.push(`/pipelines/deals/${n.deal_id}`);
-      } else if (n.board_id && n.task_id) {
-        router.push(`/operational/boards/${n.board_id}?task=${n.task_id}`);
-      }
+      const href = notificationHref(n);
+      if (href) router.push(href);
     },
     [markRead, router],
   );

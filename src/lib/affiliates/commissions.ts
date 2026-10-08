@@ -20,6 +20,10 @@ export interface Commission {
   affiliate_id: string;
   affiliate_name: string;
   affiliate_email: string;
+  /** Whether the affiliate registered a Pix key. The key itself only reaches who may see payments. */
+  has_pix?: boolean;
+  pix_key_type?: string | null;
+  pix_key?: string | null;
   /** Competência (YYYY-MM). */
   period: string;
   gross_cents: number;

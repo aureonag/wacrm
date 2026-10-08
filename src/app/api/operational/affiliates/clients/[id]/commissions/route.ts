@@ -15,6 +15,7 @@ import {
   writeAudit,
 } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
+import { can } from "@/lib/affiliates/store-access";
 import { parseCommissionInput } from "@/lib/affiliates/commissions";
 import { COMMISSION_COLUMNS, toCommission, type CommissionRow } from "@/lib/affiliates/commissions-server";
 
@@ -22,11 +23,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   try {
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    const { admin } = await requireClientAccess(id, [["commissions", "view"], ["invoices", "view"], ["payments", "view"]]);
+    const { admin, permissions } = await requireClientAccess(id, [["commissions", "view"], ["invoices", "view"], ["payments", "view"]]);
 
     const { data, error } = await admin
       .from("aff_commissions")
-      .select(`${COMMISSION_COLUMNS}, aff_affiliates(name, email)`)
+      .select(`${COMMISSION_COLUMNS}, aff_affiliates(name, email, pix_key_type, pix_key)`)
       .eq("client_id", id)
       .order("period", { ascending: false })
       .order("created_at", { ascending: false });
@@ -35,7 +36,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       console.error("[GET affiliates/commissions]", error.message);
       return NextResponse.json({ error: "Failed to load commissions" }, { status: 500 });
     }
-    return NextResponse.json({ commissions: ((data ?? []) as unknown as CommissionRow[]).map(toCommission) });
+    const seePix = can(permissions, "payments", "view");
+    return NextResponse.json({ commissions: ((data ?? []) as unknown as CommissionRow[]).map((r) => toCommission(r, seePix)) });
   } catch (err) {
     return toErrorResponse(err);
   }

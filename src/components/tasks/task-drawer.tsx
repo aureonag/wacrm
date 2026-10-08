@@ -82,6 +82,18 @@ import {
   FolderOpen,
   Play,
   Square,
+  LayoutGrid,
+  ArrowRightLeft,
+  Gauge,
+  UserRound,
+  Building2,
+  Tag,
+  FolderKanban,
+  Briefcase,
+  CalendarPlus,
+  CalendarCheck,
+  Timer,
+  Repeat,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -627,156 +639,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-3 sm:px-6 lg:grid-cols-4">
-              <FieldSelect
-                label={t("stage")}
-                value={field("stage_id") as string}
-                onChange={(v) => setField("stage_id", v)}
-                disabled={!canEdit}
-                options={stages.map((s) => ({ value: s.id, label: s.name }))}
-              />
-              <FieldSelect
-                label={t("priority")}
-                value={field("priority") as string}
-                onChange={(v) => setField("priority", v as TaskPriority)}
-                disabled={!canEdit}
-                options={PRIORITIES.map((p) => ({ value: p, label: tPriority(p) }))}
-              />
-              <FieldSelect
-                label={t("assignee")}
-                value={(field("assignee_id") as string | null) ?? "__none"}
-                onChange={(v) => setField("assignee_id", v === "__none" ? null : v)}
-                disabled={!canEdit}
-                options={[{ value: "__none", label: t("none") }, ...profiles.map((p) => ({ value: p.id, label: p.full_name }))]}
-              />
-              <FieldSelect
-                label={t("sector")}
-                value={(field("sector_id") as string | null) ?? "__none"}
-                onChange={(v) => setField("sector_id", v === "__none" ? null : v)}
-                disabled={!canEdit}
-                options={[{ value: "__none", label: t("none") }, ...sectors.map((s) => ({ value: s.id, label: s.name }))]}
-              />
-              <div className="col-span-2">
-                <FieldSelect
-                  label={t("project")}
-                  value={(field("project_id") as string | null) ?? "__none"}
-                  onChange={(v) => setField("project_id", v === "__none" ? null : v)}
-                  disabled={!canEdit}
-                  options={[
-                    { value: "__none", label: t("none") },
-                    // The saved project may be archived / of an inactive client: keep it visible.
-                    ...(field("project_id") && !projects.some((p) => p.id === field("project_id"))
-                      ? [{ value: field("project_id") as string, label: t("projectCurrent") }]
-                      : []),
-                    ...projects.map((p) => ({ value: p.id, label: `${p.client_code ? `${p.client_code} · ` : ""}${p.client_name} — ${p.name}` })),
-                  ]}
-                />
-              </div>
-              <div className="col-span-2 grid gap-1">
-                <Label className="text-[11px] text-muted-foreground">{t("client")}</Label>
-                <ContactPicker
-                  value={shownContact}
-                  disabled={!canEdit}
-                  onChange={(c) => {
-                    setDraftContact(c);
-                    setField("contact_id", c?.id ?? null);
-                  }}
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[11px] text-muted-foreground">{t("startDate")}</Label>
-                <Input
-                  type="date"
-                  disabled={!canEdit}
-                  value={(field("start_date") as string | null) ?? ""}
-                  onChange={(e) => setField("start_date", e.target.value || null)}
-                  className="h-8 border-border bg-muted text-xs text-foreground"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[11px] text-muted-foreground">{t("dueDate")}</Label>
-                <Input
-                  type="date"
-                  disabled={!canEdit}
-                  value={(field("due_date") as string | null) ?? ""}
-                  onChange={(e) => setField("due_date", e.target.value || null)}
-                  className="h-8 border-border bg-muted text-xs text-foreground"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[11px] text-muted-foreground">{t("estimatedMinutes")}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  disabled={!canEdit}
-                  value={(field("estimated_minutes") as number | null) ?? ""}
-                  onChange={(e) => setField("estimated_minutes", e.target.value ? Number(e.target.value) : null)}
-                  className="h-8 border-border bg-muted text-xs text-foreground"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[11px] text-muted-foreground">{t("recurrence")}</Label>
-                <button
-                  type="button"
-                  disabled={!canEdit}
-                  onClick={() => {
-                    setRecurrenceType(recurrenceRule?.rule_type ?? "__none");
-                    setRecurrenceWeekday(String(recurrenceRule?.weekday ?? 1));
-                    setRecurrenceDayOfMonth(String(recurrenceRule?.day_of_month ?? 1));
-                    setShowRecurrence(true);
-                  }}
-                  className="flex h-8 items-center rounded-md border border-border bg-muted px-2 text-left text-xs text-foreground disabled:opacity-50"
-                >
-                  {recurrenceSummary()}
-                </button>
-              </div>
-              <div className="col-span-2 grid gap-1 sm:col-span-3">
-                <Label className="text-[11px] text-muted-foreground">{t("driveFolder")}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="url"
-                    disabled={!canEdit}
-                    value={(field("drive_folder_url") as string | null) ?? ""}
-                    placeholder={t("driveFolderPlaceholder")}
-                    onChange={(e) => setField("drive_folder_url", e.target.value.trim() || null)}
-                    className="h-8 flex-1 border-border bg-muted text-xs text-foreground"
-                  />
-                  {task.drive_folder_url && (
-                    <a
-                      href={task.drive_folder_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-border px-2 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      <FolderOpen className="h-3.5 w-3.5" />
-                      {t("driveFolderOpen")}
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5 px-4 sm:px-6">
-              {(task.tags ?? []).map((tag) => (
-                <span
-                  key={tag.id}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-                  style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
-                >
-                  {tag.label}
-                  {canEdit && (
-                    <button type="button" onClick={() => handleRemoveTag(tag.id)} aria-label={t("removeTag")}>
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  )}
-                </span>
-              ))}
-              {canEdit && <TagAdder onAdd={handleAddTag} />}
-            </div>
-
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="flex-1 px-4 pb-6 sm:px-6">
-              <TabsList variant="line">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+            <div className="flex min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="min-h-0 flex-1 px-4 py-4 pb-6 sm:px-6">
+              <TabsList variant="line" className="shrink-0">
                 <TabsTrigger value="briefing">{t("tabBriefing")}</TabsTrigger>
                 {task.deal_id && <TabsTrigger value="contract">{t("tabContract")}</TabsTrigger>}
                 <TabsTrigger value="comments">{t("tabComments", { count: comments.length })}</TabsTrigger>
@@ -786,20 +652,23 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                 <TabsTrigger value="timesheet">{t("tabTimesheet")}</TabsTrigger>
                 <TabsTrigger value="history">{t("tabHistory")}</TabsTrigger>
               </TabsList>
-              <TabsContent value="briefing" className="pt-3">
-                <BriefingEditor
-                  content={task.briefing as JSONContent | null}
-                  editable={canEdit}
-                  onSave={(json) => patchTask({ briefing: json })}
-                />
+              <TabsContent value="briefing" className="pt-3 lg:min-h-0 lg:overflow-hidden">
+                <div className="flex flex-col lg:h-full">
+                  <BriefingEditor
+                    content={task.briefing as JSONContent | null}
+                    editable={canEdit}
+                    onSave={(json) => patchTask({ briefing: json })}
+                  />
+                </div>
               </TabsContent>
               {task.deal_id && (
-                <TabsContent value="contract" className="pt-3">
+                <TabsContent value="contract" className="pt-3 lg:min-h-0 lg:overflow-y-auto">
                   <TaskContractCard taskId={task.id} />
                 </TabsContent>
               )}
-              <TabsContent value="comments" className="pt-3">
+              <TabsContent value="comments" className="pt-3 lg:min-h-0 lg:overflow-y-auto">
                 <CommentThread
+                  key={task.id}
                   taskId={task.id}
                   comments={comments}
                   currentUserId={user?.id}
@@ -807,10 +676,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   onChanged={reloadAll}
                 />
               </TabsContent>
-              <TabsContent value="checklist" className="pt-3">
+              <TabsContent value="checklist" className="pt-3 lg:min-h-0 lg:overflow-y-auto">
                 <ChecklistPanel taskId={task.id} items={checklist} canEdit={canEdit} onChanged={reloadAll} />
               </TabsContent>
-              <TabsContent value="approvals" className="pt-3">
+              <TabsContent value="approvals" className="pt-3 lg:min-h-0 lg:overflow-y-auto">
                 <ApprovalsPanel
                   taskId={task.id}
                   approvals={approvals}
@@ -820,7 +689,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   onChanged={reloadAll}
                 />
               </TabsContent>
-              <TabsContent value="subtasks" className="pt-3">
+              <TabsContent value="subtasks" className="pt-3 lg:min-h-0 lg:overflow-y-auto">
                 {task.parent_task_id ? (
                   <p className="text-sm text-muted-foreground">{t("isSubtask")}</p>
                 ) : (
@@ -837,7 +706,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   />
                 )}
               </TabsContent>
-              <TabsContent value="timesheet" className="pt-3">
+              <TabsContent value="timesheet" className="pt-3 lg:min-h-0 lg:overflow-y-auto">
                 <TimesheetPanel
                   taskId={task.id}
                   entries={timesheet}
@@ -849,10 +718,173 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                   onChanged={reloadAll}
                 />
               </TabsContent>
-              <TabsContent value="history" className="pt-3">
+              <TabsContent value="history" className="pt-3 lg:min-h-0 lg:overflow-y-auto">
                 <HistoryPanel activity={activity} />
               </TabsContent>
             </Tabs>
+            </div>
+              <aside className="order-first shrink-0 border-b border-border bg-card/40 px-4 py-3 sm:px-6 lg:order-last lg:w-[300px] lg:overflow-y-auto lg:border-b-0 lg:border-l lg:px-5 xl:w-[320px]">
+                <div className="grid gap-x-4 sm:grid-cols-2 lg:grid-cols-1 lg:divide-y lg:divide-border/50">
+                  <PropRow icon={LayoutGrid} label={t("board")}>
+                    <span className="block truncate text-xs font-medium text-foreground">
+                      {boardsList.find((b) => b.id === task.board_id)?.name ?? "—"}
+                    </span>
+                  </PropRow>
+                  <PropRow icon={ArrowRightLeft} label={t("stage")}>
+                    <FieldSelect
+                      bare
+                      label={t("stage")}
+                      value={field("stage_id") as string}
+                      onChange={(v) => setField("stage_id", v)}
+                      disabled={!canEdit}
+                      options={stages.map((s) => ({ value: s.id, label: s.name }))}
+                    />
+                  </PropRow>
+                  <PropRow icon={Gauge} label={t("priority")}>
+                    <FieldSelect
+                      bare
+                      label={t("priority")}
+                      value={field("priority") as string}
+                      onChange={(v) => setField("priority", v as TaskPriority)}
+                      disabled={!canEdit}
+                      options={PRIORITIES.map((p) => ({ value: p, label: tPriority(p) }))}
+                    />
+                  </PropRow>
+                  <PropRow icon={UserRound} label={t("assignee")}>
+                    <FieldSelect
+                      bare
+                      label={t("assignee")}
+                      value={(field("assignee_id") as string | null) ?? "__none"}
+                      onChange={(v) => setField("assignee_id", v === "__none" ? null : v)}
+                      disabled={!canEdit}
+                      options={[{ value: "__none", label: t("none") }, ...profiles.map((p) => ({ value: p.id, label: p.full_name }))]}
+                    />
+                  </PropRow>
+                  <PropRow icon={Building2} label={t("sector")}>
+                    <FieldSelect
+                      bare
+                      label={t("sector")}
+                      value={(field("sector_id") as string | null) ?? "__none"}
+                      onChange={(v) => setField("sector_id", v === "__none" ? null : v)}
+                      disabled={!canEdit}
+                      options={[{ value: "__none", label: t("none") }, ...sectors.map((s) => ({ value: s.id, label: s.name }))]}
+                    />
+                  </PropRow>
+                  <PropRow icon={Tag} label={t("tagsLabel")}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {(task.tags ?? []).map((tag) => (
+                        <span
+                          key={tag.id}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+                          style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
+                        >
+                          {tag.label}
+                          {canEdit && (
+                            <button type="button" onClick={() => handleRemoveTag(tag.id)} aria-label={t("removeTag")}>
+                              <X className="h-2.5 w-2.5" />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                      {canEdit && <TagAdder onAdd={handleAddTag} />}
+                    </div>
+                  </PropRow>
+                  <PropRow icon={FolderKanban} label={t("project")}>
+                    <FieldSelect
+                      bare
+                      label={t("project")}
+                      value={(field("project_id") as string | null) ?? "__none"}
+                      onChange={(v) => setField("project_id", v === "__none" ? null : v)}
+                      disabled={!canEdit}
+                      options={[
+                        { value: "__none", label: t("none") },
+                        // The saved project may be archived / of an inactive client: keep it visible.
+                        ...(field("project_id") && !projects.some((p) => p.id === field("project_id"))
+                          ? [{ value: field("project_id") as string, label: t("projectCurrent") }]
+                          : []),
+                        ...projects.map((p) => ({ value: p.id, label: `${p.client_code ? `${p.client_code} · ` : ""}${p.client_name} — ${p.name}` })),
+                      ]}
+                    />
+                  </PropRow>
+                  <PropRow icon={Briefcase} label={t("client")}>
+                    <ContactPicker
+                      value={shownContact}
+                      disabled={!canEdit}
+                      onChange={(c) => {
+                        setDraftContact(c);
+                        setField("contact_id", c?.id ?? null);
+                      }}
+                    />
+                  </PropRow>
+                  <PropRow icon={CalendarPlus} label={t("startDate")}>
+                    <Input
+                      type="date"
+                      disabled={!canEdit}
+                      value={(field("start_date") as string | null) ?? ""}
+                      onChange={(e) => setField("start_date", e.target.value || null)}
+                      className="h-8 border-border bg-muted text-xs text-foreground"
+                    />
+                  </PropRow>
+                  <PropRow icon={CalendarCheck} label={t("dueDate")}>
+                    <Input
+                      type="date"
+                      disabled={!canEdit}
+                      value={(field("due_date") as string | null) ?? ""}
+                      onChange={(e) => setField("due_date", e.target.value || null)}
+                      className="h-8 border-border bg-muted text-xs text-foreground"
+                    />
+                  </PropRow>
+                  <PropRow icon={Timer} label={t("estimatedMinutes")}>
+                    <Input
+                      type="number"
+                      min={0}
+                      disabled={!canEdit}
+                      value={(field("estimated_minutes") as number | null) ?? ""}
+                      onChange={(e) => setField("estimated_minutes", e.target.value ? Number(e.target.value) : null)}
+                      className="h-8 border-border bg-muted text-xs text-foreground"
+                    />
+                  </PropRow>
+                  <PropRow icon={Repeat} label={t("recurrence")}>
+                    <button
+                      type="button"
+                      disabled={!canEdit}
+                      onClick={() => {
+                        setRecurrenceType(recurrenceRule?.rule_type ?? "__none");
+                        setRecurrenceWeekday(String(recurrenceRule?.weekday ?? 1));
+                        setRecurrenceDayOfMonth(String(recurrenceRule?.day_of_month ?? 1));
+                        setShowRecurrence(true);
+                      }}
+                      className="flex h-8 w-full items-center rounded-md border border-border bg-muted px-2 text-left text-xs text-foreground disabled:opacity-50"
+                    >
+                      {recurrenceSummary()}
+                    </button>
+                  </PropRow>
+                  <PropRow icon={FolderOpen} label={t("driveFolder")}>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="url"
+                        disabled={!canEdit}
+                        value={(field("drive_folder_url") as string | null) ?? ""}
+                        placeholder={t("driveFolderPlaceholder")}
+                        onChange={(e) => setField("drive_folder_url", e.target.value.trim() || null)}
+                        className="h-8 min-w-0 flex-1 border-border bg-muted text-xs text-foreground"
+                      />
+                      {task.drive_folder_url && (
+                        <a
+                          href={task.drive_folder_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={t("driveFolderOpen")}
+                          aria-label={t("driveFolderOpen")}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground"
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  </PropRow>
+                </div>
+              </aside>
             </div>
           </>
         )}
@@ -1006,22 +1038,46 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   );
 }
 
+/** One field of the properties column: icon + label on top, the control below it, full width. */
+function PropRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-1.5 py-2">
+      <span className="flex items-center gap-2 text-xs leading-tight text-muted-foreground">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span>{label}</span>
+      </span>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
 function FieldSelect({
   label,
   value,
   onChange,
   disabled,
   options,
+  bare,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   disabled: boolean;
   options: { value: string; label: string }[];
+  /** No label above the control: the caller already shows it (PropRow). */
+  bare?: boolean;
 }) {
   return (
     <div className="grid gap-1">
-      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+      {!bare && <Label className="text-[11px] text-muted-foreground">{label}</Label>}
       <Select value={value} onValueChange={(v) => onChange(v as string)} disabled={disabled}>
         <SelectTrigger className="h-8 w-full bg-muted border-border text-xs text-foreground">
           <SelectValue>{options.find((o) => o.value === value)?.label ?? ""}</SelectValue>

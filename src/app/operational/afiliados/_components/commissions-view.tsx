@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Check, Download, FileText, Loader2, Plus, ReceiptText, Wallet, X } from "lucide-react";
+import { Check, Copy, Download, FileDown, Loader2, Plus, ReceiptText, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import { cn } from "@/lib/utils";
 import type { Commission, CommissionStatus } from "@/lib/affiliates/commissions";
-import { InvoiceDialog, formatPeriod, money } from "./invoice-dialog";
+import { formatPeriod, money } from "./invoice-dialog";
 import { useWorkspace } from "./workspace";
 
 export type CommissionsMode = "all" | "invoices" | "payments";
@@ -33,11 +33,10 @@ interface Participant {
 type State =
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "ready"; commissions: Commission[]; participants: Participant[]; clientName: string };
+  | { kind: "ready"; commissions: Commission[]; participants: Participant[] };
 
 type Dialogs =
   | { type: "close" }
-  | { type: "invoice"; item: Commission }
   | { type: "review"; item: Commission }
   | { type: "payment"; item: Commission }
   | null;
@@ -60,23 +59,18 @@ export function CommissionsView({ mode }: { clientId?: string; mode: Commissions
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const [c, a, k] = await Promise.all([
-      fetch(`${api}/commissions`),
-      fetch(`${api}/affiliates`),
-      fetch(api),
-    ]);
-    if (!c.ok || !k.ok) return setState({ kind: "error" });
+    const [c, a] = await Promise.all([fetch(`${api}/commissions`), fetch(`${api}/affiliates`)]);
+    if (!c.ok) return setState({ kind: "error" });
     const commissions = ((await c.json()) as { commissions: Commission[] }).commissions;
     // Participants only feed the "close commission" dialog; without access to the list there are none.
     const memberships = a.ok
       ? ((await a.json()) as { memberships: { status: string; affiliate: Participant | null }[] }).memberships
       : [];
-    const clientName = ((await k.json()) as { client: { name: string } }).client.name;
     const seen = new Map<string, Participant>();
     for (const m of memberships) {
       if (m.status === "approved" && m.affiliate) seen.set(m.affiliate.id, { id: m.affiliate.id, name: m.affiliate.name });
     }
-    setState({ kind: "ready", commissions, participants: [...seen.values()], clientName });
+    setState({ kind: "ready", commissions, participants: [...seen.values()] });
   }, [api]);
 
   useEffect(() => {
@@ -207,6 +201,10 @@ export function CommissionsView({ mode }: { clientId?: string; mode: Commissions
                 {c.status === "invoice_rejected" && c.invoice_reason && (
                   <p className="mt-1 text-xs text-destructive">{c.invoice_reason}</p>
                 )}
+                {(c.status === "awaiting_invoice" || c.status === "invoice_rejected") && (
+                  <p className="mt-1 text-xs text-muted-foreground">{t("commissions.awaitingFromAffiliate")}</p>
+                )}
+                {c.status !== "paid_external" && c.status !== "awaiting_invoice" && <PixLine c={c} />}
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-sm font-semibold text-foreground">{money(c.gross_cents)}</p>
@@ -216,20 +214,25 @@ export function CommissionsView({ mode }: { clientId?: string; mode: Commissions
               </div>
               <div className="flex shrink-0 flex-wrap gap-1">
                 {c.invoice_file_name && (
-                  <Button variant="ghost" size="sm" onClick={() => download(c, "invoice")}>
-                    <FileText className="h-3.5 w-3.5" />
-                    {t("commissions.invoice")}
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title={t("commissions.downloadInvoice")}
+                    aria-label={t("commissions.downloadInvoice")}
+                    onClick={() => download(c, "invoice")}
+                  >
+                    <FileDown className="h-4 w-4" />
                   </Button>
                 )}
                 {c.receipt_file_name && (
-                  <Button variant="ghost" size="sm" onClick={() => download(c, "receipt")}>
-                    <ReceiptText className="h-3.5 w-3.5" />
-                    {t("commissions.receipt")}
-                  </Button>
-                )}
-                {can("invoices", "edit") && (c.status === "awaiting_invoice" || c.status === "invoice_rejected") && (
-                  <Button variant="outline" size="sm" onClick={() => setDialog({ type: "invoice", item: c })}>
-                    {t("commissions.sendInvoice")}
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title={t("commissions.downloadReceipt")}
+                    aria-label={t("commissions.downloadReceipt")}
+                    onClick={() => download(c, "receipt")}
+                  >
+                    <ReceiptText className="h-4 w-4" />
                   </Button>
                 )}
                 {can("invoices", "edit") && c.status === "invoice_review" && (
@@ -256,13 +259,6 @@ export function CommissionsView({ mode }: { clientId?: string; mode: Commissions
         onSubmit={(body) =>
           send(`${api}/commissions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, "commissions.closed")
         }
-      />
-      <InvoiceDialog
-        item={dialog?.type === "invoice" ? dialog.item : null}
-        busy={busy}
-        clientName={state.clientName}
-        onClose={() => setDialog(null)}
-        onSubmit={(c, form) => send(`${api}/commissions/${c.id}/invoice`, { method: "POST", body: form }, "commissions.invoiceSent")}
       />
       <ReviewDialog
         item={dialog?.type === "review" ? dialog.item : null}
@@ -463,9 +459,15 @@ function PaymentDialog({
               <DialogTitle>{t("commissions.paymentTitle")}</DialogTitle>
               <DialogDescription>{t("commissions.paymentHint")}</DialogDescription>
             </DialogHeader>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-              <strong className="text-foreground">{item.affiliate_name}</strong>
-              <span className="font-semibold text-foreground">{money(item.gross_cents - item.withholding_cents)}</span>
+            <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <strong className="text-foreground">{item.affiliate_name}</strong>
+                <span className="text-right">
+                  <span className="block text-[11px] text-muted-foreground">{t("commissions.amountToPay")}</span>
+                  <span className="font-semibold text-foreground">{money(item.gross_cents - item.withholding_cents)}</span>
+                </span>
+              </div>
+              <PixLine c={item} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="p-ref">{t("commissions.fieldReference")}</Label>
@@ -500,5 +502,36 @@ function PaymentDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PixLine({ c }: { c: Commission }) {
+  const t = useTranslations("Operational.affiliates");
+  if (!c.pix_key) {
+    return (
+      <p className={cn("mt-1 text-xs", c.has_pix ? "text-muted-foreground" : "text-amber-500")}>
+        {c.has_pix ? t("commissions.pixHidden") : t("commissions.pixMissing")}
+      </p>
+    );
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(c.pix_key ?? "");
+      toast.success(t("commissions.pixCopied"));
+    } catch {
+      toast.error(t("saveError"));
+    }
+  }
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      <span>
+        {t("commissions.pixLabel")}
+        {c.pix_key_type ? ` (${t(`members.pix_${c.pix_key_type}`)})` : ""}:
+      </span>
+      <span className="break-all font-mono text-foreground">{c.pix_key}</span>
+      <Button variant="ghost" size="icon-sm" className="h-6 w-6" title={t("commissions.copyPix")} aria-label={t("commissions.copyPix")} onClick={copy}>
+        <Copy className="h-3 w-3" />
+      </Button>
+    </p>
   );
 }

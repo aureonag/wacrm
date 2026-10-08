@@ -9,6 +9,7 @@ import { DealCreateModal } from "@/components/pipelines/deal-create-modal";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { PipelineSelector } from "@/components/pipelines/pipeline-selector";
 import { PipelineSearch } from "@/components/pipelines/pipeline-search";
+import { loadEnvironmentMembers } from "@/lib/auth/environment-members";
 import {
   PipelineOwnerFilter,
   OWNER_FILTER_ALL,
@@ -90,7 +91,9 @@ export default function PipelinesPage() {
   const supabase = createClient();
   const canEditSettings = useCan("edit-settings");
   const canCreateDeals = useCan("send-messages");
-  const { accountId, user, isOwner } = useAuth();
+  const { accountId, profile, isOwner } = useAuth();
+  // deals.assigned_to stores the PROFILE id (not the login id).
+  const myProfileId = profile?.id ?? null;
 
   // Only the account owner can slice the board by another person; everyone
   // else gets All / Mine. The account's members are read live, so a newly
@@ -253,21 +256,16 @@ export default function PipelinesPage() {
     if (!isOwner) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .order("full_name");
-      if (cancelled || !data) return;
-      setMembers(
-        data
-          .filter((p) => p.id !== user?.id)
-          .map((p) => ({ id: p.id, name: p.full_name || "—" })),
-      );
+      // Only the people who actually have access to Comercial (owner, or a
+      // cargo with the Comercial environment) — not the whole account roster.
+      const list = await loadEnvironmentMembers(supabase, "comercial");
+      if (cancelled) return;
+      setMembers(list.filter((p) => p.id !== myProfileId));
     })();
     return () => {
       cancelled = true;
     };
-  }, [isOwner, supabase, user?.id]);
+  }, [isOwner, supabase, myProfileId]);
 
   const handleOwnerFilterChange = useCallback((value: string) => {
     setOwnerFilter(value);
@@ -293,7 +291,7 @@ export default function PipelinesPage() {
       : deals.filter(
           (d) =>
             d.assigned_to ===
-            (effectiveFilter === OWNER_FILTER_MINE ? user?.id : effectiveFilter),
+            (effectiveFilter === OWNER_FILTER_MINE ? myProfileId : effectiveFilter),
         );
 
   const handleSelectPipeline = useCallback((pipelineId: string) => {

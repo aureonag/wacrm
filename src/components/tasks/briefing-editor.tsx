@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent, Mark, mergeAttributes, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import { Bold, Highlighter, Italic, List, ListOrdered, LinkIcon, ImageIcon, Heading2, SquareCheck } from "lucide-react";
+import { Bold, ChevronDown, Highlighter, Italic, List, ListOrdered, LinkIcon, ImageIcon, Heading2, SquareCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DEFAULT_HIGHLIGHT, normalizeHex, readableTextColor } from "@/lib/tasks/color";
+import { HighlightColorPicker } from "./highlight-color-picker";
 
 // Briefing (item 5 do pedido): texto formatado, títulos, listas, links,
 // imagens — salvo como JSON nativo do Tiptap (tasks.briefing jsonb),
@@ -17,9 +20,26 @@ import { useTranslations } from "next-intl";
 // um documento Word) e marca-texto ("grifar"). Os dois são nós/marcas novos
 // no mesmo JSON; briefings antigos continuam abrindo normalmente.
 
-/** Marca-texto: <mark> laranja, alternado por botão ou Ctrl/Cmd+Shift+H. */
+/**
+ * Marca-texto: <mark> com cor escolhida no seletor (atributo `color`, "#RRGGBB").
+ * Grifos antigos, sem cor, continuam laranja (estilo do editor). Alternado por
+ * botão ou Ctrl/Cmd+Shift+H. A cor só entra no HTML depois de validada.
+ */
 const Highlight = Mark.create({
   name: "highlight",
+  addAttributes() {
+    return {
+      color: {
+        default: null,
+        parseHTML: (el: HTMLElement) => normalizeHex(el.getAttribute("data-color")),
+        renderHTML: (attrs: Record<string, unknown>) => {
+          const color = normalizeHex(attrs.color);
+          if (!color) return {};
+          return { "data-color": color, style: `background-color: ${color}; color: ${readableTextColor(color)}` };
+        },
+      },
+    };
+  },
   parseHTML() {
     return [{ tag: "mark" }];
   },
@@ -27,7 +47,7 @@ const Highlight = Mark.create({
     return ["mark", mergeAttributes(HTMLAttributes), 0];
   },
   addKeyboardShortcuts() {
-    return { "Mod-Shift-h": () => this.editor.commands.toggleMark(this.name) };
+    return { "Mod-Shift-h": () => this.editor.commands.toggleMark(this.name, { color: DEFAULT_HIGHLIGHT }) };
   },
 });
 
@@ -43,6 +63,10 @@ interface BriefingEditorProps {
 
 export function BriefingEditor({ content, editable, onSave }: BriefingEditorProps) {
   const t = useTranslations("Operational.briefing");
+
+  // Last color used with the highlighter: the brush button reapplies it.
+  const [highlightColor, setHighlightColor] = useState(DEFAULT_HIGHLIGHT);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSaveRef = useRef(onSave);
@@ -69,7 +93,7 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
         // handful of element types StarterKit actually produces directly,
         // rather than pulling in a whole prose plugin for one editor.
         class:
-          "min-h-32 rounded-b-lg border border-t-0 border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none " +
+          "min-h-32 px-3 py-2 text-sm text-foreground focus:outline-none lg:min-h-full " +
           "[&_h1]:mt-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:mt-2 [&_h2]:text-base [&_h2]:font-bold [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold " +
           "[&_ul]:ml-4 [&_ul]:list-disc [&_ol]:ml-4 [&_ol]:list-decimal [&_li]:my-0.5 " +
           "[&_ul[data-type=taskList]]:ml-0 [&_ul[data-type=taskList]]:list-none [&_li[data-checked]]:flex [&_li[data-checked]]:items-start [&_li[data-checked]]:gap-2 " +
@@ -115,6 +139,16 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
 
   if (!editor) return null;
 
+  function pickHighlight(hex: string) {
+    setHighlightColor(hex);
+    editor!.chain().focus().setMark("highlight", { color: hex }).run();
+  }
+
+  function toggleHighlight() {
+    if (editor!.isActive("highlight")) editor!.chain().focus().unsetMark("highlight").run();
+    else pickHighlight(highlightColor);
+  }
+
   function addLink() {
     const url = window.prompt(t("linkPrompt"));
     if (!url) return;
@@ -128,9 +162,9 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
   }
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       {editable && (
-        <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-border bg-card/60 p-1.5">
+        <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-t-lg border border-border bg-card/60 p-1.5">
           <ToolbarButton active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} label={t("bold")}>
             <Bold className="h-3.5 w-3.5" />
           </ToolbarButton>
@@ -149,9 +183,39 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
           <ToolbarButton active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} label={t("taskList")}>
             <SquareCheck className="h-3.5 w-3.5" />
           </ToolbarButton>
-          <ToolbarButton active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleMark("highlight").run()} label={t("highlight")}>
-            <Highlighter className="h-3.5 w-3.5" />
-          </ToolbarButton>
+          <div className="flex items-center">
+            <ToolbarButton active={editor.isActive("highlight")} onClick={toggleHighlight} label={t("highlight")}>
+              <span className="relative flex items-center justify-center">
+                <Highlighter className="h-3.5 w-3.5" />
+                <span
+                  className="absolute -bottom-1 h-[3px] w-3.5 rounded-full"
+                  style={{ backgroundColor: normalizeHex(editor.getAttributes("highlight").color) ?? highlightColor }}
+                />
+              </span>
+            </ToolbarButton>
+            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+              <PopoverTrigger
+                aria-label={t("highlightColors")}
+                title={t("highlightColors")}
+                className="flex h-7 w-4 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <ChevronDown className="h-3 w-3" />
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-64 p-3">
+                <HighlightColorPicker
+                  color={normalizeHex(editor.getAttributes("highlight").color)}
+                  onPick={(hex) => {
+                    pickHighlight(hex);
+                    setPickerOpen(false);
+                  }}
+                  onClear={() => {
+                    editor.chain().focus().unsetMark("highlight").run();
+                    setPickerOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
           <ToolbarButton active={editor.isActive("link")} onClick={addLink} label={t("link")}>
             <LinkIcon className="h-3.5 w-3.5" />
           </ToolbarButton>
@@ -160,7 +224,17 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
           </ToolbarButton>
         </div>
       )}
-      <EditorContent editor={editor} />
+      <div
+        // Clicking the empty area under the text puts the cursor at the end.
+        onClick={(e) => {
+          if (editable && e.target === e.currentTarget) editor.chain().focus("end").run();
+        }}
+        className={`min-h-32 flex-1 bg-muted lg:min-h-0 lg:overflow-y-auto ${
+          editable ? "cursor-text rounded-b-lg border border-t-0 border-border" : "rounded-lg border border-border"
+        }`}
+      >
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }

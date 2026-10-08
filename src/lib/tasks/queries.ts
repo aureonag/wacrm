@@ -54,7 +54,46 @@ export async function loadBoardTasks(db: SupabaseClient, boardId: string): Promi
     console.error("Failed to load board tasks:", error.message);
     return [];
   }
-  return hydrateTaskTags(db, (data ?? []) as Task[]);
+  return hydrateTaskTime(db, await hydrateTaskTags(db, (data ?? []) as Task[]));
+}
+
+/** Batch-attaches `time_entries` (who tracked what, with names) in two extra
+ *  queries, so the Kanban card can show the total and each person's time. */
+async function hydrateTaskTime(db: SupabaseClient, tasks: Task[]): Promise<Task[]> {
+  const taskIds = tasks.map((t) => t.id);
+  if (taskIds.length === 0) return tasks;
+
+  const { data: rows, error } = await db
+    .from("timesheet_entries")
+    .select("task_id, user_id, started_at, ended_at")
+    .in("task_id", taskIds);
+  if (error) {
+    console.error("Failed to load board timesheet:", error.message);
+    return tasks;
+  }
+  const entries = (rows ?? []) as { task_id: string; user_id: string | null; started_at: string; ended_at: string | null }[];
+
+  const userIds = [...new Set(entries.map((e) => e.user_id).filter((v): v is string => !!v))];
+  const nameByUser = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: people } = await db.from("profiles").select("user_id, full_name").in("user_id", userIds);
+    for (const p of (people ?? []) as { user_id: string; full_name: string | null }[]) {
+      if (p.full_name) nameByUser.set(p.user_id, p.full_name);
+    }
+  }
+
+  const byTask = new Map<string, NonNullable<Task["time_entries"]>>();
+  for (const e of entries) {
+    const bucket = byTask.get(e.task_id) ?? [];
+    bucket.push({
+      user_id: e.user_id,
+      started_at: e.started_at,
+      ended_at: e.ended_at,
+      name: e.user_id ? (nameByUser.get(e.user_id) ?? null) : null,
+    });
+    byTask.set(e.task_id, bucket);
+  }
+  return tasks.map((t) => ({ ...t, time_entries: byTask.get(t.id) ?? [] }));
 }
 
 /** Batch-attaches `tags` to each task in one extra query — same

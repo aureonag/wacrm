@@ -10,13 +10,21 @@ import { StorageNotReady } from "./documents";
 export const COMMISSION_COLUMNS =
   "id, client_id, affiliate_id, period, gross_cents, withholding_cents, status, invoice_number, invoice_issuer, invoice_recipient, invoice_value_cents, invoice_status, invoice_reason, invoice_sent_at, invoice_file_name, receipt_file_name, payment_reference, paid_at, created_at";
 
-export interface CommissionRow extends Omit<Commission, "affiliate_name" | "affiliate_email"> {
-  aff_affiliates?: { name: string; email: string } | null;
+export interface CommissionRow extends Omit<Commission, "affiliate_name" | "affiliate_email" | "has_pix" | "pix_key_type" | "pix_key"> {
+  aff_affiliates?: { name: string; email: string; pix_key_type?: string | null; pix_key?: string | null } | null;
 }
 
-export function toCommission(row: CommissionRow): Commission {
+/** `seePix`: only who may see payments gets the Pix key (same rule as the affiliate profile). */
+export function toCommission(row: CommissionRow, seePix = false): Commission {
   const { aff_affiliates, ...rest } = row;
-  return { ...rest, affiliate_name: aff_affiliates?.name ?? "", affiliate_email: aff_affiliates?.email ?? "" };
+  return {
+    ...rest,
+    affiliate_name: aff_affiliates?.name ?? "",
+    affiliate_email: aff_affiliates?.email ?? "",
+    has_pix: Boolean(aff_affiliates?.pix_key),
+    pix_key_type: seePix ? (aff_affiliates?.pix_key_type ?? null) : null,
+    pix_key: seePix ? (aff_affiliates?.pix_key ?? null) : null,
+  };
 }
 
 export interface CommissionFiles {

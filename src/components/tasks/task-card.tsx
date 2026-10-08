@@ -1,8 +1,9 @@
 "use client";
 
 import type { BoardStage, Task } from "@/types";
-import { Calendar, Flag, User } from "lucide-react";
+import { Calendar, Flag, Pause, Play, User } from "lucide-react";
 import { formatTaskCode } from "@/lib/tasks/code";
+import { formatClockSeconds, summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { useTranslations } from "next-intl";
 
 interface TaskCardProps {
@@ -10,6 +11,15 @@ interface TaskCardProps {
   stage: BoardStage | null;
   isOverlay?: boolean;
   onOpen?: (taskId: string) => void;
+  /** Current time (ms), ticked once a second by the board while a timer runs. */
+  now: number;
+  /** Id of the signed-in user: only their own running timer shows "pause". */
+  currentUserId?: string;
+  /** Who may start/pause time (permission operational:timesheet:track). */
+  canTrack?: boolean;
+  onToggleTimer?: (taskId: string, runningByMe: boolean) => void;
+  /** A timer request for this card is in flight. */
+  timerBusy?: boolean;
 }
 
 function formatDate(dateStr: string) {
@@ -31,7 +41,17 @@ const PRIORITY_STYLES: Record<Task["priority"], string> = {
   high: "bg-amber-500/15 text-amber-500",
 };
 
-export function TaskCard({ task, stage, isOverlay, onOpen }: TaskCardProps) {
+export function TaskCard({
+  task,
+  stage,
+  isOverlay,
+  onOpen,
+  now,
+  currentUserId,
+  canTrack,
+  onToggleTimer,
+  timerBusy,
+}: TaskCardProps) {
   const t = useTranslations("Operational.tasks.card");
 
   const cardClassName = `group relative block w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
@@ -40,10 +60,22 @@ export function TaskCard({ task, stage, isOverlay, onOpen }: TaskCardProps) {
       : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
   }`;
 
+  const time = summarizeTaskTime(task.time_entries, now);
+  const runningByMe = !!currentUserId && time.people.some((p) => p.userId === currentUserId && p.running);
+  const showTime = canTrack || time.totalSeconds > 0 || time.running;
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onOpen?.(task.id)}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen?.(task.id);
+        }
+      }}
       className={cardClassName}
     >
       <span
@@ -92,6 +124,62 @@ export function TaskCard({ task, stage, isOverlay, onOpen }: TaskCardProps) {
         ))}
       </div>
 
+      {showTime && (
+        <div className="mt-2 space-y-1.5">
+          <div className="flex items-center gap-2">
+            {canTrack && !isOverlay && (
+              <button
+                type="button"
+                disabled={timerBusy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleTimer?.(task.id, runningByMe);
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+                aria-label={runningByMe ? t("timerPause") : t("timerStart")}
+                title={runningByMe ? t("timerPause") : t("timerStart")}
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50 ${
+                  runningByMe
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-primary/15 text-primary hover:bg-primary/25"
+                }`}
+              >
+                {runningByMe ? <Pause className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3 fill-current" />}
+              </button>
+            )}
+            <span
+              title={t("timeTotal")}
+              className={`font-mono text-xs tabular-nums ${time.running ? "font-semibold text-primary" : "text-muted-foreground"}`}
+            >
+              {formatClockSeconds(time.totalSeconds)}
+            </span>
+          </div>
+
+          {time.people.length > 0 && (
+            <ul className="flex flex-wrap gap-x-3 gap-y-1">
+              {time.people.map((p) => (
+                <li
+                  key={p.userId}
+                  title={p.name}
+                  className="flex items-center gap-1 text-[10.5px] text-muted-foreground"
+                >
+                  <span
+                    className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ${
+                      p.running ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary"
+                    }`}
+                  >
+                    {initials(p.name)}
+                  </span>
+                  <span className={`font-mono tabular-nums ${p.running ? "text-primary" : ""}`}>
+                    {formatClockSeconds(p.seconds)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="mt-2 flex items-center justify-between gap-2">
         {task.due_date ? (
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -110,6 +198,6 @@ export function TaskCard({ task, stage, isOverlay, onOpen }: TaskCardProps) {
           </span>
         )}
       </div>
-    </button>
+    </div>
   );
 }

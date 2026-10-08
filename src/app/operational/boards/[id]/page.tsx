@@ -6,6 +6,14 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { loadBoardStages, loadBoardTasks } from "@/lib/tasks/queries";
 import { useHasPermission } from "@/hooks/use-permissions";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  PipelineOwnerFilter,
+  OWNER_FILTER_ALL,
+  OWNER_FILTER_MINE,
+  type OwnerFilterMember,
+} from "@/components/pipelines/pipeline-owner-filter";
+import { loadEnvironmentMembers } from "@/lib/auth/environment-members";
 import type { Board, BoardStage, Task } from "@/types";
 import { TaskBoard } from "@/components/tasks/task-board";
 import { BoardSettings } from "@/components/tasks/board-settings";
@@ -42,6 +50,11 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const hasMovePermission = useHasPermission("operational", "tasks", "move_tasks");
   const hasEditPermission = useHasPermission("operational", "tasks", "edit_tasks");
   const canMoveTasks = hasMovePermission || hasEditPermission;
+  const canTrackTime = useHasPermission("operational", "timesheet", "track");
+  const { user, profile } = useAuth();
+  const [timerBusyTaskId, setTimerBusyTaskId] = useState<string | null>(null);
+  // tasks.assignee_id stores the PROFILE id (not the login id).
+  const myProfileId = profile?.id ?? null;
 
   const [board, setBoard] = useState<Board | null>(null);
   const [stages, setStages] = useState<BoardStage[]>([]);
@@ -51,7 +64,55 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
   const [query, setQuery] = useState("");
-  const visibleTasks = useMemo(() => tasks.filter((task) => matchesTaskQuery(task, query)), [tasks, query]);
+  // All tasks / mine / one person. The people are those with access to
+  // Operacional; the choice is remembered per board on this browser.
+  const [assigneeFilter, setAssigneeFilter] = useState<string>(OWNER_FILTER_ALL);
+  const [members, setMembers] = useState<OwnerFilterMember[]>([]);
+  const filterKey = `wacrm:operational:board-filter:${boardId}`;
+  const effectiveFilter =
+    assigneeFilter === OWNER_FILTER_ALL || assigneeFilter === OWNER_FILTER_MINE
+      ? assigneeFilter
+      : members.some((m) => m.id === assigneeFilter)
+        ? assigneeFilter
+        : OWNER_FILTER_ALL;
+  const visibleTasks = useMemo(
+    () =>
+      tasks.filter((task) => {
+        if (!matchesTaskQuery(task, query)) return false;
+        if (effectiveFilter === OWNER_FILTER_ALL) return true;
+        return task.assignee_id === (effectiveFilter === OWNER_FILTER_MINE ? myProfileId : effectiveFilter);
+      }),
+    [tasks, query, effectiveFilter, myProfileId],
+  );
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(filterKey);
+      setAssigneeFilter(stored ?? OWNER_FILTER_ALL);
+    } catch {
+      // Persistence is best-effort.
+    }
+  }, [filterKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list = await loadEnvironmentMembers(supabase, "operational");
+      if (!cancelled) setMembers(list.filter((p) => p.id !== myProfileId));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, myProfileId]);
+
+  function handleFilterChange(value: string) {
+    setAssigneeFilter(value);
+    try {
+      localStorage.setItem(filterKey, value);
+    } catch {
+      // Persistence is best-effort.
+    }
+  }
   // Deep-link from the Header's active-timer indicator (`?task=<id>`) —
   // read once as the initial value (not synced via an effect) so the
   // drawer opens on arrival without an extra render/setState pass.
@@ -91,6 +152,54 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
       cancelled = true;
     };
   }, [supabase, boardId]);
+
+  // Time tracked by other people (or in another tab/the drawer) shows up on
+  // the cards without a reload: any change to timesheet_entries refreshes the
+  // tasks of this board.
+  useEffect(() => {
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+    const channel = supabase
+      .channel(`board-timesheet:${boardId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "timesheet_entries" }, () => {
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(async () => {
+          const rows = await loadBoardTasks(supabase, boardId);
+          if (!cancelled) setTasks(rows);
+        }, 400);
+      })
+      .subscribe();
+    return () => {
+      cancelled = true;
+      if (debounce) clearTimeout(debounce);
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, boardId]);
+
+  // Play/pause on a card. Time is saved in the database (timesheet_entries),
+  // one row per work period and person, so nothing is lost on reload and each
+  // person keeps their own total. Starting another task pauses the running one.
+  async function handleToggleTimer(taskId: string, runningByMe: boolean) {
+    setTimerBusyTaskId(taskId);
+    try {
+      const res = runningByMe
+        ? await fetch("/api/operational/timesheet/stop", { method: "POST" })
+        : await fetch("/api/operational/timesheet/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task_id: taskId, switch: true }),
+          });
+      if (!res.ok) {
+        toast.error(t("timerFailed"));
+      } else if (!runningByMe) {
+        const data = (await res.json().catch(() => null)) as { paused_task_title?: string | null } | null;
+        if (data?.paused_task_title) toast.info(t("timerSwitched", { title: data.paused_task_title }));
+      }
+    } finally {
+      setTimerBusyTaskId(null);
+      await reload();
+    }
+  }
 
   async function handleTaskMoved(taskId: string, newStageId: string) {
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, stage_id: newStageId } : t)));
@@ -151,6 +260,14 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        <PipelineOwnerFilter
+          value={effectiveFilter}
+          onChange={handleFilterChange}
+          members={members}
+          allLabel={t("filterAll")}
+          mineLabel={t("filterMine")}
+          membersLabel={t("filterMembers")}
+        />
         <div className="relative w-full sm:w-80">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -160,7 +277,7 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
             className="h-9 border-border bg-muted pl-8 text-sm text-foreground"
           />
         </div>
-        {query.trim() && (
+        {(query.trim() || effectiveFilter !== OWNER_FILTER_ALL) && (
           <p className="text-xs text-muted-foreground">
             {t("searchCount", { shown: visibleTasks.length, total: tasks.length })}
           </p>
@@ -176,6 +293,10 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
           onTaskMoved={canMoveTasks ? handleTaskMoved : () => {}}
           onAddTask={handleAddTask}
           onOpenTask={handleOpenTask}
+          currentUserId={user?.id}
+          canTrack={canTrackTime}
+          onToggleTimer={handleToggleTimer}
+          timerBusyTaskId={timerBusyTaskId}
         />
       )}
 

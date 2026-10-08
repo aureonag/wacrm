@@ -45,13 +45,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });
     }
 
-    const mentionedIds = Array.isArray(body?.mentioned_profile_ids)
-      ? (body.mentioned_profile_ids as unknown[]).filter((v): v is string => typeof v === "string")
+    const requested = Array.isArray(body?.mentioned_profile_ids)
+      ? (body.mentioned_profile_ids as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 20)
       : [];
-    if (mentionedIds.length > 0) {
-      await ctx.supabase
-        .from("task_comment_mentions")
-        .insert(mentionedIds.map((profileId) => ({ comment_id: comment.id, profile_id: profileId })));
+    if (requested.length > 0) {
+      // Only people of this account: a made-up id must not notify anyone.
+      const { data: people } = await ctx.supabase
+        .from("profiles")
+        .select("id")
+        .in("id", requested)
+        .eq("account_id", ctx.accountId);
+      const mentionedIds = (people ?? []).map((p) => p.id as string);
+      if (mentionedIds.length > 0) {
+        await ctx.supabase
+          .from("task_comment_mentions")
+          .insert(mentionedIds.map((profileId) => ({ comment_id: comment.id, profile_id: profileId })));
+      }
     }
 
     return NextResponse.json({ id: comment.id }, { status: 201 });

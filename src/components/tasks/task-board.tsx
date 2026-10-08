@@ -16,6 +16,8 @@ import {
 } from "@dnd-kit/core";
 import type { BoardStage, Task } from "@/types";
 import { TaskCard } from "./task-card";
+import { useClockTick } from "@/hooks/use-clock-tick";
+import { summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -26,10 +28,43 @@ interface TaskBoardProps {
   onTaskMoved: (taskId: string, newStageId: string) => void;
   onAddTask: (stageId: string) => void;
   onOpenTask: (taskId: string) => void;
+  /** Timer on the card (play/pause + time per person). */
+  currentUserId?: string;
+  canTrack?: boolean;
+  onToggleTimer?: (taskId: string, runningByMe: boolean) => void;
+  timerBusyTaskId?: string | null;
 }
 
-export function TaskBoard({ stages, tasks, onTaskMoved, onAddTask, onOpenTask }: TaskBoardProps) {
+/** What every card needs to show and drive its timer. */
+interface CardTimerProps {
+  now: number;
+  currentUserId?: string;
+  canTrack?: boolean;
+  onToggleTimer?: (taskId: string, runningByMe: boolean) => void;
+  timerBusyTaskId?: string | null;
+}
+
+export function TaskBoard({
+  stages,
+  tasks,
+  onTaskMoved,
+  onAddTask,
+  onOpenTask,
+  currentUserId,
+  canTrack,
+  onToggleTimer,
+  timerBusyTaskId,
+}: TaskBoardProps) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+
+  // One shared clock for every card: ticks once a second only while some
+  // task on the board has a running timer.
+  const anyRunning = useMemo(
+    () => tasks.some((task) => summarizeTaskTime(task.time_entries, 0).running),
+    [tasks],
+  );
+  const now = useClockTick(anyRunning);
+  const timer: CardTimerProps = { now, currentUserId, canTrack, onToggleTimer, timerBusyTaskId };
 
   const sortedStages = useMemo(() => [...stages].sort((a, b) => a.position - b.position), [stages]);
 
@@ -90,6 +125,7 @@ export function TaskBoard({ stages, tasks, onTaskMoved, onAddTask, onOpenTask }:
               tasks={stageTasks}
               onAddTask={onAddTask}
               onOpenTask={onOpenTask}
+              timer={timer}
             />
           );
         })}
@@ -102,6 +138,8 @@ export function TaskBoard({ stages, tasks, onTaskMoved, onAddTask, onOpenTask }:
               task={activeTask}
               stage={sortedStages.find((s) => s.id === activeTask.stage_id) ?? null}
               isOverlay
+              now={now}
+              currentUserId={currentUserId}
             />
           </div>
         ) : null}
@@ -115,11 +153,13 @@ function StageColumn({
   tasks,
   onAddTask,
   onOpenTask,
+  timer,
 }: {
   stage: BoardStage;
   tasks: Task[];
   onAddTask: (stageId: string) => void;
   onOpenTask: (taskId: string) => void;
+  timer: CardTimerProps;
 }) {
   const t = useTranslations("Operational.tasks.board");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
@@ -146,7 +186,7 @@ function StageColumn({
           </div>
         ) : (
           tasks.map((task) => (
-            <DraggableTaskCard key={task.id} task={task} stage={stage} onOpen={onOpenTask} />
+            <DraggableTaskCard key={task.id} task={task} stage={stage} onOpen={onOpenTask} timer={timer} />
           ))
         )}
       </div>
@@ -168,10 +208,12 @@ function DraggableTaskCard({
   task,
   stage,
   onOpen,
+  timer,
 }: {
   task: Task;
   stage: BoardStage;
   onOpen: (taskId: string) => void;
+  timer: CardTimerProps;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
 
@@ -183,7 +225,16 @@ function DraggableTaskCard({
       {...attributes}
       style={{ opacity: isDragging ? 0.3 : 1, touchAction: "none" }}
     >
-      <TaskCard task={task} stage={stage} onOpen={onOpen} />
+      <TaskCard
+        task={task}
+        stage={stage}
+        onOpen={onOpen}
+        now={timer.now}
+        currentUserId={timer.currentUserId}
+        canTrack={timer.canTrack}
+        onToggleTimer={timer.onToggleTimer}
+        timerBusy={timer.timerBusyTaskId === task.id}
+      />
     </div>
   );
 }
