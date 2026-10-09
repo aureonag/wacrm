@@ -60,6 +60,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     return NextResponse.json({ error: "Este link expirou." }, { status: 400 });
   }
 
+  // Per-contract cap (the per-IP bucket above can be sidestepped by rotating
+  // IPs): bounds mail-bombing the client and OTP re-roll brute force.
+  const contractLimit = checkRateLimit(`contract-send-code-id:${contract.id}`, { limit: 6, windowMs: 3_600_000 });
+  if (!contractLimit.success) return rateLimitResponse(contractLimit);
+
   const otp = generateOtp();
 
   try {

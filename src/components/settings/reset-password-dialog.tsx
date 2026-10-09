@@ -29,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { useTranslations } from "next-intl";
 import { generatePassword } from "@/lib/auth/generate-password";
 
-const MIN_PASSWORD_LEN = 6;
+const MIN_PASSWORD_LEN = 10;
 
 interface ResetPasswordMember {
   user_id: string;

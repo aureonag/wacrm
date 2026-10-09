@@ -29,8 +29,30 @@ export interface StaffContext {
   admin: SupabaseClient;
 }
 
-export async function requireStaff(): Promise<StaffContext> {
+/**
+ * owner/admin of the Aureon account — NOT of any account. Any signup creates
+ * its own account with an owner, so "owner/admin of some account" is not a
+ * staff check. The Aureon account id lives in `aff_platform_account`
+ * (migration 155). Until that migration is applied the table does not exist
+ * and we keep the old provisional rule (logged), so nothing breaks mid-rollout.
+ */
+export async function requirePlatformStaff(): Promise<AccountContext> {
   const ctx = await requireRole("admin");
+  const { data, error } = await supabaseAdmin().from("aff_platform_account").select("account_id").maybeSingle();
+  if (error) {
+    if (isModuleNotReady(error)) {
+      console.warn("[affiliates] aff_platform_account missing (migration 155) — using provisional staff rule");
+      return ctx;
+    }
+    console.error("[affiliates] platform account lookup failed:", error.message);
+    throw new ForbiddenError("Could not verify access");
+  }
+  if (!data || data.account_id !== ctx.accountId) throw new ForbiddenError("Afiliados is restricted to the Aureon team");
+  return ctx;
+}
+
+export async function requireStaff(): Promise<StaffContext> {
+  const ctx = await requirePlatformStaff();
   return { ctx, admin: supabaseAdmin() };
 }
 
@@ -66,8 +88,8 @@ export async function requireClientAccess(clientId: string, need: Need): Promise
   const admin = supabaseAdmin();
 
   if (user.app_metadata?.aff_portal !== true) {
-    // A CRM user: only owner/admin (the Aureon team) get in.
-    const ctx = await requireRole("admin");
+    // A CRM user: only owner/admin of the Aureon account get in.
+    const ctx = await requirePlatformStaff();
     return {
       ctx: { userId: ctx.userId, name: ctx.account?.name ?? null, kind: "staff" },
       admin,

@@ -36,7 +36,7 @@ import {
   RATE_LIMITS,
 } from "@/lib/rate-limit";
 
-const MIN_PASSWORD_LEN = 6;
+const MIN_PASSWORD_LEN = 10;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {

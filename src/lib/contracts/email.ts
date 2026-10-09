@@ -65,16 +65,27 @@ export interface SendEmailArgs {
   attachments?: SendEmailAttachment[];
 }
 
+// Plain single addresses only. Bounded length + no nested/structured values keeps
+// pathological input away from Nodemailer's address parser (DoS advisories).
+const PLAIN_EMAIL_RE = /^[^\s@<>",;()]+@[^\s@<>",;()]+\.[^\s@<>",;()]+$/;
+export function isPlainEmail(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 254 && PLAIN_EMAIL_RE.test(value);
+}
+
 export async function sendEmail({ to, cc, subject, text, html, attachments }: SendEmailArgs): Promise<void> {
   if (!isEmailConfigured()) {
     throw new ContractEmailError("Email sending is not configured (CONTRACT_SMTP_* env vars missing).");
   }
+  if (!isPlainEmail(to)) {
+    throw new ContractEmailError("Invalid recipient address.");
+  }
+  const safeCc = (cc ?? []).filter(isPlainEmail);
   const from = process.env.CONTRACT_EMAIL_FROM || process.env.CONTRACT_SMTP_USER;
   try {
     await getTransporter().sendMail({
       from,
       to,
-      cc: cc && cc.length > 0 ? cc : undefined,
+      cc: safeCc.length > 0 ? safeCc : undefined,
       subject,
       text,
       html,

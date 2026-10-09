@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
+import { isPlainEmail } from "@/lib/contracts/email";
 
 interface CreateContractBody {
   deal_id?: unknown;
@@ -41,6 +42,10 @@ export async function POST(request: Request) {
     const clientEmail = str(body?.client_email);
     const signingMethod = str(body?.signing_method);
     const templateId = str(body?.template_id) || null;
+
+    if (clientEmail && !isPlainEmail(clientEmail)) {
+      return NextResponse.json({ error: "E-mail do cliente inválido" }, { status: 400 });
+    }
 
     if (
       !dealId ||

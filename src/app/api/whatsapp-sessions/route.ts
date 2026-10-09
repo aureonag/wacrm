@@ -9,6 +9,7 @@ import {
   isZApiConfigured,
   ZApiError,
 } from '@/lib/whatsapp-sessions/zapi-client';
+import { signWebhookUrl } from '@/lib/whatsapp-sessions/webhook-secret';
 
 function webhookUrl(): string {
   const site = process.env.NEXT_PUBLIC_SITE_URL;
@@ -73,7 +74,20 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
-      await configureWebhook(instanceId, instanceToken, webhookUrl());
+    }
+
+    // Always (re)register: refreshes the per-instance secret on sessions that
+    // were connected before it existed. Best-effort for already-saved
+    // credentials so a Z-API hiccup can't block a QR refresh.
+    try {
+      await configureWebhook(
+        instanceId,
+        instanceToken,
+        signWebhookUrl(webhookUrl(), instanceId),
+      );
+    } catch (err) {
+      if (!(existing?.zapi_instance_id && existing?.zapi_instance_token)) throw err;
+      console.error('[whatsapp-sessions] webhook re-registration failed:', err);
     }
 
     // A pasted-in instance may already be paired (e.g. someone scanned

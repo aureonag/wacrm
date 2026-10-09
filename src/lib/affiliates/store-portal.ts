@@ -6,7 +6,8 @@
 // app_metadata.aff_portal = true (migrations 101/104) — exactly like affiliates.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ForbiddenError, requireRole, UnauthorizedError } from "@/lib/auth/account";
+import { ForbiddenError, UnauthorizedError } from "@/lib/auth/account";
+import { requirePlatformStaff } from "./admin";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { effectivePermissions, FULL_ACCESS, isStoreRole, type StorePermissions, type StoreRole } from "./store-access";
@@ -42,7 +43,7 @@ export async function loadPortalSession(staffClientId?: string | null): Promise<
   const admin = supabaseAdmin();
 
   if (user.app_metadata?.aff_portal !== true) {
-    const ctx = await requireRole("admin");
+    const ctx = await requirePlatformStaff();
     const stores: StoreMembership[] = [];
     if (staffClientId) {
       const { data } = await admin.from("aff_clients").select("id, name").eq("id", staffClientId).eq("status", "active").maybeSingle();

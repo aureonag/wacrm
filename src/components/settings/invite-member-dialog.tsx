@@ -70,7 +70,7 @@ const EXPIRY_OPTIONS = [
 // Mirror it on the client so we short-circuit before the round-trip
 // rather than letting the user submit and bounce off a 400.
 const MAX_LABEL_LEN = 80;
-const MIN_PASSWORD_LEN = 6;
+const MIN_PASSWORD_LEN = 10;
 
 interface LinkResult {
   kind: 'link';

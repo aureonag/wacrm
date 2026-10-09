@@ -8,8 +8,6 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    reviewers:
-      - ArnasDon
     labels:
       - dependencies
     groups:
@@ -30,13 +28,19 @@ updates:
           - minor
           - patch
     ignore:
-      # Next + React + Tailwind are pinned exactly on purpose. Let
-      # them flow through manual major bumps when we're ready.
+      # Next + React + Tailwind are pinned exactly on purpose: patch and
+      # minor releases (where the security fixes land) come through as PRs;
+      # only MAJOR bumps are skipped and done by hand when we're ready.
       - dependency-name: next
+        update-types: ["version-update:semver-major"]
       - dependency-name: react
+        update-types: ["version-update:semver-major"]
       - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
       - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
       - dependency-name: eslint-config-next
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions in .github/workflows/. Catches setup-node /
   # checkout version bumps that keep the CI matrix healthy.
@@ -46,8 +50,6 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
-    reviewers:
-      - ArnasDon
     labels:
       - dependencies
       - github-actions

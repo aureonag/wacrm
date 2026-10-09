@@ -35,6 +35,10 @@ concurrency:
   group: migrations-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: these jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   apply:
     name: Apply to a clean database

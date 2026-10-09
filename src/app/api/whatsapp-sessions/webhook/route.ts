@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server';
 
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import { reopenClosedConversation } from '@/lib/conversations/reopen';
+import { verifyWebhookSecret } from '@/lib/whatsapp-sessions/webhook-secret';
 import {
   classifyZApiMessage,
   findOrCreateContact,
@@ -9,9 +10,10 @@ import {
   identityFromZApiPhone,
 } from '@/lib/whatsapp-sessions/contact-sync';
 
-// Z-API's webhook URL is only known to our Z-API instance config (set
-// via configureWebhook, never exposed to the client) — same trust model
-// the Evolution webhook used, no shared-secret verification needed.
+// Z-API doesn't sign webhooks, so the registered URL carries a per-instance
+// secret (?s=, see webhook-secret.ts). Until every instance has been
+// re-registered with it, a missing/wrong secret is only logged; set
+// ZAPI_WEBHOOK_ENFORCE=true to reject those requests.
 // One URL receives every event category (message received, connected,
 // disconnected, ...); `type` tells them apart.
 
@@ -44,6 +46,22 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const secretOk =
+    typeof body.instanceId === 'string' &&
+    verifyWebhookSecret(
+      body.instanceId,
+      new URL(request.url).searchParams.get('s'),
+    );
+  if (!secretOk) {
+    if (process.env.ZAPI_WEBHOOK_ENFORCE === 'true') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    console.warn(
+      '[whatsapp-sessions/webhook] missing/invalid webhook secret for instance',
+      body.instanceId,
+    );
   }
 
   // Ack immediately, process after — same rationale as the Meta webhook
