@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Briefcase, ChevronDown, EyeOff, Info, ListChecks, Loader2, Lock, PanelLeft, Pencil, Plus, ShieldCheck, Trash2, Users, Workflow } from 'lucide-react';
+import { Briefcase, Info, ListChecks, Loader2, Lock, Pencil, Plus, ShieldCheck, Trash2, Users, Workflow } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import { useTranslations } from 'next-intl';
 import { RequireRole } from '@/components/auth/require-role';
 import { SettingsPanelHead } from './settings-panel-head';
 import { RoleEditorDialog } from './role-editor-dialog';
-import { NAV_MODULES, navLabel } from './nav-modules';
+import { NAV_MODULES } from './nav-modules';
 import type { PlatformEnvironment, Permission, Role } from '@/types';
 
 const ENV_ICON: Record<PlatformEnvironment, typeof Briefcase> = {
@@ -41,7 +41,6 @@ const NAV_MODULE_SET = new Set(NAV_MODULES.map((m) => m.module));
 export function RolesPanel() {
   const t = useTranslations('Settings.rolesPanel');
   const tEnv = useTranslations('Sidebar.environment');
-  const tSidebar = useTranslations('Sidebar');
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -51,7 +50,6 @@ export function RolesPanel() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
   const [deleting, setDeleting] = useState<Role | null>(null);
-  const [disablingModule, setDisablingModule] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -80,16 +78,6 @@ export function RolesPanel() {
     void load();
   }, [load]);
 
-  // module -> permission id, for the "disable in every cargo" shortcut — only
-  // the `comercial:*:view` nav permissions are relevant here.
-  const navPermissionIdByModule = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of permissions) {
-      if (p.environment === 'comercial' && p.action === 'view') map.set(p.module, p.id);
-    }
-    return map;
-  }, [permissions]);
-
   // ids that are menu switches vs "O que pode fazer" actions (Afiliados access counts with its menu item)
   const { navIds, hiddenIds } = useMemo(() => {
     const nav = new Set<string>();
@@ -100,46 +88,6 @@ export function RolesPanel() {
     }
     return { navIds: nav, hiddenIds: hidden };
   }, [permissions]);
-
-  // How many cargos currently grant each nav module — shown next to the shortcut button.
-  const roleCountByModule = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const [module, permissionId] of navPermissionIdByModule) {
-      counts.set(module, roles.filter((r) => r.permission_ids.includes(permissionId)).length);
-    }
-    return counts;
-  }, [roles, navPermissionIdByModule]);
-
-  async function handleDisableEverywhere(module: string) {
-    const permissionId = navPermissionIdByModule.get(module);
-    if (!permissionId) return;
-    setDisablingModule(module);
-    try {
-      const affected = roles.filter((r) => r.permission_ids.includes(permissionId));
-      const results = await Promise.all(
-        affected.map((role) =>
-          fetch(`/api/account/roles/${role.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              permission_ids: role.permission_ids.filter((id) => id !== permissionId),
-            }),
-          }),
-        ),
-      );
-      if (results.some((res) => !res.ok)) {
-        toast.error(t('disableEverywhereError'));
-        return;
-      }
-      toast.success(t('disableEverywhereToast', { item: navLabel(tSidebar, module) }));
-      await load();
-    } catch (err) {
-      console.error('[RolesPanel] disable-everywhere error:', err);
-      toast.error(t('disableEverywhereError'));
-    } finally {
-      setDisablingModule(null);
-    }
-  }
 
   function openCreate() {
     setEditing(null);
@@ -210,7 +158,6 @@ export function RolesPanel() {
       {/* cargos */}
       <div className="grid gap-4 lg:grid-cols-2">
         {roles.map((role) => {
-          const menuCount = role.permission_ids.filter((id) => navIds.has(id)).length;
           const actionCount = role.permission_ids.filter((id) => !navIds.has(id) && !hiddenIds.has(id)).length;
           const people = peopleByRole.get(role.id) ?? 0;
           return (
@@ -262,20 +209,13 @@ export function RolesPanel() {
                 </RequireRole>
               </div>
 
-              <dl className="grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs">
+              <dl className="grid grid-cols-2 gap-2 border-t border-border/60 pt-3 text-xs">
                 <div>
                   <dt className="flex items-center gap-1 text-muted-foreground">
                     <Users className="size-3.5" />
                     {t('statPeople')}
                   </dt>
                   <dd className="mt-0.5 text-sm font-medium text-foreground">{people}</dd>
-                </div>
-                <div>
-                  <dt className="flex items-center gap-1 text-muted-foreground">
-                    <PanelLeft className="size-3.5" />
-                    {t('statMenu')}
-                  </dt>
-                  <dd className="mt-0.5 text-sm font-medium text-foreground">{menuCount}</dd>
                 </div>
                 <div>
                   <dt className="flex items-center gap-1 text-muted-foreground">
@@ -289,42 +229,6 @@ export function RolesPanel() {
           );
         })}
       </div>
-
-      {/* bulk shortcut, out of the way */}
-      <RequireRole min="admin">
-        <details className="group rounded-xl border border-border bg-card/40">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-            <span>
-              <span className="block text-sm font-semibold text-foreground">{t('menuVisibilityTitle')}</span>
-              <span className="block text-xs text-muted-foreground">{t('menuVisibilityDesc')}</span>
-            </span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="space-y-1 border-t border-border px-4 py-3">
-            {NAV_MODULES.map(({ module }) => {
-              const count = roleCountByModule.get(module) ?? 0;
-              return (
-                <div key={module} className="flex items-center justify-between gap-3 py-1">
-                  <span className="text-sm text-foreground">{navLabel(tSidebar, module)}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{t('grantedToCount', { count })}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDisableEverywhere(module)}
-                      disabled={count === 0 || disablingModule === module}
-                      className="border-border text-muted-foreground hover:bg-muted"
-                    >
-                      {disablingModule === module ? <Loader2 className="size-3.5 animate-spin" /> : <EyeOff className="size-3.5" />}
-                      {t('disableEverywhere')}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </details>
-      </RequireRole>
 
       <RoleEditorDialog
         open={editorOpen}

@@ -3,16 +3,11 @@
 // ============================================================
 // RoleEditorDialog — create / edit a cargo (Settings → Cargos e permissões).
 //
-// Same look as "Gerenciar acesso" of a person (Membros da equipe): wide dialog,
-// one card per menu section in two balanced columns, a switch per item. A cargo
-// is the DEFAULT package for a group of people; "Gerenciar acesso" adds the
-// exceptions of one person on top of it.
-//
-// Two parts, on purpose:
-//   1. Menu lateral  — what shows up in the sidebar (the `comercial:<item>:view`
-//      permissions, registry in nav-modules.ts). One switch per item.
-//   2. O que pode fazer — the actions inside the system (create / edit / delete
-//      contacts, deals, tasks, timesheet…), with names in Portuguese.
+// Same look as "Gerenciar acesso" of a person (Membros da equipe). A cargo only
+// says WHAT PEOPLE MAY DO (create / edit / delete contacts, deals, tasks,
+// timesheet…, names in Portuguese). What shows in the sidebar menu is set per
+// PERSON in "Gerenciar acesso" — not here, so the same choice is never in two
+// places.
 // ============================================================
 
 import { useMemo, useState } from 'react';
@@ -24,10 +19,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { AFFILIATES_MENU_MODULE, NAV_MODULES, NAV_SECTIONS } from './nav-modules';
+import { NAV_MODULES } from './nav-modules';
 import type { Permission, PlatformEnvironment, Role } from '@/types';
 
 const ENVIRONMENTS: PlatformEnvironment[] = ['comercial', 'operational'];
@@ -88,25 +82,22 @@ function RoleEditorBody({
 }) {
   const t = useTranslations('Settings.rolesPanel');
   const tEnv = useTranslations('Sidebar.environment');
-  const tSidebar = useTranslations('Sidebar');
 
   const [name, setName] = useState(role?.name ?? '');
   const [environments, setEnvironments] = useState<Set<PlatformEnvironment>>(new Set(role?.environments ?? []));
-  const [permissionIds, setPermissionIds] = useState<Set<string>>(new Set(role?.permission_ids ?? []));
+  // A new cargo starts with every menu item visible ("Padrão" in Gerenciar acesso follows the
+  // cargo); each person's menu is then narrowed there. Existing cargos keep what they have.
+  const [permissionIds, setPermissionIds] = useState<Set<string>>(() => {
+    if (role) return new Set(role.permission_ids);
+    const menu = new Set<string>();
+    for (const p of permissions) {
+      if (p.environment === 'comercial' && p.action === 'view' && NAV_MODULE_SET.has(p.module)) menu.add(p.id);
+    }
+    return menu;
+  });
   const [saving, setSaving] = useState(false);
 
-  // permission id of each menu item (comercial:<module>:view) and of the Afiliados access
-  const { navIdByModule, affiliatesAccessId } = useMemo(() => {
-    const nav = new Map<string, string>();
-    let access: string | undefined;
-    for (const p of permissions) {
-      if (p.environment === 'comercial' && p.action === 'view') nav.set(p.module, p.id);
-      if (p.environment === 'operational' && p.module === 'affiliates' && p.action === 'access') access = p.id;
-    }
-    return { navIdByModule: nav, affiliatesAccessId: access };
-  }, [permissions]);
-
-  // "O que pode fazer": environment → module → actions (menu items and the Afiliados access excluded)
+  // environment → module → actions (menu items and the Afiliados access are not listed: they are per person)
   const actionGroups = useMemo(() => {
     const byEnv = new Map<PlatformEnvironment, Map<string, Permission[]>>();
     for (const p of permissions) {
@@ -124,29 +115,12 @@ function RoleEditorBody({
     return byEnv;
   }, [permissions]);
 
-  const has = (id: string | undefined) => !!id && permissionIds.has(id);
-
   function setPermission(id: string | undefined, on: boolean) {
     if (!id) return;
     setPermissionIds((prev) => {
       const next = new Set(prev);
       if (on) next.add(id);
       else next.delete(id);
-      return next;
-    });
-  }
-
-  /** Menu switch. Afiliados also carries the right to OPEN the area (same rule as "Gerenciar acesso"). */
-  function setNav(module: string, on: boolean) {
-    setPermissionIds((prev) => {
-      const next = new Set(prev);
-      const ids = [navIdByModule.get(module)];
-      if (module === AFFILIATES_MENU_MODULE) ids.push(affiliatesAccessId);
-      for (const id of ids) {
-        if (!id) continue;
-        if (on) next.add(id);
-        else next.delete(id);
-      }
       return next;
     });
   }
@@ -193,15 +167,6 @@ function RoleEditorBody({
     } finally {
       setSaving(false);
     }
-  }
-
-  // Menu cards into two columns by height — same rule as "Gerenciar acesso", so no holes.
-  const columns: (typeof NAV_SECTIONS)[] = [[], []];
-  const heights = [0, 0];
-  for (const section of NAV_SECTIONS) {
-    const target = heights[0] <= heights[1] ? 0 : 1;
-    columns[target].push(section);
-    heights[target] += 2 + section.items.length + (section.noteKey ? 1 : 0);
   }
 
   const moduleName = (module: string) => (KNOWN_MODULES.has(module) ? t(`modules.${module}`) : module);
@@ -256,49 +221,7 @@ function RoleEditorBody({
           </div>
         </div>
 
-        {/* 1. menu */}
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{t('menuSectionTitle')}</h3>
-          <p className="text-xs text-muted-foreground">{t('menuSectionDesc')}</p>
-          <div className="mt-4 grid items-start gap-5 lg:grid-cols-2">
-            {columns.map((sections, index) => (
-              <div key={index} className="flex flex-col gap-5">
-                {sections.map((section) => (
-                  <section key={section.key} className="overflow-hidden rounded-xl border border-border bg-card/40">
-                    <header className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
-                      <h4 className="text-sm font-semibold text-foreground">{tSidebar(section.titleKey)}</h4>
-                      {section.master.module && (
-                        <label className="flex cursor-pointer items-center gap-2">
-                          <span className="text-[11px] text-muted-foreground">{tSidebar(section.master.labelKey)}</span>
-                          <Switch
-                            checked={has(navIdByModule.get(section.master.module))}
-                            onCheckedChange={(on) => setNav(section.master.module, on)}
-                          />
-                        </label>
-                      )}
-                    </header>
-                    {section.noteKey && <p className="px-4 py-3 text-xs text-muted-foreground">{tSidebar(section.noteKey)}</p>}
-                    {section.items.length > 0 && (
-                      <div className="divide-y divide-border/50 px-4">
-                        {section.items.map((item) => (
-                          <label key={item.module} className="flex cursor-pointer items-center justify-between gap-3 py-2">
-                            <span className="text-sm text-foreground">{tSidebar(item.labelKey)}</span>
-                            <Switch
-                              checked={has(navIdByModule.get(item.module))}
-                              onCheckedChange={(on) => setNav(item.module, on)}
-                            />
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 2. actions */}
+        {/* what they can do */}
         <div>
           <h3 className="text-sm font-semibold text-foreground">{t('actionsTitle')}</h3>
           <p className="text-xs text-muted-foreground">{t('actionsDesc')}</p>
