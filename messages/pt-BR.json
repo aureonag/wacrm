@@ -73,7 +73,6 @@
       "opBoards": "Gestão de Tarefas",
       "opClients": "Clientes",
       "opAffiliates": "Afiliados",
-      "affiliatesAccess": "Acesso à área (só admin por padrão)",
       "matComercial": "Comercial",
       "matMidia": "Mídia",
       "financeiroNote": "O menu Financeiro aparece só para o dono da conta e não tem opção por pessoa."
@@ -3188,9 +3187,7 @@
         "permissionsStateShort": {
           "default": "Padrão",
           "visible": "Visível",
-          "hidden": "Oculto",
-          "allowed": "Permitido",
-          "blocked": "Bloqueado"
+          "hidden": "Oculto"
         },
         "permissionsUpdateError": "Não foi possível atualizar as permissões",
         "permissionsUpdatedToast": "Permissões de {name} atualizadas",

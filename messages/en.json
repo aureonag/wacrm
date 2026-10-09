@@ -73,7 +73,6 @@
       "opBoards": "Task management",
       "opClients": "Clients",
       "opAffiliates": "Affiliates",
-      "affiliatesAccess": "Area access (admin only by default)",
       "matComercial": "Sales",
       "matMidia": "Media",
       "financeiroNote": "The Finance menu is only shown to the account owner and has no per-person option."
@@ -3188,9 +3187,7 @@
         "permissionsStateShort": {
           "default": "Default",
           "visible": "Visible",
-          "hidden": "Hidden",
-          "allowed": "Allowed",
-          "blocked": "Blocked"
+          "hidden": "Hidden"
         },
         "permissionsUpdateError": "Failed to update permissions",
         "permissionsUpdatedToast": "Updated {name}'s permissions",

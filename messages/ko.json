@@ -73,7 +73,6 @@
       "opBoards": "Task management",
       "opClients": "Clients",
       "opAffiliates": "Affiliates",
-      "affiliatesAccess": "Area access (admin only by default)",
       "matComercial": "Sales",
       "matMidia": "Media",
       "financeiroNote": "The Finance menu is only shown to the account owner and has no per-person option."
@@ -3188,9 +3187,7 @@
         "permissionsStateShort": {
           "default": "기본값",
           "visible": "표시",
-          "hidden": "숨김",
-          "allowed": "Allowed",
-          "blocked": "Blocked"
+          "hidden": "숨김"
         },
         "permissionsUpdateError": "권한을 업데이트하지 못했습니다",
         "permissionsUpdatedToast": "{name}의 권한이 업데이트되었습니다",

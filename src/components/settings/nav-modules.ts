@@ -10,12 +10,16 @@
 export interface NavItem {
   module: string;
   labelKey: string;
-  /** A second switch under the item: who may OPEN the area (not just see the menu entry). */
-  access?: { module: string; labelKey: string };
 }
 
-/** Key (in nav_overrides) of the "Acessar Afiliados" permission — operational:affiliates:access. */
+/**
+ * Key (in nav_overrides) of the "Acessar Afiliados" permission
+ * (operational:affiliates:access). It has no switch of its own: the person's
+ * "Afiliados" menu choice drives it, so Visível = sees AND can open it.
+ */
 export const AFFILIATES_ACCESS_MODULE = 'affiliates_access';
+/** The menu item whose choice also grants/denies the access permission above. */
+export const AFFILIATES_MENU_MODULE = 'op_affiliates';
 
 export interface NavSection {
   key: string;
@@ -54,11 +58,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { module: 'op_dashboard', labelKey: 'menuAdmin.opDashboard' },
       { module: 'op_boards', labelKey: 'menuAdmin.opBoards' },
       { module: 'op_clients', labelKey: 'menuAdmin.opClients' },
-      {
-        module: 'op_affiliates',
-        labelKey: 'menuAdmin.opAffiliates',
-        access: { module: AFFILIATES_ACCESS_MODULE, labelKey: 'menuAdmin.affiliatesAccess' },
-      },
+      { module: AFFILIATES_MENU_MODULE, labelKey: 'menuAdmin.opAffiliates' },
     ],
   },
   {
