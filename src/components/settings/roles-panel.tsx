@@ -3,22 +3,19 @@
 // ============================================================
 // RolesPanel — Settings → Roles & permissions (Cargos e Permissões)
 //
-// Migration 058's admin UI: list of cargos, each with the environments
-// it grants and a permission matrix (environment → module → action).
-// Mirrors MembersTab's structure (roster + create dialog) and
-// ContractTemplatesPanel's create/edit Dialog pattern.
+// Migration 058's admin UI. A cargo is the DEFAULT package for a group of
+// people (which menu items they see + what they may do); the exceptions of one
+// person are set in Membros da equipe → "Gerenciar acesso", on top of it.
+// The editor (RoleEditorDialog) uses the same look as that dialog.
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
-import { Briefcase, EyeOff, Loader2, Lock, Pencil, Plus, ShieldCheck, Trash2, Workflow } from 'lucide-react';
+import { Briefcase, ChevronDown, EyeOff, Info, ListChecks, Loader2, Lock, PanelLeft, Pencil, Plus, ShieldCheck, Trash2, Users, Workflow } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -30,22 +27,15 @@ import {
 import { useTranslations } from 'next-intl';
 import { RequireRole } from '@/components/auth/require-role';
 import { SettingsPanelHead } from './settings-panel-head';
+import { RoleEditorDialog } from './role-editor-dialog';
 import { NAV_MODULES, navLabel } from './nav-modules';
 import type { PlatformEnvironment, Permission, Role } from '@/types';
 
-const ENVIRONMENTS: PlatformEnvironment[] = ['comercial', 'operational'];
 const ENV_ICON: Record<PlatformEnvironment, typeof Briefcase> = {
   comercial: Briefcase,
   operational: Workflow,
 };
 
-// Splits the flat Comercial module list into two labeled groups instead
-// of one undifferentiated list — the 11 `comercial:*:view` nav modules
-// (sidebar visibility) read very differently from the CRM-object CRUD
-// modules (dashboard/pipelines/deals/contacts), and showing them
-// together under raw lowercase module strings was part of what Allan
-// found hard to scan (2026-10-01). Only `comercial` gets this split —
-// `operational` stays a flat list, out of scope for this pass.
 const NAV_MODULE_SET = new Set(NAV_MODULES.map((m) => m.module));
 
 export function RolesPanel() {
@@ -55,25 +45,29 @@ export function RolesPanel() {
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [peopleByRole, setPeopleByRole] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
-  const [name, setName] = useState('');
-  const [environments, setEnvironments] = useState<Set<PlatformEnvironment>>(new Set());
-  const [permissionIds, setPermissionIds] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<Role | null>(null);
   const [disablingModule, setDisablingModule] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [rres, pres] = await Promise.all([
+      const [rres, pres, mres] = await Promise.all([
         fetch('/api/account/roles', { cache: 'no-store' }),
         fetch('/api/account/permissions', { cache: 'no-store' }),
+        fetch('/api/account/members', { cache: 'no-store' }),
       ]);
       if (rres.ok) setRoles(((await rres.json()) as { roles: Role[] }).roles);
       if (pres.ok) setPermissions(((await pres.json()) as { permissions: Permission[] }).permissions);
+      if (mres.ok) {
+        const members = ((await mres.json()) as { members: { role_id: string | null }[] }).members;
+        const counts = new Map<string, number>();
+        for (const m of members) if (m.role_id) counts.set(m.role_id, (counts.get(m.role_id) ?? 0) + 1);
+        setPeopleByRole(counts);
+      }
     } catch (err) {
       console.error('[RolesPanel] load error:', err);
       toast.error(t('loadError'));
@@ -86,20 +80,8 @@ export function RolesPanel() {
     void load();
   }, [load]);
 
-  const permissionsByEnvModule = useMemo(() => {
-    const map = new Map<PlatformEnvironment, Map<string, Permission[]>>();
-    for (const perm of permissions) {
-      const envMap = map.get(perm.environment) ?? new Map<string, Permission[]>();
-      const bucket = envMap.get(perm.module) ?? [];
-      bucket.push(perm);
-      envMap.set(perm.module, bucket);
-      map.set(perm.environment, envMap);
-    }
-    return map;
-  }, [permissions]);
-
-  // module -> permission id, for the "disable in every cargo" shortcut
-  // below — only the `comercial:*:view` nav permissions are relevant here.
+  // module -> permission id, for the "disable in every cargo" shortcut — only
+  // the `comercial:*:view` nav permissions are relevant here.
   const navPermissionIdByModule = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of permissions) {
@@ -108,8 +90,18 @@ export function RolesPanel() {
     return map;
   }, [permissions]);
 
-  // How many cargos currently grant each nav module — purely
-  // informational, shown next to the shortcut button.
+  // ids that are menu switches vs "O que pode fazer" actions (Afiliados access counts with its menu item)
+  const { navIds, hiddenIds } = useMemo(() => {
+    const nav = new Set<string>();
+    const hidden = new Set<string>();
+    for (const p of permissions) {
+      if (p.environment === 'comercial' && p.action === 'view' && NAV_MODULE_SET.has(p.module)) nav.add(p.id);
+      if (p.environment === 'operational' && p.module === 'affiliates') hidden.add(p.id);
+    }
+    return { navIds: nav, hiddenIds: hidden };
+  }, [permissions]);
+
+  // How many cargos currently grant each nav module — shown next to the shortcut button.
   const roleCountByModule = useMemo(() => {
     const counts = new Map<string, number>();
     for (const [module, permissionId] of navPermissionIdByModule) {
@@ -151,75 +143,12 @@ export function RolesPanel() {
 
   function openCreate() {
     setEditing(null);
-    setName('');
-    setEnvironments(new Set());
-    setPermissionIds(new Set());
-    setDialogOpen(true);
+    setEditorOpen(true);
   }
 
   function openEdit(role: Role) {
     setEditing(role);
-    setName(role.name);
-    setEnvironments(new Set(role.environments));
-    setPermissionIds(new Set(role.permission_ids));
-    setDialogOpen(true);
-  }
-
-  function toggleEnvironment(env: PlatformEnvironment) {
-    setEnvironments((prev) => {
-      const next = new Set(prev);
-      if (next.has(env)) next.delete(env);
-      else next.add(env);
-      return next;
-    });
-  }
-
-  function togglePermission(id: string) {
-    setPermissionIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleSave() {
-    if (!name.trim()) {
-      toast.error(t('nameRequired'));
-      return;
-    }
-    setSaving(true);
-    try {
-      const payload = {
-        name: name.trim(),
-        environments: [...environments],
-        permission_ids: [...permissionIds],
-      };
-      const res = editing
-        ? await fetch(`/api/account/roles/${editing.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-        : await fetch('/api/account/roles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        toast.error(body.error || t('saveError'));
-        return;
-      }
-      toast.success(t('savedToast', { name: payload.name }));
-      setDialogOpen(false);
-      await load();
-    } catch (err) {
-      console.error('[RolesPanel] save error:', err);
-      toast.error(t('saveError'));
-    } finally {
-      setSaving(false);
-    }
+    setEditorOpen(true);
   }
 
   async function handleDelete() {
@@ -263,52 +192,33 @@ export function RolesPanel() {
         }
       />
 
-      <RequireRole min="admin">
-        <Card>
-          <CardContent className="space-y-1 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t('menuVisibilityTitle')}
-            </p>
-            <p className="mb-2 text-xs text-muted-foreground">{t('menuVisibilityDesc')}</p>
-            {NAV_MODULES.map(({ module }) => {
-              const count = roleCountByModule.get(module) ?? 0;
-              return (
-                <div key={module} className="flex items-center justify-between gap-3 py-1">
-                  <span className="text-sm text-foreground">{navLabel(tSidebar, module)}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {t('grantedToCount', { count })}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDisableEverywhere(module)}
-                      disabled={count === 0 || disablingModule === module}
-                      className="border-border text-muted-foreground hover:bg-muted"
-                    >
-                      {disablingModule === module ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <EyeOff className="size-3.5" />
-                      )}
-                      {t('disableEverywhere')}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </RequireRole>
+      {/* how cargos and "Gerenciar acesso" fit together */}
+      <div className="flex gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+        <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+        <div className="text-xs leading-relaxed text-muted-foreground">
+          <p className="text-sm font-medium text-foreground">{t('howTitle')}</p>
+          <p className="mt-1">{t('howCargo')}</p>
+          <p>
+            {t('howPerson')}{' '}
+            <Link href="/settings?tab=members" className="font-medium text-primary hover:underline">
+              {t('howPersonLink')}
+            </Link>
+          </p>
+        </div>
+      </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <ul className="divide-y divide-border">
-            {roles.map((role) => (
-              <li key={role.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0 flex-1">
+      {/* cargos */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {roles.map((role) => {
+          const menuCount = role.permission_ids.filter((id) => navIds.has(id)).length;
+          const actionCount = role.permission_ids.filter((id) => !navIds.has(id) && !hiddenIds.has(id)).length;
+          const people = peopleByRole.get(role.id) ?? 0;
+          return (
+            <article key={role.id} className="flex flex-col gap-4 rounded-xl border border-border bg-card/40 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
+                    <span className="inline-flex items-center gap-1.5 text-base font-semibold text-foreground">
                       <ShieldCheck className="size-4 text-primary" />
                       {role.name}
                     </span>
@@ -318,6 +228,8 @@ export function RolesPanel() {
                         {t('default')}
                       </Badge>
                     )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     {role.environments.map((env) => {
                       const Icon = ENV_ICON[env];
                       return (
@@ -328,20 +240,19 @@ export function RolesPanel() {
                       );
                     })}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t('permissionCount', { count: role.permission_ids.length })}
-                  </p>
                 </div>
                 <RequireRole min="admin">
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => openEdit(role)} className="border-border text-muted-foreground hover:bg-muted">
                       <Pencil className="size-4" />
+                      {t('edit')}
                     </Button>
                     {!role.is_system_default && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setDeleting(role)}
+                        aria-label={t('deleteBtn')}
                         className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
                       >
                         <Trash2 className="size-4" />
@@ -349,133 +260,79 @@ export function RolesPanel() {
                     )}
                   </div>
                 </RequireRole>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">
-              {editing ? t('editTitle') : t('newRole')}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('nameLabel')}</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('namePlaceholder')}
-                className="bg-muted text-foreground"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('environmentsLabel')}</Label>
-              <div className="flex gap-3">
-                {ENVIRONMENTS.map((env) => {
-                  const Icon = ENV_ICON[env];
-                  return (
-                    <label key={env} className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
-                      <Checkbox checked={environments.has(env)} onCheckedChange={() => toggleEnvironment(env)} />
-                      <Icon className="size-4 text-muted-foreground" />
-                      {tEnv(env)}
-                    </label>
-                  );
-                })}
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <Label className="text-muted-foreground">{t('permissionsLabel')}</Label>
-              {[...permissionsByEnvModule.entries()].map(([env, modules]) => {
-                const EnvIcon = ENV_ICON[env];
-                const moduleEntries = [...modules.entries()];
-                // Only Comercial gets split into Menu Principal vs
-                // Negócios — Operational stays a flat list (see the
-                // NAV_MODULE_SET comment above).
-                const navEntries = env === 'comercial' ? moduleEntries.filter(([m]) => NAV_MODULE_SET.has(m)) : [];
-                const otherEntries = env === 'comercial' ? moduleEntries.filter(([m]) => !NAV_MODULE_SET.has(m)) : moduleEntries;
-                return (
-                  <div key={env} className="rounded-lg border border-border p-3">
-                    <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      <EnvIcon className="size-3.5" />
-                      {tEnv(env)}
-                    </div>
-                    {navEntries.length > 0 && (
-                      <div className="mb-3">
-                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-                          {t('categoryNav')}
-                        </p>
-                        <div className="space-y-2">
-                          {navEntries.map(([module, perms]) => (
-                            <div key={module} className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                              <span className="w-28 shrink-0 text-xs text-muted-foreground">
-                                {navLabel(tSidebar, module)}
-                              </span>
-                              {perms.map((perm) => (
-                                <label key={perm.id} className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
-                                  <Checkbox
-                                    checked={permissionIds.has(perm.id)}
-                                    onCheckedChange={() => togglePermission(perm.id)}
-                                  />
-                                  {perm.label}
-                                </label>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {otherEntries.length > 0 && (
-                      <div>
-                        {env === 'comercial' && navEntries.length > 0 && (
-                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-                            {t('categoryBusiness')}
-                          </p>
-                        )}
-                        <div className="space-y-2">
-                          {otherEntries.map(([module, perms]) => (
-                            <div key={module} className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                              <span className="w-28 shrink-0 text-xs text-muted-foreground">{module}</span>
-                              {perms.map((perm) => (
-                                <label key={perm.id} className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
-                                  <Checkbox
-                                    checked={permissionIds.has(perm.id)}
-                                    onCheckedChange={() => togglePermission(perm.id)}
-                                  />
-                                  {perm.label}
-                                </label>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+              <dl className="grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs">
+                <div>
+                  <dt className="flex items-center gap-1 text-muted-foreground">
+                    <Users className="size-3.5" />
+                    {t('statPeople')}
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-medium text-foreground">{people}</dd>
+                </div>
+                <div>
+                  <dt className="flex items-center gap-1 text-muted-foreground">
+                    <PanelLeft className="size-3.5" />
+                    {t('statMenu')}
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-medium text-foreground">{menuCount}</dd>
+                </div>
+                <div>
+                  <dt className="flex items-center gap-1 text-muted-foreground">
+                    <ListChecks className="size-3.5" />
+                    {t('statActions')}
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-medium text-foreground">{actionCount}</dd>
+                </div>
+              </dl>
+            </article>
+          );
+        })}
+      </div>
+
+      {/* bulk shortcut, out of the way */}
+      <RequireRole min="admin">
+        <details className="group rounded-xl border border-border bg-card/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <span>
+              <span className="block text-sm font-semibold text-foreground">{t('menuVisibilityTitle')}</span>
+              <span className="block text-xs text-muted-foreground">{t('menuVisibilityDesc')}</span>
+            </span>
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="space-y-1 border-t border-border px-4 py-3">
+            {NAV_MODULES.map(({ module }) => {
+              const count = roleCountByModule.get(module) ?? 0;
+              return (
+                <div key={module} className="flex items-center justify-between gap-3 py-1">
+                  <span className="text-sm text-foreground">{navLabel(tSidebar, module)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{t('grantedToCount', { count })}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisableEverywhere(module)}
+                      disabled={count === 0 || disablingModule === module}
+                      className="border-border text-muted-foreground hover:bg-muted"
+                    >
+                      {disablingModule === module ? <Loader2 className="size-3.5 animate-spin" /> : <EyeOff className="size-3.5" />}
+                      {t('disableEverywhere')}
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
+        </details>
+      </RequireRole>
 
-          <DialogFooter className="border-border bg-popover/50">
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              className="border-border bg-transparent text-muted-foreground hover:bg-muted"
-            >
-              {t('cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              {saving ? t('saving') : t('save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RoleEditorDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        role={editing}
+        permissions={permissions}
+        onSaved={load}
+      />
 
       <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
         <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-sm">

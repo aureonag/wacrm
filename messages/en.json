@@ -3460,14 +3460,38 @@
       "deleteTitle": "Delete role",
       "deleteDesc": "Delete \"{name}\"? Members with this role keep their base account role, but lose whatever this cargo granted them.",
       "deleteBtn": "Delete",
-      "menuVisibilityTitle": "Sidebar visibility",
+      "menuVisibilityTitle": "Bulk action: remove a menu item from every cargo",
       "menuVisibilityDesc": "Shortcut to remove an item from every role's menu at once, instead of editing each one.",
       "categoryNav": "Main menu",
       "categoryBusiness": "Business",
       "grantedToCount": "{count, plural, =0 {no roles} =1 {1 role} other {{count} roles}}",
       "disableEverywhere": "Disable for all",
       "disableEverywhereToast": "\"{item}\" disabled for every role",
-      "disableEverywhereError": "Failed to disable for every role"
+      "disableEverywhereError": "Failed to disable for every role",
+      "howTitle": "How cargos and “Manage access” fit together",
+      "howCargo": "A cargo is the default package for a group of people: what shows in the menu and what they can do.",
+      "howPerson": "One person's exception (show or hide an item just for them, sector, access level) lives in Team members →",
+      "howPersonLink": "Manage access",
+      "edit": "Edit",
+      "statPeople": "People",
+      "statMenu": "Menu items",
+      "statActions": "Actions",
+      "environmentHint": {
+        "comercial": "CRM: contacts, deals, inbox, automations.",
+        "operational": "Tasks, boards, clients, timesheet and affiliates."
+      },
+      "menuSectionTitle": "Sidebar menu",
+      "menuSectionDesc": "What shows in the menu for people with this cargo. Turning a whole section off hides all its items.",
+      "actionsTitle": "What they can do",
+      "actionsDesc": "Actions inside the system: create, edit, delete, move… Tick only what this cargo should be able to do.",
+      "modules": {
+        "contacts": "Contacts",
+        "deals": "Deals",
+        "pipelines": "Pipelines",
+        "tasks": "Tasks and boards",
+        "dashboard": "Dashboard",
+        "timesheet": "Timesheet (hours)"
+      }
     },
     "sectors": {
       "title": "Sectors",
