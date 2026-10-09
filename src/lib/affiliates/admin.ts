@@ -1,6 +1,6 @@
 // Server helpers for the Afiliados admin (Operacional → Afiliados).
 //
-// Access is gated by `requireRole("admin")` (owner/admin of the CRM account) —
+// Access: owner/admin of the CRM account, or anyone granted `operational:affiliates:access` —
 // the same provisional rule as the SQL helper `aff_is_staff()` (migration 100).
 // This deliberately does NOT use the Cargos/Permissões system, which is being
 // reorganized separately; when it is ready, swap the check in `requireStaff`
@@ -11,7 +11,8 @@
 
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ForbiddenError, requireRole, UnauthorizedError, type AccountContext } from "@/lib/auth/account";
+import { ForbiddenError, getCurrentAccount, UnauthorizedError, type AccountContext } from "@/lib/auth/account";
+import { hasMinRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { BadInput } from "./campaigns";
@@ -37,7 +38,21 @@ export interface StaffContext {
  * and we keep the old provisional rule (logged), so nothing breaks mid-rollout.
  */
 export async function requirePlatformStaff(): Promise<AccountContext> {
-  const ctx = await requireRole("admin");
+  const ctx = await getCurrentAccount();
+  if (!hasMinRole(ctx.role, "admin")) {
+    // Below admin only with the explicit "Acessar Afiliados" permission (migration 118),
+    // given per person or per cargo. Never granted by default.
+    const { data: allowed, error: permError } = await ctx.supabase.rpc("has_permission", {
+      p_environment: "operational",
+      p_module: "affiliates",
+      p_action: "access",
+    });
+    if (permError) {
+      console.error("[affiliates] has_permission failed:", permError.message);
+      throw new ForbiddenError("Could not verify access");
+    }
+    if (!allowed) throw new ForbiddenError("Afiliados requires the admin role or the Afiliados access permission");
+  }
   const { data, error } = await supabaseAdmin().from("aff_platform_account").select("account_id").maybeSingle();
   if (error) {
     if (isModuleNotReady(error)) {

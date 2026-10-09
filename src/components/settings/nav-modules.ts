@@ -10,7 +10,12 @@
 export interface NavItem {
   module: string;
   labelKey: string;
+  /** A second switch under the item: who may OPEN the area (not just see the menu entry). */
+  access?: { module: string; labelKey: string };
 }
+
+/** Key (in nav_overrides) of the "Acessar Afiliados" permission — operational:affiliates:access. */
+export const AFFILIATES_ACCESS_MODULE = 'affiliates_access';
 
 export interface NavSection {
   key: string;
@@ -49,7 +54,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { module: 'op_dashboard', labelKey: 'menuAdmin.opDashboard' },
       { module: 'op_boards', labelKey: 'menuAdmin.opBoards' },
       { module: 'op_clients', labelKey: 'menuAdmin.opClients' },
-      { module: 'op_affiliates', labelKey: 'menuAdmin.opAffiliates' },
+      {
+        module: 'op_affiliates',
+        labelKey: 'menuAdmin.opAffiliates',
+        access: { module: AFFILIATES_ACCESS_MODULE, labelKey: 'menuAdmin.affiliatesAccess' },
+      },
     ],
   },
   {

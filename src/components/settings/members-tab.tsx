@@ -79,7 +79,7 @@ import { InviteMemberDialog } from './invite-member-dialog';
 import { ResetPasswordDialog } from './reset-password-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
-import { NAV_MODULES, NAV_SECTIONS } from './nav-modules';
+import { AFFILIATES_ACCESS_MODULE, NAV_MODULES, NAV_SECTIONS } from './nav-modules';
 import type { Permission, Role, Sector } from '@/types';
 
 /** Tri-state per module: 'default' follows the member's cargo. */
@@ -176,6 +176,9 @@ export function MembersTab() {
     const map = new Map<string, string>();
     for (const p of permissions) {
       if (p.environment === 'comercial' && p.action === 'view') map.set(p.module, p.id);
+      if (p.environment === 'operational' && p.module === 'affiliates' && p.action === 'access') {
+        map.set(AFFILIATES_ACCESS_MODULE, p.id);
+      }
     }
     return map;
   }, [permissions]);
@@ -258,6 +261,11 @@ export function MembersTab() {
       const granted = member.nav_overrides[module];
       draft.set(module, granted === undefined ? 'default' : granted ? 'visible' : 'hidden');
     }
+    const affiliatesAccess = member.nav_overrides[AFFILIATES_ACCESS_MODULE];
+    draft.set(
+      AFFILIATES_ACCESS_MODULE,
+      affiliatesAccess === undefined ? 'default' : affiliatesAccess ? 'visible' : 'hidden',
+    );
     setDraftNavOverrides(draft);
     // Owner row never opens this dialog (see the `!isOwnerRow` guard at
     // the call site), but guard here too since `draftRole` must be one
@@ -888,11 +896,16 @@ export function MembersTab() {
 function NavVisibilitySelect({
   value,
   onChange,
+  kind = 'visibility',
 }: {
   value: NavOverrideState;
   onChange: (value: NavOverrideState) => void;
+  /** 'access' reads Permitido/Bloqueado (who may open an area) instead of Visível/Oculto. */
+  kind?: 'visibility' | 'access';
 }) {
   const tCargo = useTranslations('Settings.members.cargo');
+  const stateKey = (v: NavOverrideState) =>
+    kind === 'access' ? (v === 'visible' ? 'allowed' : v === 'hidden' ? 'blocked' : 'default') : v;
   const tone =
     value === 'visible' ? 'text-emerald-400' : value === 'hidden' ? 'text-red-400' : 'text-muted-foreground';
   return (
@@ -900,12 +913,12 @@ function NavVisibilitySelect({
       {/* Short labels in the trigger AND in the options: the open panel
           matches the trigger width, so long texts clipped. */}
       <SelectTrigger className={`h-8 w-32 shrink-0 border-border bg-muted text-xs font-medium ${tone}`}>
-        <SelectValue>{tCargo(`permissionsStateShort.${value}`)}</SelectValue>
+        <SelectValue>{tCargo(`permissionsStateShort.${stateKey(value)}`)}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="default">{tCargo('permissionsStateShort.default')}</SelectItem>
-        <SelectItem value="visible">{tCargo('permissionsStateShort.visible')}</SelectItem>
-        <SelectItem value="hidden">{tCargo('permissionsStateShort.hidden')}</SelectItem>
+        <SelectItem value="visible">{tCargo(`permissionsStateShort.${stateKey('visible')}`)}</SelectItem>
+        <SelectItem value="hidden">{tCargo(`permissionsStateShort.${stateKey('hidden')}`)}</SelectItem>
       </SelectContent>
     </Select>
   );
@@ -958,12 +971,24 @@ function NavSectionsGrid({
               {section.items.length > 0 && (
                 <div className="divide-y divide-border/50 px-4">
                   {section.items.map((item) => (
-                    <div key={item.module} className="flex items-center justify-between gap-3 py-1.5">
-                      <span className="text-sm text-foreground">{tSidebar(item.labelKey)}</span>
-                      <NavVisibilitySelect
-                        value={draft.get(item.module) ?? 'default'}
-                        onChange={(v) => onChange(item.module, v)}
-                      />
+                    <div key={item.module} className="py-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm text-foreground">{tSidebar(item.labelKey)}</span>
+                        <NavVisibilitySelect
+                          value={draft.get(item.module) ?? 'default'}
+                          onChange={(v) => onChange(item.module, v)}
+                        />
+                      </div>
+                      {item.access && (
+                        <div className="mt-1.5 flex items-center justify-between gap-3 border-l-2 border-primary/40 pl-3">
+                          <span className="text-xs text-muted-foreground">{tSidebar(item.access.labelKey)}</span>
+                          <NavVisibilitySelect
+                            kind="access"
+                            value={draft.get(item.access.module) ?? 'default'}
+                            onChange={(v) => onChange(item.access!.module, v)}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

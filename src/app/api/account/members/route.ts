@@ -73,25 +73,29 @@ export async function GET() {
     // sectors above, scoped to `comercial:*:view` permissions only (the
     // sidebar-visibility feature's slice of user_permission_overrides;
     // other environments/modules aren't this endpoint's concern).
+    type PermRef = { module: string; environment: string; action: string };
     const navOverridesByProfile = new Map<string, Record<string, boolean>>();
     if (profileIds.length > 0) {
       const { data: overrides } = await ctx.supabase
         .from("user_permission_overrides")
         .select("profile_id, granted, permissions!inner(module, environment, action)")
-        .in("profile_id", profileIds)
-        .eq("permissions.environment", "comercial")
-        .eq("permissions.action", "view");
+        .in("profile_id", profileIds);
       for (const row of (overrides ?? []) as unknown as {
         profile_id: string;
         granted: boolean;
-        permissions: { module: string } | { module: string }[];
+        permissions: PermRef | PermRef[];
       }[]) {
         // Supabase's embed typing for this relation isn't reliably a
         // single object vs. an array across environments — handle both.
         const perm = Array.isArray(row.permissions) ? row.permissions[0] : row.permissions;
         if (!perm) continue;
+        // Only the menu-visibility slice (comercial:*:view) and the Afiliados access permission.
+        const isNav = perm.environment === "comercial" && perm.action === "view";
+        const isAffiliatesAccess =
+          perm.environment === "operational" && perm.module === "affiliates" && perm.action === "access";
+        if (!isNav && !isAffiliatesAccess) continue;
         const bucket = navOverridesByProfile.get(row.profile_id) ?? {};
-        bucket[perm.module] = row.granted;
+        bucket[isAffiliatesAccess ? "affiliates_access" : perm.module] = row.granted;
         navOverridesByProfile.set(row.profile_id, bucket);
       }
     }

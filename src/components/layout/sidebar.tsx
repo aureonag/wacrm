@@ -525,7 +525,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         </Link>
                       </li>
                     )}
-                    {canManageMembers && can("op_affiliates") && (
+                    {(canManageMembers || permissions.has("operational:affiliates:access")) && can("op_affiliates") && (
                       <li>
                         <AffiliatesNav />
                       </li>
