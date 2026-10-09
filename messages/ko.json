@@ -15,6 +15,8 @@
     "createAccount": "계정 만들기"
   },
   "SignupPage": {
+    "inviteOnlyTitle": "Sign-up is by invitation only",
+    "inviteOnlyDesc": "Access to the Aureon CRM is by invitation. Ask the person who manages your team for one.",
     "titleJoin": "계정 만들기 및 참여하기",
     "titleCreate": "계정 만들기",
     "descJoin": "이메일을 인증한 후 팀 초대를 수락하세요.",

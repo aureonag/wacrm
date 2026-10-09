@@ -15,6 +15,8 @@
     "createAccount": "Criar conta"
   },
   "SignupPage": {
+    "inviteOnlyTitle": "Cadastro somente por convite",
+    "inviteOnlyDesc": "O acesso ao CRM Aureon é liberado por convite. Peça o seu a quem administra a sua equipe.",
     "titleJoin": "Criar conta e entrar na equipe",
     "titleCreate": "Criar conta",
     "descJoin": "Confirme seu e-mail e depois aceite o convite para entrar na sua equipe.",

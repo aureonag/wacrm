@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -44,6 +44,26 @@ function SignupPageInner() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const supabase = createClient();
+
+  // Access is by invitation only: the form shows only for a valid invitation link.
+  // null = still checking; no token = closed right away.
+  const [inviteValid, setInviteValid] = useState<boolean | null>(inviteToken ? null : false);
+
+  useEffect(() => {
+    if (!inviteToken) return;
+    let cancelled = false;
+    fetch(`/api/invitations/${encodeURIComponent(inviteToken)}/peek`, { cache: "no-store" })
+      .then((res) => res.json() as Promise<{ ok?: boolean }>)
+      .then((body) => {
+        if (!cancelled) setInviteValid(body.ok === true);
+      })
+      .catch(() => {
+        if (!cancelled) setInviteValid(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteToken]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +109,41 @@ function SignupPageInner() {
     setSuccess(true);
     setLoading(false);
   };
+
+  if (inviteValid === null) return null;
+
+  if (!inviteValid) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md border-border bg-card">
+          <CardHeader className="items-center text-center">
+            <img
+              src="/brand/aureon-logo-white.png"
+              alt="Aureon"
+              className="aureon-logo aureon-logo--dark mb-6 h-7 w-auto justify-self-center"
+            />
+            <img
+              src="/brand/aureon-logo-black.png"
+              alt="Aureon"
+              className="aureon-logo aureon-logo--light mb-6 h-7 w-auto justify-self-center"
+            />
+            <CardTitle className="text-xl text-foreground">{t("inviteOnlyTitle")}</CardTitle>
+            <CardDescription className="text-muted-foreground">{t("inviteOnlyDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/login">
+              <Button
+                variant="outline"
+                className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                {t("backToSignIn")}
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (success) {
     return (
