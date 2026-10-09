@@ -39,7 +39,6 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { module: 'dashboard', labelKey: 'dashboard' },
       { module: 'inbox', labelKey: 'inbox' },
-      { module: 'notifications', labelKey: 'notifications' },
       { module: 'contacts', labelKey: 'contacts' },
       { module: 'prospecting', labelKey: 'prospecting' },
       { module: 'pipelines', labelKey: 'pipelines' },

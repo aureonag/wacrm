@@ -7,10 +7,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useHasEnvironmentAccess, useHasPermission } from "@/hooks/use-permissions";
 import { useTotalUnread } from "@/hooks/use-total-unread";
-import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import { toast } from "sonner";
 import {
-  Bell,
   BookOpen,
   Bot,
   Briefcase,
@@ -142,7 +140,6 @@ interface ComercialNavItem {
 const COMERCIAL_ITEMS: ComercialNavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, module: "dashboard" },
   { href: "/inbox", labelKey: "inbox", icon: MessageSquare, module: "inbox" },
-  { href: "/notifications", labelKey: "notifications", icon: Bell, module: "notifications" },
   { href: "/contacts", labelKey: "contacts", icon: Users, module: "contacts" },
   { href: "/prospecting", labelKey: "prospecting", icon: Radar, beta: true, module: "prospecting" },
   { href: "/pipelines", labelKey: "pipelines", icon: GitBranch, module: "pipelines" },
@@ -216,7 +213,6 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const router = useRouter();
   const { profile, profileLoading, account, accountRole, signOut, isOwner, permissions, canManageMembers } = useAuth();
   const totalUnread = useTotalUnread();
-  const unreadNotifications = useUnreadNotifications();
   const hasComercialAccess = useHasEnvironmentAccess("comercial");
   const hasOperationalAccess = useHasEnvironmentAccess("operational");
   const canViewBoards = useHasPermission("operational", "tasks", "view_boards");
@@ -431,8 +427,6 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         pathname === item.href ||
                         (item.href !== "/dashboard" && pathname.startsWith(item.href));
                       const showUnreadDot = item.href === "/inbox" && totalUnread > 0 && !isActive;
-                      const showNotificationBadge =
-                        item.href === "/notifications" && unreadNotifications > 0;
 
                       return (
                         <li key={item.href}>
@@ -454,14 +448,6 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                               >
                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                              </span>
-                            )}
-                            {showNotificationBadge && (
-                              <span
-                                aria-label={t("unreadNotifications", { count: unreadNotifications })}
-                                className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
-                              >
-                                {unreadNotifications > 9 ? "9+" : unreadNotifications}
                               </span>
                             )}
                           </Link>
