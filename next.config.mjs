@@ -1,4 +1,6 @@
-import type { NextConfig } from "next";
+// Plain JS on purpose (not .ts): Hostinger's build machine (old glibc) cannot load the
+// native SWC binary, and Next 16.3 then fails to compile a TypeScript config
+// ("Failed to load next.config.ts"). A .mjs config needs no compilation.
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
@@ -61,9 +63,10 @@ const SECURITY_HEADERS = [
       "form-action 'self'",
     ].join("; "),
   },
-] as const;
+];
 
-const nextConfig: NextConfig = {
+/** @type {import("next").NextConfig} */
+const nextConfig = {
   // Emit a self-contained server bundle (.next/standalone) so the
   // Docker image can run without node_modules or the Next CLI.
   // Harmless outside Docker: `next start` keeps working as before.
