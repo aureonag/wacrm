@@ -1002,6 +1002,7 @@
       "stage": "Etapa",
       "priority": "Prioridade",
       "assignee": "Responsável",
+      "members": "Membros",
       "sector": "Setor",
       "none": "—",
       "dueDate": "Prazo",
@@ -1154,6 +1155,7 @@
       "stage": "Etapa",
       "priority": "Prioridade",
       "assignee": "Responsável",
+      "members": "Membros",
       "sector": "Setor",
       "none": "—",
       "startDate": "Início",
@@ -1421,6 +1423,16 @@
       "toastMovedToTop": "Tarefa movida para o topo",
       "bulkClone": "Clonar",
       "bulkDelete": "Excluir"
+    },
+    "members": {
+      "add": "Adicionar membros",
+      "title": "Membros",
+      "close": "Fechar",
+      "search": "Pesquisar membros…",
+      "onTask": "Membros do cartão",
+      "available": "Membros do quadro",
+      "none": "Ninguém encontrado",
+      "remove": "Remover {name}"
     },
     "stageMenu": {
       "menuLabel": "Opções da etapa",

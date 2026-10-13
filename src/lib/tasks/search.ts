@@ -24,6 +24,7 @@ export function matchesTaskQuery(task: Task, query: string): boolean {
       code ? String(task.task_number) : "",
       task.contact?.name ?? "",
       task.assignee?.full_name ?? "",
+      ...(task.members ?? []).map((m) => m.name),
       ...(task.tags ?? []).map((t) => t.label),
     ].join(" "),
   );

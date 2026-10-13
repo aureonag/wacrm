@@ -13,12 +13,16 @@ import {
   loadTaskApprovals,
   loadTaskChecklist,
   loadTaskComments,
+  loadTaskMembers,
   loadTaskRecurrenceRule,
   loadTaskTimesheet,
 } from "@/lib/tasks/queries";
 import { TaskLabelsField } from "./task-labels";
 import { TaskShareDialog } from "./task-share-dialog";
 import { moveTaskToTopForUser } from "@/lib/ordering/column-order-db";
+import { MembersField } from "./members-field";
+import type { TaskMember } from "@/lib/tasks/members";
+import { loadEnvironmentMembers } from "@/lib/auth/environment-members";
 import type {
   Board,
   BoardStage,
@@ -153,6 +157,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
   const [task, setTask] = useState<Task | null>(null);
   const [stages, setStages] = useState<BoardStage[]>([]);
   const [boardsList, setBoardsList] = useState<Board[]>([]);
+  // People who can be added as members (those with access to Operacional).
+  const [memberCandidates, setMemberCandidates] = useState<TaskMember[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
@@ -250,7 +256,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
       return;
     }
     const { data: tagRows } = await supabase.from("task_tags").select("*").eq("task_id", taskId);
-    const loadedTask = { ...(taskRow as Task), tags: (tagRows ?? []) as TaskTag[] };
+    const baseTask = { ...(taskRow as Task), tags: (tagRows ?? []) as TaskTag[] };
+    const loadedTask = { ...baseTask, members: await loadTaskMembers(supabase, baseTask) };
 
     const [stageRows, comms, check, appr, subs, act, ts, recurrence] = await Promise.all([
       loadBoardStages(supabase, loadedTask.board_id),
@@ -316,6 +323,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
       setProfiles(profileRows);
       setSectors((sectorRows.data ?? []) as Sector[]);
       setBoardsList(boardRows);
+      const people = await loadEnvironmentMembers(supabase, "operational");
+      if (!cancelled) {
+        setMemberCandidates(people.map((p) => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl ?? null })));
+      }
     })();
     return () => {
       cancelled = true;
@@ -420,6 +431,22 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
     onOpenChange(false);
     onChanged();
     toast.success(t("toastDeleted"));
+  }
+
+  /** Replaces the people on the task (first = main person). Applies at once, like labels. */
+  async function handleSetMembers(profileIds: string[]) {
+    if (!task) return;
+    const res = await fetch(`/api/operational/tasks/${task.id}/members`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile_ids: profileIds }),
+    });
+    if (!res.ok) {
+      toast.error(t("toastFailed"));
+      return;
+    }
+    await reloadAll();
+    onChanged();
   }
 
   async function handleMoveToBoard() {
@@ -772,14 +799,12 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
                       options={PRIORITIES.map((p) => ({ value: p, label: tPriority(p) }))}
                     />
                   </PropRow>
-                  <PropRow icon={UserRound} label={t("assignee")}>
-                    <FieldSelect
-                      bare
-                      label={t("assignee")}
-                      value={(field("assignee_id") as string | null) ?? "__none"}
-                      onChange={(v) => setField("assignee_id", v === "__none" ? null : v)}
+                  <PropRow icon={UserRound} label={t("members")}>
+                    <MembersField
+                      members={task.members ?? []}
+                      candidates={memberCandidates}
                       disabled={!canEdit}
-                      options={[{ value: "__none", label: t("none") }, ...profiles.map((p) => ({ value: p.id, label: p.full_name }))]}
+                      onChange={handleSetMembers}
                     />
                   </PropRow>
                   <PropRow icon={Building2} label={t("sector")}>

@@ -1088,6 +1088,8 @@ export interface Task {
   contact?: Contact | null;
   sector?: Sector | null;
   tags?: TaskTag[];
+  /** People on the task: the assignee first, then participants (hydrated). */
+  members?: import("@/lib/tasks/members").TaskMember[];
   subtask_count?: number;
   /** Project and client of the task (Operacional > Clientes), hydrated for the Kanban card. */
   project?: { id: string; name: string; client_name: string | null; client_code: string | null } | null;

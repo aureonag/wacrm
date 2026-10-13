@@ -15,6 +15,7 @@ import {
 } from "@/components/pipelines/pipeline-owner-filter";
 import { loadEnvironmentMembers } from "@/lib/auth/environment-members";
 import { useColumnOrder } from "@/hooks/use-column-order";
+import { isTaskMember } from "@/lib/tasks/members";
 import { sortTaskIds, type TaskSortKey } from "@/lib/ordering/task-sort";
 import type { StageMenuAction } from "@/components/tasks/stage-menu";
 import { NewStageDialog, StageSettingsDialog, type StagePatch } from "@/components/tasks/stage-dialogs";
@@ -94,7 +95,7 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
       tasks.filter((task) => {
         if (!matchesTaskQuery(task, query)) return false;
         if (effectiveFilter === OWNER_FILTER_ALL) return true;
-        return task.assignee_id === (effectiveFilter === OWNER_FILTER_MINE ? myProfileId : effectiveFilter);
+        return isTaskMember(task, effectiveFilter === OWNER_FILTER_MINE ? myProfileId : effectiveFilter);
       }),
     [tasks, query, effectiveFilter, myProfileId],
   );

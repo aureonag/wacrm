@@ -1002,6 +1002,7 @@
       "stage": "Stage",
       "priority": "Priority",
       "assignee": "Assignee",
+      "members": "Members",
       "sector": "Sector",
       "none": "—",
       "dueDate": "Due date",
@@ -1154,6 +1155,7 @@
       "stage": "Stage",
       "priority": "Priority",
       "assignee": "Assignee",
+      "members": "Members",
       "sector": "Sector",
       "none": "—",
       "startDate": "Start",
@@ -1421,6 +1423,16 @@
       "toastMovedToTop": "Task moved to the top",
       "bulkClone": "Clone",
       "bulkDelete": "Delete"
+    },
+    "members": {
+      "add": "Add members",
+      "title": "Members",
+      "close": "Close",
+      "search": "Search members…",
+      "onTask": "Card members",
+      "available": "Board members",
+      "none": "No one found",
+      "remove": "Remove {name}"
     },
     "stageMenu": {
       "menuLabel": "Stage options",

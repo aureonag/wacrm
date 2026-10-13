@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { composeMembers, type TaskMember } from "./members";
 import type {
   Board,
   BoardStage,
@@ -54,7 +55,46 @@ export async function loadBoardTasks(db: SupabaseClient, boardId: string): Promi
     console.error("Failed to load board tasks:", error.message);
     return [];
   }
-  return hydrateTaskProject(db, await hydrateTaskTime(db, await hydrateTaskTags(db, (data ?? []) as Task[])));
+  return hydrateTaskMembers(
+    db,
+    await hydrateTaskProject(db, await hydrateTaskTime(db, await hydrateTaskTags(db, (data ?? []) as Task[]))),
+  );
+}
+
+type MemberProfile = { id: string; full_name: string | null; avatar_url: string | null };
+
+/** Batch-attaches `members` (assignee + participants) with two plain queries. */
+async function hydrateTaskMembers(db: SupabaseClient, tasks: Task[]): Promise<Task[]> {
+  const taskIds = tasks.map((t) => t.id);
+  if (taskIds.length === 0) return tasks;
+
+  const { data: rows, error } = await db.from("task_participants").select("task_id, profile_id").in("task_id", taskIds);
+  if (error) {
+    console.error("Failed to load task participants:", error.message);
+    return tasks.map((t) => ({ ...t, members: composeMembers(t.assignee, []) }));
+  }
+  const links = (rows ?? []) as { task_id: string; profile_id: string }[];
+  const profileIds = [...new Set(links.map((r) => r.profile_id))];
+  const profileById = new Map<string, MemberProfile>();
+  if (profileIds.length > 0) {
+    const { data: profiles } = await db.from("profiles").select("id, full_name, avatar_url").in("id", profileIds);
+    for (const p of (profiles ?? []) as MemberProfile[]) profileById.set(p.id, p);
+  }
+  const byTask = new Map<string, MemberProfile[]>();
+  for (const link of links) {
+    const profile = profileById.get(link.profile_id);
+    if (!profile) continue;
+    const bucket = byTask.get(link.task_id) ?? [];
+    bucket.push(profile);
+    byTask.set(link.task_id, bucket);
+  }
+  return tasks.map((t) => ({ ...t, members: composeMembers(t.assignee, byTask.get(t.id) ?? []) }));
+}
+
+/** The people on one task (for the task panel). */
+export async function loadTaskMembers(db: SupabaseClient, task: Task): Promise<TaskMember[]> {
+  const [withMembers] = await hydrateTaskMembers(db, [task]);
+  return withMembers?.members ?? [];
 }
 
 /** Batch-attaches `project` (name + client) with two plain queries (no embed that could break the board). */

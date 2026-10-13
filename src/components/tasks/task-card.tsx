@@ -4,6 +4,7 @@ import type { BoardStage, Task } from "@/types";
 import { Building2, Calendar, Check, Flag, Pause, Play, User } from "lucide-react";
 import { formatTaskCode } from "@/lib/tasks/code";
 import { LabelPill } from "./task-labels";
+import { MemberAvatar } from "./members-field";
 import { TaskCardMenu, type TaskMenuAction, type TaskMenuPerms } from "./task-card-menu";
 import { formatClockSeconds, summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { useTranslations } from "next-intl";
@@ -240,13 +241,28 @@ export function TaskCard({
         ) : (
           <span />
         )}
-        {task.assignee?.full_name && (
-          <span
-            title={task.assignee.full_name}
-            className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary"
-          >
-            {initials(task.assignee.full_name)}
+        {(task.members?.length ?? 0) > 0 ? (
+          <span className="flex items-center -space-x-1.5">
+            {task.members!.slice(0, 3).map((m) => (
+              <span key={m.id} className="rounded-full ring-2 ring-muted">
+                <MemberAvatar member={m} size={20} />
+              </span>
+            ))}
+            {task.members!.length > 3 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-[9px] font-semibold text-muted-foreground ring-2 ring-muted">
+                +{task.members!.length - 3}
+              </span>
+            )}
           </span>
+        ) : (
+          task.assignee?.full_name && (
+            <span
+              title={task.assignee.full_name}
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary"
+            >
+              {initials(task.assignee.full_name)}
+            </span>
+          )
         )}
       </div>
     </div>

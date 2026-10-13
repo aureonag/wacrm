@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { splitMembers } from "@/lib/tasks/members";
 import type { TaskPriority } from "@/types";
 
 const PRIORITIES: TaskPriority[] = ["low", "medium", "high"];
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
           project_id?: unknown;
           sector_id?: unknown;
           assignee_id?: unknown;
+          member_ids?: unknown;
           priority?: unknown;
           is_urgent?: unknown;
           start_date?: unknown;
@@ -83,6 +85,26 @@ export async function POST(request: Request) {
       projectId = project.id as string;
     }
 
+    // People on the task: `member_ids` (first = main person, rest = participants) or the
+    // older single `assignee_id`. Only people of this account.
+    let assigneeId: string | null = typeof body?.assignee_id === "string" ? body.assignee_id : null;
+    let participantIds: string[] = [];
+    if (Array.isArray(body?.member_ids)) {
+      const wanted = [...new Set(body.member_ids.filter((v): v is string => typeof v === "string"))].slice(0, 30);
+      if (wanted.length > 0) {
+        const { data: found } = await ctx.supabase
+          .from("profiles")
+          .select("id")
+          .eq("account_id", ctx.accountId)
+          .in("id", wanted);
+        const valid = new Set((found ?? []).map((p) => p.id as string));
+        if (wanted.some((id) => !valid.has(id))) {
+          return NextResponse.json({ error: "Member not found" }, { status: 400 });
+        }
+      }
+      ({ assigneeId, participantIds } = splitMembers(wanted));
+    }
+
     const { count } = await ctx.supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
@@ -99,7 +121,7 @@ export async function POST(request: Request) {
         contact_id: typeof body?.contact_id === "string" ? body.contact_id : null,
         project_id: projectId,
         sector_id: typeof body?.sector_id === "string" ? body.sector_id : null,
-        assignee_id: typeof body?.assignee_id === "string" ? body.assignee_id : null,
+        assignee_id: assigneeId,
         priority,
         is_urgent: body?.is_urgent === true,
         start_date: typeof body?.start_date === "string" ? body.start_date : null,
@@ -115,6 +137,13 @@ export async function POST(request: Request) {
     if (error) {
       console.error("[POST /api/operational/tasks] insert error:", error);
       return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+    }
+
+    if (participantIds.length > 0) {
+      const { error: participantsError } = await ctx.supabase
+        .from("task_participants")
+        .insert(participantIds.map((profile_id) => ({ task_id: data.id, profile_id })));
+      if (participantsError) console.error("[POST /api/operational/tasks] participants insert error:", participantsError);
     }
 
     // Optional starting checklist (from a template / AI draft).

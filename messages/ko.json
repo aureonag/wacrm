@@ -1002,6 +1002,7 @@
       "stage": "단계",
       "priority": "우선순위",
       "assignee": "담당자",
+      "members": "멤버",
       "sector": "부서",
       "none": "—",
       "dueDate": "마감일",
@@ -1154,6 +1155,7 @@
       "stage": "단계",
       "priority": "우선순위",
       "assignee": "담당자",
+      "members": "멤버",
       "sector": "부서",
       "none": "—",
       "startDate": "시작일",
@@ -1421,6 +1423,16 @@
       "toastMovedToTop": "Task moved to the top",
       "bulkClone": "Clone",
       "bulkDelete": "Delete"
+    },
+    "members": {
+      "add": "멤버 추가",
+      "title": "멤버",
+      "close": "닫기",
+      "search": "멤버 검색…",
+      "onTask": "카드 멤버",
+      "available": "보드 멤버",
+      "none": "검색 결과 없음",
+      "remove": "{name} 제거"
     },
     "stageMenu": {
       "menuLabel": "Stage options",

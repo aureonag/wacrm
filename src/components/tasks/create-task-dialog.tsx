@@ -29,6 +29,7 @@ import { Sparkles } from "lucide-react";
 import { draftTaskFromDescription } from "@/lib/tasks/internal-agent";
 import { Textarea } from "@/components/ui/textarea";
 import { TextareaWithEmoji } from "@/components/ui/textarea-with-emoji";
+import { MembersField } from "./members-field";
 import {
   TASK_TEMPLATES,
   checklistFromText,
@@ -63,7 +64,8 @@ export function CreateTaskDialog({
 
   const [title, setTitle] = useState("");
   const [stageId, setStageId] = useState("");
-  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  // People on the new task, in order (the first one is the main person).
+  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [sectorId, setSectorId] = useState<string | null>(null);
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [isUrgent, setIsUrgent] = useState(false);
@@ -84,7 +86,6 @@ export function CreateTaskDialog({
     if (!open) return;
     setTitle("");
     setStageId(defaultStageId || stages[0]?.id || "");
-    setAssigneeId(null);
     setSectorId(null);
     setPriority("medium");
     setIsUrgent(false);
@@ -96,6 +97,7 @@ export function CreateTaskDialog({
     setBriefingText("");
     setChecklistText("");
     setAiDescription("");
+    setMemberIds([]);
   }, [open, defaultStageId, stages]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -159,7 +161,7 @@ export function CreateTaskDialog({
         board_id: boardId,
         stage_id: stageId,
         title: title.trim(),
-        assignee_id: assigneeId,
+        member_ids: memberIds,
         sector_id: sectorId,
         priority,
         is_urgent: isUrgent,
@@ -284,20 +286,15 @@ export function CreateTaskDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
-              <Label className="text-muted-foreground">{t("assignee")}</Label>
-              <Select value={assigneeId ?? "__none"} onValueChange={(v) => setAssigneeId(v === "__none" ? null : (v as string))}>
-                <SelectTrigger className="w-full bg-muted border-border text-foreground">
-                  <SelectValue>{profiles.find((p) => p.id === assigneeId)?.full_name ?? t("none")}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">{t("none")}</SelectItem>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-muted-foreground">{t("members")}</Label>
+              <MembersField
+                members={memberIds.flatMap((id) => {
+                  const p = profiles.find((x) => x.id === id);
+                  return p ? [{ id: p.id, name: p.full_name, avatarUrl: p.avatar_url ?? null }] : [];
+                })}
+                candidates={profiles.map((p) => ({ id: p.id, name: p.full_name, avatarUrl: p.avatar_url ?? null }))}
+                onChange={setMemberIds}
+              />
             </div>
 
             <div className="grid gap-2">
