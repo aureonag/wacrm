@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 // Cliente -> Projeto of a task. The clients are the ACTIVE ones of
 // Operacional -> Clientes (not the CRM's contact list) and the projects are the
@@ -120,58 +120,36 @@ export function ClientProjectFields({ projectId, onChange, onClientName, disable
   return (
     <>
       <Field label={t("client")} icon="client">
-        <Select
+        <SearchableSelect
           value={clientId ?? NONE}
           disabled={disabled}
-          onValueChange={(v) => {
-            const next = v === NONE ? null : (v as string);
+          onChange={(v) => {
+            const next = v === NONE ? null : v;
             setPickedClient(next);
             // A project of another client no longer applies.
             if (projectId && projectClientId !== next) onChange(null);
           }}
-        >
-          <SelectTrigger className="h-8 w-full border-border bg-muted text-xs text-foreground">
-            <SelectValue>
-              {clientId ? (allClients.find((c) => c.id === clientId) ? clientLabel(allClients.find((c) => c.id === clientId)!) : "") : t("noClient")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>{t("noClient")}</SelectItem>
-            {sortedClients.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {clientLabel(c)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          noneOption={{ value: NONE, label: t("noClient") }}
+          options={sortedClients.map((c) => ({ value: c.id, label: clientLabel(c) }))}
+          placeholder={t("noClient")}
+          searchPlaceholder={t("searchClient")}
+          emptyLabel={t("noResults")}
+        />
       </Field>
 
       <Field label={t("project")} icon="project">
-        <Select
+        <SearchableSelect
           value={projectId ?? NONE}
           disabled={disabled || !clientId || clientProjects.length === 0}
-          onValueChange={(v) => onChange(v === NONE ? null : (v as string))}
-        >
-          <SelectTrigger className="h-8 w-full border-border bg-muted text-xs text-foreground">
-            <SelectValue>
-              {projectId
-                ? (allProjects.find((p) => p.id === projectId)?.name ?? "")
-                : clientId
-                  ? clientProjects.length === 0
-                    ? t("noProjects")
-                    : t("pickProject")
-                  : t("pickClientFirst")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>{t("noProject")}</SelectItem>
-            {clientProjects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onChange={(v) => onChange(v === NONE ? null : v)}
+          noneOption={{ value: NONE, label: t("noProject") }}
+          options={clientProjects.map((p) => ({ value: p.id, label: p.name }))}
+          placeholder={
+            clientId ? (clientProjects.length === 0 ? t("noProjects") : t("pickProject")) : t("pickClientFirst")
+          }
+          searchPlaceholder={t("searchProject")}
+          emptyLabel={t("noResults")}
+        />
         {clientId && clientProjects.length === 0 && loaded && (
           <p className="mt-1 text-[11px] text-amber-500">
             {t("noProjectsHint")}{" "}

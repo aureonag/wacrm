@@ -1075,7 +1075,10 @@
       "pickProject": "Select the project",
       "noProjects": "Client has no projects",
       "noProjectsHint": "This client has no projects yet, so the task will not be linked to it.",
-      "openClient": "Create a project in Clients"
+      "openClient": "Create a project in Clients",
+      "searchClient": "Search client...",
+      "searchProject": "Search project...",
+      "noResults": "Nothing found"
     },
     "briefing": {
       "bold": "Bold",
