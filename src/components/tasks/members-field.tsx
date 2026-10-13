@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -56,6 +56,8 @@ export function MembersField({ members, candidates, onChange, disabled, classNam
   const t = useTranslations("Operational.members");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // The panel hangs from the whole field (like Cliente/Etiquetas), straight down.
+  const fieldRef = useRef<HTMLDivElement>(null);
 
   const memberIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
   const q = fold(query.trim());
@@ -72,7 +74,7 @@ export function MembersField({ members, candidates, onChange, disabled, classNam
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+    <div ref={fieldRef} className={cn("flex flex-wrap items-center gap-1.5", className)}>
       {members.map((m) => (
         <MemberAvatar key={m.id} member={m} />
       ))}
@@ -91,7 +93,7 @@ export function MembersField({ members, candidates, onChange, disabled, classNam
           >
             <Plus className="h-4 w-4" />
           </PopoverTrigger>
-          <PopoverContent align="start" sideOffset={6} className="w-72 gap-2 p-3">
+          <PopoverContent anchor={fieldRef} side="bottom" align="start" sideOffset={8} className="w-(--anchor-width) min-w-64 gap-2 p-3">
             <div className="relative flex items-center justify-center">
               <h4 className="text-sm font-semibold text-foreground">{t("title")}</h4>
               <button

@@ -1116,7 +1116,8 @@ function FieldSelect({
         <SelectTrigger className="h-8 w-full bg-muted border-border text-xs text-foreground">
           <SelectValue>{options.find((o) => o.value === value)?.label ?? ""}</SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        {/* Hangs below the field, like Cliente/Projeto, instead of covering it. */}
+        <SelectContent align="start" alignItemWithTrigger={false}>
           {options.map((o) => (
             <SelectItem key={o.value} value={o.value}>
               {o.label}
