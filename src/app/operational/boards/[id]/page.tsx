@@ -20,12 +20,16 @@ import { BoardSettings } from "@/components/tasks/board-settings";
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Search, Settings } from "lucide-react";
+import { ArrowLeft, Copy, FolderInput, Loader2, Plus, Search, Settings, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { matchesTaskQuery } from "@/lib/tasks/search";
 import { Input } from "@/components/ui/input";
+import { TaskShareDialog } from "@/components/tasks/task-share-dialog";
+import { MoveTaskDialog } from "@/components/tasks/move-task-dialog";
+import type { TaskMenuAction, TaskMenuPerms } from "@/components/tasks/task-card-menu";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function BoardKanbanPage(props: { params: Promise<{ id: string }> }) {
   // useSearchParams (for the Header active-timer's `?task=` deep link)
@@ -41,6 +45,7 @@ export default function BoardKanbanPage(props: { params: Promise<{ id: string }>
 function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const { id: boardId } = use(params);
   const t = useTranslations("Operational.boards");
+  const tc = useTranslations("Operational.cardActions");
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -51,6 +56,9 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const hasEditPermission = useHasPermission("operational", "tasks", "edit_tasks");
   const canMoveTasks = hasMovePermission || hasEditPermission;
   const canTrackTime = useHasPermission("operational", "timesheet", "track");
+  const canDeleteTasks = useHasPermission("operational", "tasks", "delete_tasks");
+  const canCommentTasks = useHasPermission("operational", "tasks", "comment");
+  const canEditTimesheet = useHasPermission("operational", "timesheet", "edit_entries");
   const { user, profile } = useAuth();
   const [timerBusyTaskId, setTimerBusyTaskId] = useState<string | null>(null);
   // tasks.assignee_id stores the PROFILE id (not the login id).
@@ -117,6 +125,15 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   // read once as the initial value (not synced via an effect) so the
   // drawer opens on arrival without an extra render/setState pass.
   const [openTaskId, setOpenTaskId] = useState<string | null>(() => searchParams.get("task"));
+  // Tab the panel opens on (from the card menu: comments / timesheet / approvals).
+  const [openTaskTab, setOpenTaskTab] = useState<string | null>(null);
+
+  // Selection (square on each card) and the actions on it.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [shareTaskId, setShareTaskId] = useState<string | null>(null);
+  const [moveIds, setMoveIds] = useState<string[] | null>(null);
+  const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const reload = useCallback(async () => {
     const [{ data: boardRow }, stageRows, taskRows] = await Promise.all([
@@ -220,7 +237,145 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   }
 
   function handleOpenTask(taskId: string) {
+    setOpenTaskTab(null);
     setOpenTaskId(taskId);
+  }
+
+  // ---- selection ----
+  // Only tasks still on the board (and visible with the current filter) count.
+  const selectedList = useMemo(
+    () => visibleTasks.filter((task) => selectedIds.has(task.id)).map((task) => task.id),
+    [visibleTasks, selectedIds],
+  );
+
+  function toggleSelect(taskId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }
+
+  function toggleStageSelect(taskIds: string[], select: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of taskIds) {
+        if (select) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
+
+  const menuPerms: TaskMenuPerms = {
+    canEdit: hasEditPermission,
+    canCreate: canCreateTasks,
+    canDelete: canDeleteTasks,
+    canEditTimesheet,
+    canComment: canCommentTasks,
+  };
+
+  /** Runs one request per task, one after the other; returns how many worked. */
+  async function runForEach(ids: string[], request: (id: string) => Promise<Response>): Promise<number> {
+    let ok = 0;
+    for (const id of ids) {
+      try {
+        const res = await request(id);
+        if (res.ok) ok += 1;
+      } catch {
+        // counted as failed
+      }
+    }
+    return ok;
+  }
+
+  function reportBulk(done: number, total: number, okKey: "toastCloned" | "toastMoved" | "toastDeleted") {
+    if (done === total) toast.success(tc(okKey, { count: done }));
+    else if (done === 0) toast.error(tc("toastFailed"));
+    else toast.warning(tc("toastPartial", { done, total }));
+  }
+
+  async function cloneTasks(ids: string[]) {
+    setBulkBusy(true);
+    const done = await runForEach(ids, (id) => fetch(`/api/operational/tasks/${id}/clone`, { method: "POST" }));
+    setBulkBusy(false);
+    reportBulk(done, ids.length, "toastCloned");
+    setSelectedIds(new Set());
+    await reload();
+  }
+
+  async function moveTasksToBoard(ids: string[], targetBoardId: string, targetStageId: string) {
+    setBulkBusy(true);
+    const done = await runForEach(ids, (id) =>
+      fetch(`/api/operational/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ board_id: targetBoardId, stage_id: targetStageId }),
+      }),
+    );
+    setBulkBusy(false);
+    setMoveIds(null);
+    reportBulk(done, ids.length, "toastMoved");
+    setSelectedIds(new Set());
+    await reload();
+  }
+
+  async function deleteTasks(ids: string[]) {
+    setBulkBusy(true);
+    const done = await runForEach(ids, (id) => fetch(`/api/operational/tasks/${id}`, { method: "DELETE" }));
+    setBulkBusy(false);
+    setDeleteIds(null);
+    reportBulk(done, ids.length, "toastDeleted");
+    setSelectedIds(new Set());
+    await reload();
+  }
+
+  async function moveToTop(taskId: string) {
+    const task = tasks.find((x) => x.id === taskId);
+    if (!task) return;
+    const positions = tasks.filter((x) => x.stage_id === task.stage_id).map((x) => x.position);
+    const minPosition = positions.length > 0 ? Math.min(...positions) : 0;
+    const res = await fetch(`/api/operational/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ position: minPosition - 1 }),
+    });
+    if (res.ok) toast.success(tc("toastMovedToTop"));
+    else toast.error(tc("toastFailed"));
+    await reload();
+  }
+
+  function handleMenuAction(taskId: string, action: TaskMenuAction) {
+    switch (action) {
+      case "moveToTop":
+        void moveToTop(taskId);
+        break;
+      case "moveToBoard":
+        setMoveIds([taskId]);
+        break;
+      case "clone":
+        void cloneTasks([taskId]);
+        break;
+      case "openComments":
+        setOpenTaskTab("comments");
+        setOpenTaskId(taskId);
+        break;
+      case "adjustHours":
+        setOpenTaskTab("timesheet");
+        setOpenTaskId(taskId);
+        break;
+      case "requestApproval":
+        setOpenTaskTab("approvals");
+        setOpenTaskId(taskId);
+        break;
+      case "share":
+        setShareTaskId(taskId);
+        break;
+      case "delete":
+        setDeleteIds([taskId]);
+        break;
+    }
   }
 
   if (loading) return null;
@@ -286,6 +441,53 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
         )}
       </div>
 
+      {selectedList.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              aria-label={tc("clearSelection")}
+              title={tc("clearSelection")}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-medium text-foreground">{tc("selectedCount", { count: selectedList.length })}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {canCreateTasks && (
+              <Button
+                variant="outline"
+                disabled={bulkBusy}
+                onClick={() => void cloneTasks(selectedList)}
+                className="border-border bg-card text-foreground hover:bg-muted"
+              >
+                {bulkBusy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />}
+                {tc("bulkClone")}
+              </Button>
+            )}
+            {hasEditPermission && (
+              <Button
+                variant="outline"
+                disabled={bulkBusy}
+                onClick={() => setMoveIds(selectedList)}
+                className="border-border bg-card text-foreground hover:bg-muted"
+              >
+                <FolderInput className="mr-1 h-4 w-4" />
+                {tc("moveToBoard")}
+              </Button>
+            )}
+            {canDeleteTasks && (
+              <Button disabled={bulkBusy} onClick={() => setDeleteIds(selectedList)} className="bg-red-600 text-white hover:bg-red-700">
+                <Trash2 className="mr-1 h-4 w-4" />
+                {tc("bulkDelete")}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {stages.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("noStages")}</p>
       ) : (
@@ -300,6 +502,11 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
             canTrack={canTrackTime}
             onToggleTimer={handleToggleTimer}
             timerBusyTaskId={timerBusyTaskId}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleStage={toggleStageSelect}
+            menuPerms={menuPerms}
+            onMenuAction={handleMenuAction}
           />
         </div>
       )}
@@ -313,7 +520,51 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
         onCreated={reload}
       />
 
+      <TaskShareDialog
+        open={!!shareTaskId}
+        onOpenChange={(open) => !open && setShareTaskId(null)}
+        task={tasks.find((x) => x.id === shareTaskId) ?? null}
+      />
+
+      <MoveTaskDialog
+        open={moveIds !== null}
+        onOpenChange={(open) => !open && setMoveIds(null)}
+        count={moveIds?.length ?? 0}
+        currentBoardId={boardId}
+        busy={bulkBusy}
+        onConfirm={(targetBoardId, targetStageId) => moveTasksToBoard(moveIds ?? [], targetBoardId, targetStageId)}
+      />
+
+      <Dialog open={deleteIds !== null} onOpenChange={(open) => !open && !bulkBusy && setDeleteIds(null)}>
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{tc("deleteTitle", { count: deleteIds?.length ?? 0 })}</DialogTitle>
+          </DialogHeader>
+          <p className="py-1 text-sm text-red-400">{tc("deleteDesc")}</p>
+          <DialogFooter className="border-border bg-popover/50">
+            <Button
+              variant="outline"
+              disabled={bulkBusy}
+              onClick={() => setDeleteIds(null)}
+              className="border-border bg-transparent text-muted-foreground hover:bg-muted"
+            >
+              {tc("cancel")}
+            </Button>
+            <Button
+              disabled={bulkBusy}
+              onClick={() => void deleteTasks(deleteIds ?? [])}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {bulkBusy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+              {tc("deleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <TaskDrawer
+        key={openTaskTab ?? "default"}
+        initialTab={openTaskTab ?? undefined}
         taskId={openTaskId}
         open={!!openTaskId}
         onOpenChange={(open) => !open && setOpenTaskId(null)}

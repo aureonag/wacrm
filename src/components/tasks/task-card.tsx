@@ -1,9 +1,10 @@
 "use client";
 
 import type { BoardStage, Task } from "@/types";
-import { Building2, Calendar, Flag, Pause, Play, User } from "lucide-react";
+import { Building2, Calendar, Check, Flag, Pause, Play, User } from "lucide-react";
 import { formatTaskCode } from "@/lib/tasks/code";
 import { LabelPill } from "./task-labels";
+import { TaskCardMenu, type TaskMenuAction, type TaskMenuPerms } from "./task-card-menu";
 import { formatClockSeconds, summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { useTranslations } from "next-intl";
 
@@ -21,6 +22,15 @@ interface TaskCardProps {
   onToggleTimer?: (taskId: string, runningByMe: boolean) => void;
   /** A timer request for this card is in flight. */
   timerBusy?: boolean;
+  /** Selection (square on the card). Absent = no selection on this board. */
+  selection?: {
+    selected: boolean;
+    /** at least one task of the board is selected: a click on the card toggles it */
+    active: boolean;
+    onToggle: () => void;
+  };
+  /** The "•••" menu. Absent = no menu (e.g. the drag preview). */
+  menu?: { perms: TaskMenuPerms; onAction: (action: TaskMenuAction) => void };
 }
 
 function formatDate(dateStr: string) {
@@ -52,14 +62,25 @@ export function TaskCard({
   canTrack,
   onToggleTimer,
   timerBusy,
+  selection,
+  menu,
 }: TaskCardProps) {
   const t = useTranslations("Operational.tasks.card");
 
+  const selecting = !!selection?.active;
   const cardClassName = `group relative block w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
     isOverlay
       ? "shadow-xl"
-      : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
-  }`;
+      : selecting
+        ? ""
+        : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
+  } ${selection?.selected ? "border-primary ring-2 ring-primary/40" : ""}`;
+  // While something is selected, a click on the card selects it (it does not open it).
+  const handleCardClick = () => {
+    if (selection && selecting) selection.onToggle();
+    else onOpen?.(task.id);
+  };
+  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
 
   const time = summarizeTaskTime(task.time_entries, now);
   const runningByMe = !!currentUserId && time.people.some((p) => p.userId === currentUserId && p.running);
@@ -71,12 +92,12 @@ export function TaskCard({
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onOpen?.(task.id)}
+      onClick={handleCardClick}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onOpen?.(task.id);
+          handleCardClick();
         }
       }}
       className={cardClassName}
@@ -87,11 +108,38 @@ export function TaskCard({
         style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
       />
 
-      {formatTaskCode(task.task_number) && (
-        <p className="mb-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-          {formatTaskCode(task.task_number)}
+      <div className="mb-0.5 flex min-h-6 items-center justify-between gap-2">
+        <p className="font-mono text-[10px] font-medium text-muted-foreground">
+          {formatTaskCode(task.task_number) ?? ""}
         </p>
-      )}
+        {!isOverlay && (selection || menu) && (
+          <div className="-mr-1 flex shrink-0 items-center gap-1">
+            {selection && (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={selection.selected}
+                aria-label={t("selectAria")}
+                title={t("selectAria")}
+                onClick={(e) => {
+                  stop(e);
+                  selection.onToggle();
+                }}
+                onPointerDown={stop}
+                onKeyDown={stop}
+                className={`flex h-4 w-4 items-center justify-center rounded border transition-opacity ${
+                  selection.selected
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-muted-foreground/50 bg-transparent opacity-60 hover:opacity-100 group-hover:opacity-100"
+                }`}
+              >
+                {selection.selected && <Check className="h-3 w-3" />}
+              </button>
+            )}
+            {menu && <TaskCardMenu perms={menu.perms} onAction={menu.onAction} />}
+          </div>
+        )}
+      </div>
       <div className="flex items-start justify-between gap-2">
         <h4 className="flex-1 text-sm font-semibold leading-snug text-foreground break-words">
           {task.title}

@@ -1041,7 +1041,8 @@
           "low": "P3",
           "medium": "P2",
           "high": "P1"
-        }
+        },
+        "selectAria": "Select task"
       }
     },
     "labels": {
@@ -1232,7 +1233,8 @@
         "noScope": "계약에 범위 항목(계약 서비스, 포함 내용, 책임)이 없습니다."
       },
       "project": "Project",
-      "projectCurrent": "Current project (archived or inactive client)"
+      "projectCurrent": "Current project (archived or inactive client)",
+      "share": "Share"
     },
     "approvals": {
       "selectRecipient": "승인할 사람을 선택하세요",
@@ -1377,6 +1379,45 @@
       "taskOpen": "Open",
       "taskDone": "Done",
       "taskOverdue": "Overdue"
+    },
+    "cardActions": {
+      "menuLabel": "Task actions",
+      "moveToTop": "Move to top of stage",
+      "moveToBoard": "Move to another board",
+      "clone": "Clone task",
+      "openComments": "Open comments",
+      "share": "Share",
+      "adjustHours": "Adjust hours",
+      "requestApproval": "Request approval",
+      "delete": "Delete task",
+      "shareTitle": "Share task",
+      "shareDesc": "Whoever opens the link must be signed in to the CRM and have access to Operations. Signed out, the CRM asks for the login first.",
+      "shareLinkLabel": "Task link",
+      "shareCopy": "Copy link",
+      "shareCopied": "Link copied",
+      "shareCopyManual": "Could not copy automatically: the link is selected, just copy it.",
+      "shareWhatsapp": "Send on WhatsApp",
+      "shareWhatsappMessage": "Task: {title}\n{link}",
+      "moveTitle": "{count, plural, =1 {Move task to another board} other {Move # tasks to another board}}",
+      "moveBoard": "Board",
+      "moveStage": "Stage",
+      "movePickBoard": "Pick the board",
+      "movePickStage": "Pick the stage",
+      "move": "Move",
+      "cancel": "Cancel",
+      "selectedCount": "{count, plural, =1 {1 task selected} other {# tasks selected}}",
+      "clearSelection": "Clear selection",
+      "deleteTitle": "{count, plural, =1 {Delete task} other {Delete # tasks}}",
+      "deleteDesc": "This cannot be undone. Logged hours and comments are deleted too.",
+      "deleteConfirm": "Delete",
+      "toastCloned": "{count, plural, =1 {Task cloned} other {# tasks cloned}}",
+      "toastMoved": "{count, plural, =1 {Task moved} other {# tasks moved}}",
+      "toastDeleted": "{count, plural, =1 {Task deleted} other {# tasks deleted}}",
+      "toastPartial": "{done} of {total} done. Some could not be processed.",
+      "toastFailed": "Could not complete the action.",
+      "toastMovedToTop": "Task moved to the top",
+      "bulkClone": "Clone",
+      "bulkDelete": "Delete"
     }
   },
   "Inbox": {

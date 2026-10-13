@@ -27,7 +27,7 @@ interface DealCardProps {
   /** Present only while the board is in "Selecionar" mode: the card stops being
    *  a link, toggles on click and shows a checkbox. `locked` cards (won or with
    *  a contract) can't be picked. */
-  selection?: { selected: boolean; locked: boolean; onToggle: () => void };
+  selection?: { selected: boolean; locked: boolean; /** at least one deal is selected: the whole card toggles */ active: boolean; onToggle: () => void };
 }
 
 function formatDate(dateStr: string) {
@@ -120,8 +120,11 @@ export function DealCard({
     onTagsChanged?.(deal.id, (deal.dealTags ?? []).filter((t) => t.id !== tagId));
   }
 
+  // Selecting is always available (small square on every card); the whole
+  // card only turns into a toggle once something is selected.
+  const selecting = !!selection?.active;
   const selectionClassName = selection
-    ? selection.locked
+    ? selection.locked && selecting
       ? "cursor-not-allowed opacity-50"
       : selection.selected
         ? "cursor-pointer border-primary ring-2 ring-primary/40"
@@ -130,7 +133,7 @@ export function DealCard({
   const cardClassName = `group relative block w-full cursor-pointer rounded-xl border border-border/50 bg-muted/70 pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
     isOverlay
       ? "shadow-xl"
-      : selection
+      : selecting
         ? ""
         : "hover:-translate-y-0.5 hover:border-border hover:bg-muted hover:shadow-lg"
   } ${selectionClassName}`;
@@ -147,14 +150,26 @@ export function DealCard({
       <div className="flex items-start justify-between gap-2">
         {selection && (
           <span
-            aria-hidden
+            role="checkbox"
+            aria-checked={selection.selected}
+            aria-disabled={selection.locked}
             title={selection.locked ? t("lockedHint") : undefined}
-            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+            // Outside "selecting" the card is a link: the square must not open the deal.
+            onClick={
+              selecting
+                ? undefined
+                : (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!selection.locked) selection.onToggle();
+                  }
+            }
+            className={`mt-0.5 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border transition-opacity ${
               selection.locked
-                ? "border-border bg-muted text-muted-foreground"
+                ? "cursor-not-allowed border-border bg-muted text-muted-foreground"
                 : selection.selected
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-muted-foreground/50 bg-transparent"
+                  : "border-muted-foreground/50 bg-transparent opacity-60 hover:opacity-100 group-hover:opacity-100"
             }`}
           >
             {selection.locked ? <Lock className="h-2.5 w-2.5" /> : selection.selected ? <Check className="h-3 w-3" /> : null}
@@ -352,7 +367,7 @@ export function DealCard({
     return <div className={cardClassName}>{cardContent}</div>;
   }
 
-  if (selection) {
+  if (selection && selecting) {
     return (
       <div
         role="checkbox"
