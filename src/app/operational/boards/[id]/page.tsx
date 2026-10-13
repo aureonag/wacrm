@@ -236,7 +236,9 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   }
 
   return (
-    <div className="space-y-5">
+    // The board fills the height of the page: header and filters stay put and
+    // each stage column scrolls by itself (see TaskBoard).
+    <div className="flex h-full min-h-0 flex-col gap-5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Link href="/operational/boards" className="text-muted-foreground hover:text-foreground">
@@ -287,17 +289,19 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
       {stages.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("noStages")}</p>
       ) : (
-        <TaskBoard
-          stages={stages}
-          tasks={visibleTasks}
-          onTaskMoved={canMoveTasks ? handleTaskMoved : () => {}}
-          onAddTask={handleAddTask}
-          onOpenTask={handleOpenTask}
-          currentUserId={user?.id}
-          canTrack={canTrackTime}
-          onToggleTimer={handleToggleTimer}
-          timerBusyTaskId={timerBusyTaskId}
-        />
+        <div className="min-h-0 flex-1">
+          <TaskBoard
+            stages={stages}
+            tasks={visibleTasks}
+            onTaskMoved={canMoveTasks ? handleTaskMoved : () => {}}
+            onAddTask={handleAddTask}
+            onOpenTask={handleOpenTask}
+            currentUserId={user?.id}
+            canTrack={canTrackTime}
+            onToggleTimer={handleToggleTimer}
+            timerBusyTaskId={timerBusyTaskId}
+          />
+        </div>
       )}
 
       <CreateTaskDialog

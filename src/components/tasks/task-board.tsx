@@ -115,7 +115,9 @@ export function TaskBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 lg:snap-none">
+      {/* Fills the height the page gives it: each column scrolls on its own, so the
+          stage titles (and the "Adicionar tarefa" button) stay in view. */}
+      <div className="flex h-full min-h-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 lg:snap-none">
         {sortedStages.map((stage) => {
           const stageTasks = tasksByStage.get(stage.id) ?? [];
           return (
@@ -165,7 +167,7 @@ function StageColumn({
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   return (
-    <div className="flex w-[85vw] min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col rounded-xl border border-border bg-card/60 p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:basis-[260px] lg:shrink lg:snap-none">
+    <div className="flex min-h-0 w-[85vw] min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col rounded-xl border border-border bg-card/60 p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:basis-[260px] lg:shrink lg:snap-none">
       <div className="-mx-4 -mt-4 h-[3px] rounded-t-xl" style={{ backgroundColor: stage.color ?? "#94a3b8" }} />
       <div className="flex items-center justify-between pt-3">
         <h3 className="truncate text-sm font-semibold text-foreground">{stage.name}</h3>
@@ -176,8 +178,8 @@ function StageColumn({
 
       <div
         ref={setNodeRef}
-        className={`mt-3 flex flex-1 flex-col gap-2 rounded-lg transition-all ${
-          isOver ? "bg-primary/5 outline outline-2 outline-dashed outline-primary outline-offset-2" : ""
+        className={`mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain rounded-lg pr-1 transition-all ${
+          isOver ? "bg-primary/5 outline outline-2 outline-dashed outline-primary -outline-offset-2" : ""
         }`}
       >
         {tasks.length === 0 ? (
