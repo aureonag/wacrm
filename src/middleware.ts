@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { safeNextPath } from '@/lib/auth/next-path'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -95,6 +96,8 @@ export async function middleware(request: NextRequest) {
   )) {
     const url = request.nextUrl.clone()
     const inviteToken = request.nextUrl.searchParams.get('invite')
+    // A link to a page inside the CRM (e.g. a task) that was opened while signed out.
+    const nextPath = safeNextPath(request.nextUrl.searchParams.get('next'))
     if (
       inviteToken &&
       (request.nextUrl.pathname === '/login' ||
@@ -102,6 +105,10 @@ export async function middleware(request: NextRequest) {
     ) {
       url.pathname = `/join/${encodeURIComponent(inviteToken)}`
       url.search = ''
+    } else if (nextPath && request.nextUrl.pathname === '/login') {
+      const target = new URL(nextPath, request.nextUrl.origin)
+      url.pathname = target.pathname
+      url.search = target.search
     } else {
       url.pathname = '/dashboard'
       url.search = ''
@@ -110,10 +117,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected pages - redirect to login if not authenticated
-  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/financeiro']
+  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/financeiro', '/operational', '/chat']
   if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     const url = request.nextUrl.clone()
+    const back = request.nextUrl.pathname + request.nextUrl.search
     url.pathname = '/login'
+    url.search = ''
+    const safeBack = safeNextPath(back)
+    if (safeBack) url.searchParams.set('next', safeBack)
     return withRefreshedCookies(NextResponse.redirect(url))
   }
 

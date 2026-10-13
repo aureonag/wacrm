@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { loginUrlFor } from "@/lib/auth/next-path";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useHasEnvironmentAccess } from "@/hooks/use-permissions";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -19,15 +20,17 @@ function OperationalShellInner({ children }: { children: React.ReactNode }) {
   const { user, loading, accountStatus } = useAuth();
   const hasOperationalAccess = useHasEnvironmentAccess("operational");
   const router = useRouter();
+  const pathname = usePathname();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      // Keep the link: after signing in the person comes back to this page.
+      router.push(loginUrlFor(pathname + window.location.search));
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   useEffect(() => {
     if (accountStatus === "ready" && !hasOperationalAccess) {

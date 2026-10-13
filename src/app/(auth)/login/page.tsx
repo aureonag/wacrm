@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,9 @@ function LoginPageInner() {
   // account. After a successful sign-in we send them to the join
   // page to accept rather than to /dashboard.
   const inviteToken = searchParams.get("invite");
+  // A link to a page of the CRM opened while signed out (e.g. a task): after
+  // signing in the person lands on it, not on the dashboard.
+  const nextPath = safeNextPath(searchParams.get("next"));
   const t = useTranslations("LoginPage");
 
   const [email, setEmail] = useState("");
@@ -69,7 +73,7 @@ function LoginPageInner() {
     // reload the invite-accept flow already uses in join/[token].
     const destination = inviteToken
       ? `/join/${encodeURIComponent(inviteToken)}`
-      : "/dashboard";
+      : (nextPath ?? "/dashboard");
     window.location.href = destination;
   };
 

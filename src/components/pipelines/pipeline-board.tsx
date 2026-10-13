@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 
-/** Board-wide "Selecionar" mode (bulk delete). Absent = normal board. */
+/** Selection of deals (small square on each card; bulk bar appears with 1+ selected). Absent = no selection (no permission). */
 export interface BoardSelection {
   selectedIds: Set<string>;
   /** Won / with-paperwork deals: shown with a lock, cannot be selected. */
@@ -298,6 +298,7 @@ function StageColumn({
   const t = useTranslations("Pipelines.board");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
+  const selecting = !!selection && selection.selectedIds.size > 0;
   const selectableIds = selection ? deals.filter((d) => !selection.lockedIds.has(d.id)).map((d) => d.id) : [];
   const allStageSelected =
     !!selection && selectableIds.length > 0 && selectableIds.every((id) => selection.selectedIds.has(id));
@@ -316,7 +317,7 @@ function StageColumn({
         style={{ backgroundColor: stage.color }}
       />
       <div className="flex items-center justify-between pt-3">
-        {selection && (
+        {selection && selecting && (
           <Checkbox
             className="mr-2 shrink-0"
             checked={allStageSelected}
@@ -391,19 +392,21 @@ function DraggableDealCard({
   onTagsChanged: (dealId: string, tags: DealTag[]) => void;
   selection?: BoardSelection;
 }) {
+  // While something is selected a click selects, so dragging is paused (a deal can't be
+  // moved by accident).
+  const selecting = !!selection && selection.selectedIds.size > 0;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: deal.id,
-    // Selecting must not start a drag (or move a deal by accident).
-    disabled: !!selection,
+    disabled: selecting,
   });
 
   return (
     <div
       ref={setNodeRef}
       data-dnd-card="true"
-      {...(selection ? {} : listeners)}
-      {...(selection ? {} : attributes)}
-      style={{ opacity: isDragging ? 0.3 : 1, touchAction: selection ? "auto" : "none" }}
+      {...(selecting ? {} : listeners)}
+      {...(selecting ? {} : attributes)}
+      style={{ opacity: isDragging ? 0.3 : 1, touchAction: selecting ? "auto" : "none" }}
     >
       <DealCard
         deal={deal}
@@ -416,6 +419,7 @@ function DraggableDealCard({
             ? {
                 selected: selection.selectedIds.has(deal.id),
                 locked: selection.lockedIds.has(deal.id),
+                active: selecting,
                 onToggle: () => selection.onToggle(deal.id),
               }
             : undefined

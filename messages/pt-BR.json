@@ -1041,7 +1041,8 @@
           "low": "P3",
           "medium": "P2",
           "high": "P1"
-        }
+        },
+        "selectAria": "Selecionar tarefa"
       }
     },
     "labels": {
@@ -1229,7 +1230,8 @@
         "noScope": "O contrato não traz as seções de escopo (serviço contratado, o que está incluso e responsabilidades)."
       },
       "project": "Projeto",
-      "projectCurrent": "Projeto atual (arquivado ou de cliente inativo)"
+      "projectCurrent": "Projeto atual (arquivado ou de cliente inativo)",
+      "share": "Compartilhar"
     },
     "approvals": {
       "selectRecipient": "Selecione quem vai aprovar",
@@ -1374,6 +1376,45 @@
       "taskOpen": "Aberta",
       "taskDone": "Concluída",
       "taskOverdue": "Atrasada"
+    },
+    "cardActions": {
+      "menuLabel": "Ações da tarefa",
+      "moveToTop": "Mover para o topo da etapa",
+      "moveToBoard": "Mover para outro quadro",
+      "clone": "Clonar tarefa",
+      "openComments": "Abrir comentários",
+      "share": "Compartilhar",
+      "adjustHours": "Ajustar horas",
+      "requestApproval": "Solicitar aprovação",
+      "delete": "Excluir tarefa",
+      "shareTitle": "Compartilhar tarefa",
+      "shareDesc": "Quem abrir o link precisa estar logado no CRM e ter acesso ao Operacional. Sem login, o CRM pede o login primeiro.",
+      "shareLinkLabel": "Link da tarefa",
+      "shareCopy": "Copiar link",
+      "shareCopied": "Link copiado",
+      "shareCopyManual": "Não consegui copiar sozinho: o link está selecionado, é só copiar.",
+      "shareWhatsapp": "Enviar pelo WhatsApp",
+      "shareWhatsappMessage": "Tarefa: {title}\n{link}",
+      "moveTitle": "{count, plural, =1 {Mover tarefa para outro quadro} other {Mover # tarefas para outro quadro}}",
+      "moveBoard": "Quadro",
+      "moveStage": "Etapa",
+      "movePickBoard": "Escolha o quadro",
+      "movePickStage": "Escolha a etapa",
+      "move": "Mover",
+      "cancel": "Cancelar",
+      "selectedCount": "{count, plural, =1 {1 tarefa selecionada} other {# tarefas selecionadas}}",
+      "clearSelection": "Limpar seleção",
+      "deleteTitle": "{count, plural, =1 {Excluir tarefa} other {Excluir # tarefas}}",
+      "deleteDesc": "Essa ação não pode ser desfeita. As horas lançadas e os comentários também são apagados.",
+      "deleteConfirm": "Excluir",
+      "toastCloned": "{count, plural, =1 {Tarefa clonada} other {# tarefas clonadas}}",
+      "toastMoved": "{count, plural, =1 {Tarefa movida} other {# tarefas movidas}}",
+      "toastDeleted": "{count, plural, =1 {Tarefa excluída} other {# tarefas excluídas}}",
+      "toastPartial": "{done} de {total} concluídas. Algumas não puderam ser processadas.",
+      "toastFailed": "Não foi possível concluir a ação.",
+      "toastMovedToTop": "Tarefa movida para o topo",
+      "bulkClone": "Clonar",
+      "bulkDelete": "Excluir"
     }
   },
   "Inbox": {

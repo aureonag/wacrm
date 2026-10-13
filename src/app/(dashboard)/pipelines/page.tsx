@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, ListChecks, Loader2, Plus, Trash2 } from "lucide-react";
+import { GitBranch, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
@@ -47,9 +47,9 @@ import {
 // not on different copy.
 
 // Remembers the last pipeline the user viewed so navigating away (e.g. into
-// a deal's detail page) and back via the header's back link — a plain
+// a deal's detail page) and back via the header's back link â€” a plain
 // `<Link href="/pipelines">`, which remounts this page and resets all local
-// state — doesn't silently drop them back to whichever pipeline happens to
+// state â€” doesn't silently drop them back to whichever pipeline happens to
 // load first.
 const SELECTED_PIPELINE_STORAGE_KEY = "wacrm:pipelines:selected-pipeline-id";
 
@@ -64,18 +64,18 @@ function persistSelectedPipeline(pipelineId: string) {
 }
 
 // Default seed for a new pipeline. Names are pt-BR (not localized via
-// next-intl) — every real pipeline in this account already uses Portuguese
+// next-intl) â€” every real pipeline in this account already uses Portuguese
 // stage names, and a freshly created one should match, not default to
 // English regardless of the UI's own language setting.
 const SPEC_DEFAULT_STAGES = [
   { name: "Novo Lead", color: "#3b82f6", position: 0 }, // blue
   { name: "Qualificado", color: "#eab308", position: 1 }, // yellow
   { name: "Proposta Enviada", color: "#f97316", position: 2 }, // orange
-  { name: "Negociação", color: "#8b5cf6", position: 3 }, // purple
+  { name: "NegociaÃ§Ã£o", color: "#8b5cf6", position: 3 }, // purple
   { name: "Ganho", color: "#22c55e", position: 4 }, // green
 ];
 
-// Every pipeline gets this stage — see migration 054. Backfilled for
+// Every pipeline gets this stage â€” see migration 054. Backfilled for
 // existing pipelines there; new pipelines get it seeded right here so
 // there's never a window where a pipeline lacks it.
 const CONTRACT_CLOSED_STAGE = {
@@ -118,8 +118,8 @@ export default function PipelinesPage() {
   const [dealFormOpen, setDealFormOpen] = useState(false);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
 
-  // "Selecionar" mode (bulk delete). Same permission as deleting one deal.
-  const [selectMode, setSelectMode] = useState(false);
+  // Selection (bulk delete): a square on every deal; the bar below the filters
+  // shows up with 1+ selected. Same permission as deleting one deal.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [paperworkIds, setPaperworkIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -168,7 +168,7 @@ export default function PipelinesPage() {
         position: s.position,
         // PostgREST fills a row's missing key with an explicit NULL rather
         // than the column default when other rows in the same bulk insert
-        // DO have that key — `kind` must be set on every row, not just
+        // DO have that key â€” `kind` must be set on every row, not just
         // the locked one, or this insert 400s with a not-null violation.
         kind: "custom" as const,
       })),
@@ -257,7 +257,7 @@ export default function PipelinesPage() {
     let cancelled = false;
     (async () => {
       // Only the people who actually have access to Comercial (owner, or a
-      // cargo with the Comercial environment) — not the whole account roster.
+      // cargo with the Comercial environment) â€” not the whole account roster.
       const list = await loadEnvironmentMembers(supabase, "comercial");
       if (cancelled) return;
       setMembers(list.filter((p) => p.id !== myProfileId));
@@ -297,7 +297,6 @@ export default function PipelinesPage() {
   const handleSelectPipeline = useCallback((pipelineId: string) => {
     setSelectedPipelineId(pipelineId);
     persistSelectedPipeline(pipelineId);
-    setSelectMode(false);
     setSelectedIds(new Set());
   }, []);
 
@@ -321,7 +320,7 @@ export default function PipelinesPage() {
 
   // Live-patch: a stage move made from the Inbox's Kanban view (same
   // `deals.stage_id` write, see inbox-kanban-view.tsx) shows up here
-  // without a refetch, and vice versa — migration 076 added `deals` to
+  // without a refetch, and vice versa â€” migration 076 added `deals` to
   // the realtime publication for exactly this. INSERT/DELETE fall back
   // to a full reload since the bare payload has no joined contact.
   const handleDealEvent = useCallback(
@@ -345,7 +344,7 @@ export default function PipelinesPage() {
 
   const handleDealMoved = useCallback(
     async (dealId: string, newStageId: string) => {
-      // Optimistic update — board already animated; just persist.
+      // Optimistic update â€” board already animated; just persist.
       setDeals((prev) =>
         prev.map((d) => (d.id === dealId ? { ...d, stage_id: newStageId } : d)),
       );
@@ -401,14 +400,21 @@ export default function PipelinesPage() {
     [selectedIds, lockedIds, deals],
   );
 
-  const enterSelectMode = useCallback(async () => {
-    setSelectedIds(new Set());
-    setSelectMode(true);
-    setPaperworkIds(await loadDealIdsWithPaperwork(supabase, deals.map((d) => d.id)));
-  }, [supabase, deals]);
+  // Which deals have a contract / closing sheet (locked): loaded once per set of deals.
+  const dealIdsKey = useMemo(() => deals.map((d) => d.id).join(","), [deals]);
+  useEffect(() => {
+    if (!canCreateDeals || !dealIdsKey) return;
+    let cancelled = false;
+    (async () => {
+      const ids = await loadDealIdsWithPaperwork(supabase, dealIdsKey.split(","));
+      if (!cancelled) setPaperworkIds(ids);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, canCreateDeals, dealIdsKey]);
 
   const exitSelectMode = useCallback(() => {
-    setSelectMode(false);
     setSelectedIds(new Set());
     setConfirmDeleteOpen(false);
   }, []);
@@ -459,7 +465,7 @@ export default function PipelinesPage() {
     await refreshDeals();
   }
 
-  const boardSelection: BoardSelection | undefined = selectMode
+  const boardSelection: BoardSelection | undefined = canCreateDeals
     ? { selectedIds, lockedIds, onToggle: toggleSelected, onToggleStage: toggleStageSelected }
     : undefined;
 
@@ -507,7 +513,7 @@ export default function PipelinesPage() {
         position: s.position,
         // PostgREST fills a row's missing key with an explicit NULL rather
         // than the column default when other rows in the same bulk insert
-        // DO have that key — `kind` must be set on every row, not just
+        // DO have that key â€” `kind` must be set on every row, not just
         // the locked one, or this insert 400s with a not-null violation.
         kind: "custom" as const,
       })),
@@ -567,36 +573,6 @@ export default function PipelinesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {canCreateDeals && selectMode && (
-            <>
-              <span className="text-sm text-muted-foreground">
-                {t("selectedCount", { count: selectedList.length })}
-              </span>
-              <Button variant="outline" onClick={exitSelectMode} className="border-border bg-card text-foreground hover:bg-muted">
-                {t("cancelSelect")}
-              </Button>
-              {selectedList.length > 0 && (
-                <Button
-                  onClick={() => setConfirmDeleteOpen(true)}
-                  className="bg-red-600 text-white hover:bg-red-700"
-                >
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  {t("deleteSelected")}
-                </Button>
-              )}
-            </>
-          )}
-          {canCreateDeals && !selectMode && (
-            <Button
-              variant="outline"
-              disabled={deals.length === 0}
-              onClick={() => void enterSelectMode()}
-              className="border-border bg-card text-foreground hover:bg-muted"
-            >
-              <ListChecks className="mr-1 h-4 w-4" />
-              {t("selectMode")}
-            </Button>
-          )}
           <GatedButton
             variant="outline"
             canAct={canEditSettings}
@@ -619,6 +595,28 @@ export default function PipelinesPage() {
           </GatedButton>
         </div>
       </div>
+
+      {/* Bulk bar: shows up as soon as one deal is selected */}
+      {canCreateDeals && selectedList.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={exitSelectMode}
+              aria-label={t("cancelSelect")}
+              title={t("cancelSelect")}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-medium text-foreground">{t("selectedCount", { count: selectedList.length })}</span>
+          </div>
+          <Button onClick={() => setConfirmDeleteOpen(true)} className="bg-red-600 text-white hover:bg-red-700">
+            <Trash2 className="mr-1 h-4 w-4" />
+            {t("deleteSelected")}
+          </Button>
+        </div>
+      )}
 
       {/* Board */}
       {pipelines.length === 0 ? (

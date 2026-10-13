@@ -17,6 +17,7 @@ import {
   loadTaskTimesheet,
 } from "@/lib/tasks/queries";
 import { TaskLabelsField } from "./task-labels";
+import { TaskShareDialog } from "./task-share-dialog";
 import type {
   Board,
   BoardStage,
@@ -74,6 +75,7 @@ import {
   Trash2,
   Copy,
   ArrowUpToLine,
+  Share2,
   FolderInput,
   CornerDownRight,
   Users2,
@@ -112,6 +114,8 @@ interface TaskDrawerProps {
   /** Open a different task in this same drawer (subtask row click, or
    *  after "converter em subtarefa" navigates back to the parent). */
   onNavigate: (taskId: string) => void;
+  /** Tab the panel opens on (default "briefing"). Remount the drawer (key) to change it. */
+  initialTab?: string;
 }
 
 const PRIORITIES: TaskPriority[] = ["low", "medium", "high"];
@@ -131,7 +135,7 @@ type Draft = Partial<{
   drive_folder_url: string | null;
 }>;
 
-export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }: TaskDrawerProps) {
+export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, initialTab }: TaskDrawerProps) {
   const t = useTranslations("Operational.taskDrawer");
   const tPriority = useTranslations("Operational.tasks.card.priority");
   const tTimesheet = useTranslations("Operational.timesheet");
@@ -162,7 +166,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
   const [draft, setDraft] = useState<Draft>({});
   const [saving, setSaving] = useState(false);
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
-  const [activeTab, setActiveTab] = useState("briefing");
+  const [activeTab, setActiveTab] = useState(initialTab ?? "briefing");
+  const [showShare, setShowShare] = useState(false);
   const [showMoveBoard, setShowMoveBoard] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRecurrence, setShowRecurrence] = useState(false);
@@ -608,6 +613,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
                           {t("clone")}
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuItem onClick={() => setShowShare(true)} className={MENU_ITEM}>
+                        <Share2 className="size-4 text-muted-foreground" />
+                        {t("share")}
+                      </DropdownMenuItem>
                       {canEditTimesheet && (
                         <DropdownMenuItem onClick={() => setActiveTab("timesheet")} className={MENU_ITEM}>
                           <Clock className="size-4 text-muted-foreground" />
@@ -909,6 +918,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate }
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TaskShareDialog open={showShare} onOpenChange={setShowShare} task={task} />
 
       <Dialog open={showMoveBoard} onOpenChange={setShowMoveBoard}>
         <DialogContent className="sm:max-w-sm bg-popover border-border">
