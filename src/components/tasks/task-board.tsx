@@ -24,8 +24,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useClockTick } from "@/hooks/use-clock-tick";
 import { summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { ChevronsRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { StageMenu, type StageMenuAction } from "./stage-menu";
 import { CARD_DROP_PREFIX, resolveDrop, type DropTarget } from "@/lib/ordering/column-order";
 
 /** Dropping a card: prefer the card under the pointer (to place it), else the column. */
@@ -61,6 +62,14 @@ interface TaskBoardProps {
   /** The "•••" menu of each card. */
   menuPerms?: TaskMenuPerms;
   onMenuAction?: (taskId: string, action: TaskMenuAction) => void;
+  /** The "•••" of each column. Absent = no column menu. */
+  stageMenu?: {
+    canAddTask: boolean;
+    canManage: boolean;
+    onAction: (stageId: string, action: StageMenuAction) => void;
+  };
+  /** Where minimized columns are remembered (localStorage key). */
+  collapseKey?: string;
 }
 
 /** What every card needs to show and drive its timer. */
@@ -92,10 +101,39 @@ export function TaskBoard({
   onToggleStage,
   menuPerms,
   onMenuAction,
+  stageMenu,
+  collapseKey,
 }: TaskBoardProps) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   // Line shown above/below the card the dragged one would land next to.
   const [hint, setHint] = useState<{ cardId: string; where: "before" | "after" } | null>(null);
+
+  // Minimized stages (a thin strip, no cards), remembered on this browser per board.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    if (!collapseKey || typeof window === "undefined") return new Set();
+    try {
+      const raw = window.localStorage.getItem(collapseKey);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+      return new Set(Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []);
+    } catch {
+      return new Set();
+    }
+  });
+  function toggleCollapsed(stageId: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(stageId)) next.delete(stageId);
+      else next.add(stageId);
+      if (collapseKey) {
+        try {
+          window.localStorage.setItem(collapseKey, JSON.stringify([...next]));
+        } catch {
+          // Persistence is best-effort.
+        }
+      }
+      return next;
+    });
+  }
 
   // One shared clock for every card: ticks once a second only while some
   // task on the board has a running timer.
@@ -208,6 +246,9 @@ export function TaskBoard({
               timer={timer}
               onToggleStage={onToggleStage}
               hint={hint}
+              collapsed={collapsed.has(stage.id)}
+              onToggleCollapsed={() => toggleCollapsed(stage.id)}
+              stageMenu={stageMenu}
             />
           );
         })}
@@ -238,6 +279,9 @@ function StageColumn({
   timer,
   onToggleStage,
   hint,
+  collapsed,
+  onToggleCollapsed,
+  stageMenu,
 }: {
   stage: BoardStage;
   tasks: Task[];
@@ -246,14 +290,48 @@ function StageColumn({
   timer: CardTimerProps;
   onToggleStage?: (taskIds: string[], select: boolean) => void;
   hint: { cardId: string; where: "before" | "after" } | null;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  stageMenu?: {
+    canAddTask: boolean;
+    canManage: boolean;
+    onAction: (stageId: string, action: StageMenuAction) => void;
+  };
 }) {
   const t = useTranslations("Operational.tasks.board");
+  const tMenu = useTranslations("Operational.stageMenu");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   // The "select the whole stage" square only shows once something is selected.
   const selecting = !!timer.selectedIds && timer.selectedIds.size > 0;
   const stageIds = tasks.map((task) => task.id);
   const allStageSelected = selecting && stageIds.length > 0 && stageIds.every((id) => timer.selectedIds!.has(id));
+
+  if (collapsed) {
+    // A thin strip: the name (vertical), how many tasks, and a click to open it again.
+    // It still accepts a dropped card (it goes to the end of the stage).
+    return (
+      <button
+        type="button"
+        ref={setNodeRef as unknown as React.Ref<HTMLButtonElement>}
+        onClick={onToggleCollapsed}
+        title={tMenu("expandStage")}
+        aria-label={tMenu("expandStage")}
+        className={`flex min-h-0 w-11 shrink-0 flex-col items-center gap-3 rounded-xl border border-border bg-card/60 px-1 py-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${
+          isOver ? "border-primary bg-primary/10" : ""
+        }`}
+        style={{ borderTop: `3px solid ${stage.color ?? "#94a3b8"}` }}
+      >
+        <ChevronsRight className="h-4 w-4 shrink-0" />
+        <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+          {tasks.length}
+        </span>
+        <span className="min-h-0 flex-1 truncate text-sm font-semibold text-foreground [text-orientation:mixed] [writing-mode:vertical-rl]">
+          {stage.name}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div className="flex min-h-0 w-[85vw] min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col rounded-xl border border-border bg-card/60 p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:basis-[260px] lg:shrink lg:snap-none">
@@ -272,6 +350,16 @@ function StageColumn({
         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
           {tasks.length}
         </span>
+        {stageMenu && (
+          <div className="ml-1 shrink-0">
+            <StageMenu
+              canAddTask={stageMenu.canAddTask}
+              canManage={stageMenu.canManage}
+              onMinimize={onToggleCollapsed}
+              onAction={(action) => stageMenu.onAction(stage.id, action)}
+            />
+          </div>
+        )}
       </div>
 
       <div

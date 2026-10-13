@@ -15,6 +15,9 @@ import {
 } from "@/components/pipelines/pipeline-owner-filter";
 import { loadEnvironmentMembers } from "@/lib/auth/environment-members";
 import { useColumnOrder } from "@/hooks/use-column-order";
+import { sortTaskIds, type TaskSortKey } from "@/lib/ordering/task-sort";
+import type { StageMenuAction } from "@/components/tasks/stage-menu";
+import { NewStageDialog, StageSettingsDialog, type StagePatch } from "@/components/tasks/stage-dialogs";
 import { applyColumnOrder, applyOrderByStage, moveInOrder, type DropTarget } from "@/lib/ordering/column-order";
 import type { Board, BoardStage, Task } from "@/types";
 import { TaskBoard } from "@/components/tasks/task-board";
@@ -48,6 +51,7 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const { id: boardId } = use(params);
   const t = useTranslations("Operational.boards");
   const tc = useTranslations("Operational.cardActions");
+  const tm = useTranslations("Operational.stageMenu");
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -144,6 +148,11 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   const [moveIds, setMoveIds] = useState<string[] | null>(null);
   const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Column menu: create / settings / delete a stage.
+  const [newStage, setNewStage] = useState<{ refId: string; where: "before" | "after" } | null>(null);
+  const [settingsStageId, setSettingsStageId] = useState<string | null>(null);
+  const [deleteStageId, setDeleteStageId] = useState<string | null>(null);
+  const [stageBusy, setStageBusy] = useState(false);
 
   const reload = useCallback(async () => {
     const [{ data: boardRow }, stageRows, taskRows] = await Promise.all([
@@ -261,6 +270,95 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
       if (source) void saveOrder(task.stage_id, source.filter((id) => id !== taskId));
       await handleTaskMoved(taskId, targetStageId);
     }
+  }
+
+  // ---- column menu ----
+  async function sortStage(stageId: string, key: TaskSortKey) {
+    const column = tasks.filter((x) => x.stage_id === stageId);
+    await saveOrder(stageId, sortTaskIds(column, key));
+    toast.success(tm("sorted", { by: tm(`sort.${key}`) }));
+  }
+
+  function handleStageAction(stageId: string, action: StageMenuAction) {
+    switch (action.type) {
+      case "addTask":
+        handleAddTask(stageId);
+        break;
+      case "sort":
+        void sortStage(stageId, action.key);
+        break;
+      case "createStage":
+        setNewStage({ refId: stageId, where: action.where });
+        break;
+      case "settings":
+        setSettingsStageId(stageId);
+        break;
+      case "deleteStage":
+        setDeleteStageId(stageId);
+        break;
+    }
+  }
+
+  async function createStage(name: string, color: string) {
+    if (!newStage) return;
+    setStageBusy(true);
+    const res = await fetch(`/api/operational/boards/${boardId}/stages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, color }),
+    });
+    const body = (await res.json().catch(() => null)) as { id?: string } | null;
+    if (!res.ok || !body?.id) {
+      setStageBusy(false);
+      toast.error(tm("toastFailed"));
+      return;
+    }
+    // The API adds it at the end: put it before/after the stage the menu was opened on.
+    const ids = [...stages].sort((a, b) => a.position - b.position).map((st) => st.id);
+    const at = ids.indexOf(newStage.refId);
+    ids.splice(at === -1 ? ids.length : newStage.where === "before" ? at : at + 1, 0, body.id);
+    await fetch(`/api/operational/boards/${boardId}/stages/reorder`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: ids }),
+    });
+    setStageBusy(false);
+    setNewStage(null);
+    toast.success(tm("toastCreated"));
+    await reload();
+  }
+
+  async function saveStage(patch: StagePatch) {
+    if (!settingsStageId) return;
+    setStageBusy(true);
+    const res = await fetch(`/api/operational/boards/${boardId}/stages/${settingsStageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    setStageBusy(false);
+    if (!res.ok) {
+      toast.error(tm("toastFailed"));
+      return;
+    }
+    setSettingsStageId(null);
+    toast.success(tm("toastSaved"));
+    await reload();
+  }
+
+  async function deleteStage() {
+    if (!deleteStageId) return;
+    setStageBusy(true);
+    const res = await fetch(`/api/operational/boards/${boardId}/stages/${deleteStageId}`, { method: "DELETE" });
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    setStageBusy(false);
+    if (!res.ok) {
+      toast.error(body?.error ?? tm("toastFailedDelete"));
+      return;
+    }
+    setDeleteStageId(null);
+    toast.success(tm("toastDeleted"));
+    await reload();
   }
 
   function handleAddTask(stageId: string) {
@@ -537,6 +635,8 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
             onToggleStage={toggleStageSelect}
             menuPerms={menuPerms}
             onMenuAction={handleMenuAction}
+            stageMenu={{ canAddTask: canCreateTasks, canManage: canEditBoards, onAction: handleStageAction }}
+            collapseKey={`wacrm:operational:collapsed-stages:${boardId}`}
           />
         </div>
       )}
@@ -549,6 +649,51 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
         defaultStageId={defaultStageId}
         onCreated={reload}
       />
+
+      <NewStageDialog
+        open={newStage !== null}
+        onOpenChange={(open) => !open && setNewStage(null)}
+        busy={stageBusy}
+        title={
+          newStage
+            ? tm(newStage.where === "before" ? "newStageBefore" : "newStageAfter", {
+                name: stages.find((st) => st.id === newStage.refId)?.name ?? "",
+              })
+            : ""
+        }
+        onSubmit={createStage}
+      />
+
+      <StageSettingsDialog
+        stage={stages.find((st) => st.id === settingsStageId) ?? null}
+        onOpenChange={(open) => !open && setSettingsStageId(null)}
+        busy={stageBusy}
+        onSave={saveStage}
+      />
+
+      <Dialog open={deleteStageId !== null} onOpenChange={(open) => !open && !stageBusy && setDeleteStageId(null)}>
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{tm("deleteTitle")}</DialogTitle>
+          </DialogHeader>
+          <p className="py-1 text-sm text-red-400">
+            {tm("deleteDesc", { name: stages.find((st) => st.id === deleteStageId)?.name ?? "" })}
+          </p>
+          <DialogFooter className="border-border bg-popover/50">
+            <Button
+              variant="outline"
+              disabled={stageBusy}
+              onClick={() => setDeleteStageId(null)}
+              className="border-border bg-transparent text-muted-foreground hover:bg-muted"
+            >
+              {tm("cancel")}
+            </Button>
+            <Button disabled={stageBusy} onClick={() => void deleteStage()} className="bg-red-600 text-white hover:bg-red-700">
+              {tm("deleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <TaskShareDialog
         open={!!shareTaskId}
