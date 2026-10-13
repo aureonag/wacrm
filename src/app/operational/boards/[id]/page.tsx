@@ -14,6 +14,8 @@ import {
   type OwnerFilterMember,
 } from "@/components/pipelines/pipeline-owner-filter";
 import { loadEnvironmentMembers } from "@/lib/auth/environment-members";
+import { useColumnOrder } from "@/hooks/use-column-order";
+import { applyColumnOrder, applyOrderByStage, moveInOrder, type DropTarget } from "@/lib/ordering/column-order";
 import type { Board, BoardStage, Task } from "@/types";
 import { TaskBoard } from "@/components/tasks/task-board";
 import { BoardSettings } from "@/components/tasks/board-settings";
@@ -91,6 +93,14 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
         return task.assignee_id === (effectiveFilter === OWNER_FILTER_MINE ? myProfileId : effectiveFilter);
       }),
     [tasks, query, effectiveFilter, myProfileId],
+  );
+
+  // Personal order of the cards inside each column (only this person sees it).
+  const stageIds = useMemo(() => stages.map((st) => st.id), [stages]);
+  const { orders, save: saveOrder, refresh: refreshOrders } = useColumnOrder("task", stageIds);
+  const orderedTasks = useMemo(
+    () => applyOrderByStage(visibleTasks, (task) => task.stage_id, orders),
+    [visibleTasks, orders],
   );
 
   useEffect(() => {
@@ -231,6 +241,28 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
     }
   }
 
+  /**
+   * A card was dropped: its place in the person's own order of the column and,
+   * when it went to another stage, the stage change (that one is for everyone).
+   */
+  async function handleReorder(taskId: string, targetStageId: string, target: DropTarget) {
+    const task = tasks.find((x) => x.id === taskId);
+    if (!task) return;
+    const sameStage = task.stage_id === targetStageId;
+    if (!sameStage && !canMoveTasks) return;
+    // The whole column (not only what the filter shows), in the person's order.
+    const column = applyColumnOrder(
+      tasks.filter((x) => x.stage_id === targetStageId),
+      orders[targetStageId],
+    ).map((x) => x.id);
+    void saveOrder(targetStageId, moveInOrder(column, taskId, target));
+    if (!sameStage) {
+      const source = orders[task.stage_id];
+      if (source) void saveOrder(task.stage_id, source.filter((id) => id !== taskId));
+      await handleTaskMoved(taskId, targetStageId);
+    }
+  }
+
   function handleAddTask(stageId: string) {
     setDefaultStageId(stageId);
     setCreateOpen(true);
@@ -331,19 +363,16 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
     await reload();
   }
 
+  // "Mover para o topo": only in this person's own order of the column.
   async function moveToTop(taskId: string) {
     const task = tasks.find((x) => x.id === taskId);
     if (!task) return;
-    const positions = tasks.filter((x) => x.stage_id === task.stage_id).map((x) => x.position);
-    const minPosition = positions.length > 0 ? Math.min(...positions) : 0;
-    const res = await fetch(`/api/operational/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ position: minPosition - 1 }),
-    });
-    if (res.ok) toast.success(tc("toastMovedToTop"));
-    else toast.error(tc("toastFailed"));
-    await reload();
+    const column = applyColumnOrder(
+      tasks.filter((x) => x.stage_id === task.stage_id),
+      orders[task.stage_id],
+    ).map((x) => x.id);
+    await saveOrder(task.stage_id, moveInOrder(column, taskId, "top"));
+    toast.success(tc("toastMovedToTop"));
   }
 
   function handleMenuAction(taskId: string, action: TaskMenuAction) {
@@ -494,8 +523,9 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
         <div className="min-h-0 flex-1">
           <TaskBoard
             stages={stages}
-            tasks={visibleTasks}
+            tasks={orderedTasks}
             onTaskMoved={canMoveTasks ? handleTaskMoved : () => {}}
+            onReorder={handleReorder}
             onAddTask={handleAddTask}
             onOpenTask={handleOpenTask}
             currentUserId={user?.id}
@@ -568,7 +598,10 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
         taskId={openTaskId}
         open={!!openTaskId}
         onOpenChange={(open) => !open && setOpenTaskId(null)}
-        onChanged={reload}
+        onChanged={() => {
+          void reload();
+          void refreshOrders();
+        }}
         onNavigate={setOpenTaskId}
       />
 

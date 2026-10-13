@@ -18,6 +18,7 @@ import {
 } from "@/lib/tasks/queries";
 import { TaskLabelsField } from "./task-labels";
 import { TaskShareDialog } from "./task-share-dialog";
+import { moveTaskToTopForUser } from "@/lib/ordering/column-order-db";
 import type {
   Board,
   BoardStage,
@@ -381,17 +382,21 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
     else action();
   }
 
+  // Only in this person's own order of the column (nobody else's view changes).
   async function handleMoveToTop() {
-    if (!task) return;
-    const { data: rows } = await supabase
-      .from("tasks")
-      .select("position")
-      .eq("stage_id", task.stage_id)
-      .order("position", { ascending: true })
-      .limit(1);
-    const minPosition = rows && rows.length > 0 ? rows[0].position : 0;
-    const ok = await patchTask({ position: minPosition - 1 });
-    if (ok) toast.success(t("toastMovedToTop"));
+    if (!task || !user || !accountId) return;
+    const ok = await moveTaskToTopForUser(supabase, {
+      userId: user.id,
+      accountId,
+      stageId: task.stage_id,
+      taskId: task.id,
+    });
+    if (!ok) {
+      toast.error(t("toastFailed"));
+      return;
+    }
+    toast.success(t("toastMovedToTop"));
+    onChanged();
   }
 
   async function handleClone() {

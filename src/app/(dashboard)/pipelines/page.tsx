@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Pipeline, PipelineStage, Deal, DealTag } from "@/types";
 import { PipelineBoard, type BoardSelection } from "@/components/pipelines/pipeline-board";
+import { useColumnOrder } from "@/hooks/use-column-order";
+import { applyColumnOrder, applyOrderByStage, moveInOrder, type DropTarget } from "@/lib/ordering/column-order";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealCreateModal } from "@/components/pipelines/deal-create-modal";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
@@ -294,6 +296,14 @@ export default function PipelinesPage() {
             (effectiveFilter === OWNER_FILTER_MINE ? myProfileId : effectiveFilter),
         );
 
+  // Personal order of the cards inside each column (only this person sees it).
+  const stageIds = useMemo(() => stages.map((st) => st.id), [stages]);
+  const { orders, save: saveOrder } = useColumnOrder("deal", stageIds);
+  const orderedDeals = useMemo(
+    () => applyOrderByStage(visibleDeals, (d) => d.stage_id, orders),
+    [visibleDeals, orders],
+  );
+
   const handleSelectPipeline = useCallback((pipelineId: string) => {
     setSelectedPipelineId(pipelineId);
     persistSelectedPipeline(pipelineId);
@@ -373,6 +383,28 @@ export default function PipelinesPage() {
       });
     },
     [supabase, refreshDeals, t, tActivity, stages, accountId],
+  );
+
+  /**
+   * A card was dropped: its place in the person's own order of the column and,
+   * when it went to another stage, the stage change (that one is for everyone).
+   */
+  const handleDealReorder = useCallback(
+    async (dealId: string, targetStageId: string, target: DropTarget) => {
+      const deal = deals.find((d) => d.id === dealId);
+      if (!deal) return;
+      const column = applyColumnOrder(
+        deals.filter((d) => d.stage_id === targetStageId),
+        orders[targetStageId],
+      ).map((d) => d.id);
+      void saveOrder(targetStageId, moveInOrder(column, dealId, target));
+      if (deal.stage_id !== targetStageId) {
+        const source = orders[deal.stage_id];
+        if (source) void saveOrder(deal.stage_id, source.filter((id) => id !== dealId));
+        await handleDealMoved(dealId, targetStageId);
+      }
+    },
+    [deals, orders, saveOrder, handleDealMoved],
   );
 
   const handleAddDeal = useCallback(
@@ -643,8 +675,9 @@ export default function PipelinesPage() {
           <PipelineAnalytics stages={stages} deals={visibleDeals} />
           <PipelineBoard
             stages={stages}
-            deals={visibleDeals}
+            deals={orderedDeals}
             onDealMoved={handleDealMoved}
+            onReorder={handleDealReorder}
             onAddDeal={handleAddDeal}
             onTagsChanged={handleTagsChanged}
             selection={boardSelection}

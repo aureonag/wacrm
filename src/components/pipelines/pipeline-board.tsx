@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -11,7 +11,10 @@ import {
   useDroppable,
   useDraggable,
   closestCorners,
+  pointerWithin,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import type { Deal, DealTag, PipelineStage } from "@/types";
@@ -22,6 +25,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/currency";
 import { useTranslations } from "next-intl";
+import { CARD_DROP_PREFIX, resolveDrop, type DropTarget } from "@/lib/ordering/column-order";
+
+/** Dropping a card: prefer the card under the pointer (to place it), else the column. */
+const detectCollisions: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  const card = hits.find((h) => String(h.id).startsWith(CARD_DROP_PREFIX) && h.id !== `${CARD_DROP_PREFIX}${args.active.id}`);
+  if (card) return [card];
+  if (hits.length > 0) return hits.filter((h) => !String(h.id).startsWith(CARD_DROP_PREFIX));
+  // Nearest card/column, never the card being dragged itself.
+  return closestCorners({
+    ...args,
+    droppableContainers: args.droppableContainers.filter((c) => c.id !== `${CARD_DROP_PREFIX}${args.active.id}`),
+  });
+};
 
 /** Selection of deals (small square on each card; bulk bar appears with 1+ selected). Absent = no selection (no permission). */
 export interface BoardSelection {
@@ -37,6 +54,8 @@ interface PipelineBoardProps {
   stages: PipelineStage[];
   deals: Deal[];
   onDealMoved: (dealId: string, newStageId: string) => void;
+  /** A card was dropped: where (stage + before/after a card). Handles both the stage change and the personal order. */
+  onReorder?: (dealId: string, targetStageId: string, target: DropTarget) => void;
   onAddDeal: (stageId: string) => void;
   onTagsChanged: (dealId: string, tags: DealTag[]) => void;
   selection?: BoardSelection;
@@ -46,12 +65,15 @@ export function PipelineBoard({
   stages,
   deals,
   onDealMoved,
+  onReorder,
   onAddDeal,
   onTagsChanged,
   selection,
 }: PipelineBoardProps) {
   const { defaultCurrency } = useAuth();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  // Line shown above/below the card the dragged one would land next to.
+  const [hint, setHint] = useState<{ cardId: string; where: "before" | "after" } | null>(null);
   // Only one deal's inline tag editor may be open at a time, across
   // the whole board — a single piece of state here (not per-card).
   const [tagEditorDealId, setTagEditorDealId] = useState<string | null>(null);
@@ -148,29 +170,57 @@ export function PipelineBoard({
     setActiveDealId(String(event.active.id));
   }
 
+  const stageOfCard = useCallback((cardId: string) => deals.find((d) => d.id === cardId)?.stage_id ?? null, [deals]);
+
+  function resolve(event: DragOverEvent | DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return null;
+    return resolveDrop({
+      overId: String(over.id),
+      stageOfCard,
+      overRect: over.rect,
+      activeRect: active.rect.current.translated,
+      activeId: String(active.id),
+    });
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const r = resolve(event);
+    if (!r || !r.overCardId || r.target === "top" || r.target === "end") {
+      setHint(null);
+      return;
+    }
+    setHint({ cardId: r.overCardId, where: "beforeId" in r.target ? "before" : "after" });
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     setActiveDealId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const dealId = String(active.id);
-    const targetStageId = String(over.id);
-
+    setHint(null);
+    const r = resolve(event);
+    if (!r) return;
+    const dealId = String(event.active.id);
     const deal = deals.find((d) => d.id === dealId);
-    if (!deal || deal.stage_id === targetStageId) return;
-    if (!sortedStages.some((s) => s.id === targetStageId)) return;
+    if (!deal) return;
+    if (!sortedStages.some((s) => s.id === r.stageId)) return;
 
-    onDealMoved(dealId, targetStageId);
+    if (onReorder) {
+      onReorder(dealId, r.stageId, r.target);
+    } else if (deal.stage_id !== r.stageId) {
+      onDealMoved(dealId, r.stageId);
+    }
   }
 
   function handleDragCancel() {
     setActiveDealId(null);
+    setHint(null);
   }
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={detectCollisions}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -205,6 +255,7 @@ export function PipelineBoard({
               onToggleTagEditor={setTagEditorDealId}
               onTagsChanged={onTagsChanged}
               selection={selection}
+              hint={hint}
             />
           );
         })}
@@ -284,6 +335,7 @@ function StageColumn({
   onToggleTagEditor,
   onTagsChanged,
   selection,
+  hint,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -294,6 +346,7 @@ function StageColumn({
   onToggleTagEditor: (dealId: string | null) => void;
   onTagsChanged: (dealId: string, tags: DealTag[]) => void;
   selection?: BoardSelection;
+  hint: { cardId: string; where: "before" | "after" } | null;
 }) {
   const t = useTranslations("Pipelines.board");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
@@ -359,6 +412,7 @@ function StageColumn({
               onToggleTagEditor={onToggleTagEditor}
               onTagsChanged={onTagsChanged}
               selection={selection}
+              hint={hint?.cardId === deal.id ? hint.where : null}
             />
           ))
         )}
@@ -384,6 +438,7 @@ function DraggableDealCard({
   onToggleTagEditor,
   onTagsChanged,
   selection,
+  hint,
 }: {
   deal: Deal;
   stage: PipelineStage;
@@ -391,6 +446,7 @@ function DraggableDealCard({
   onToggleTagEditor: (dealId: string | null) => void;
   onTagsChanged: (dealId: string, tags: DealTag[]) => void;
   selection?: BoardSelection;
+  hint: "before" | "after" | null;
 }) {
   // While something is selected a click selects, so dragging is paused (a deal can't be
   // moved by accident).
@@ -400,14 +456,33 @@ function DraggableDealCard({
     disabled: selecting,
   });
 
+  // The card is also a drop spot: that is how the position inside a column is chosen.
+  const { setNodeRef: setDropRef } = useDroppable({ id: `${CARD_DROP_PREFIX}${deal.id}` });
+  const setRefs = useCallback(
+    (el: HTMLDivElement | null) => {
+      setNodeRef(el);
+      setDropRef(el);
+    },
+    [setNodeRef, setDropRef],
+  );
+
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
+      className="relative"
       data-dnd-card="true"
       {...(selecting ? {} : listeners)}
       {...(selecting ? {} : attributes)}
       style={{ opacity: isDragging ? 0.3 : 1, touchAction: selecting ? "auto" : "none" }}
     >
+      {hint && (
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute left-1 right-1 z-10 h-0.5 rounded-full bg-primary ${
+            hint === "before" ? "-top-1.5" : "-bottom-1.5"
+          }`}
+        />
+      )}
       <DealCard
         deal={deal}
         stage={stage}

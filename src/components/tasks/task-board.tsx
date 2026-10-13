@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -11,7 +11,10 @@ import {
   useDroppable,
   useDraggable,
   closestCorners,
+  pointerWithin,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import type { BoardStage, Task } from "@/types";
@@ -23,11 +26,27 @@ import { summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { CARD_DROP_PREFIX, resolveDrop, type DropTarget } from "@/lib/ordering/column-order";
+
+/** Dropping a card: prefer the card under the pointer (to place it), else the column. */
+const detectCollisions: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  const card = hits.find((h) => String(h.id).startsWith(CARD_DROP_PREFIX) && h.id !== `${CARD_DROP_PREFIX}${args.active.id}`);
+  if (card) return [card];
+  if (hits.length > 0) return hits.filter((h) => !String(h.id).startsWith(CARD_DROP_PREFIX));
+  // Nearest card/column, never the card being dragged itself.
+  return closestCorners({
+    ...args,
+    droppableContainers: args.droppableContainers.filter((c) => c.id !== `${CARD_DROP_PREFIX}${args.active.id}`),
+  });
+};
 
 interface TaskBoardProps {
   stages: BoardStage[];
   tasks: Task[];
   onTaskMoved: (taskId: string, newStageId: string) => void;
+  /** A card was dropped: where (stage + before/after a card). Handles both the stage change and the personal order. */
+  onReorder?: (taskId: string, targetStageId: string, target: DropTarget) => void;
   onAddTask: (stageId: string) => void;
   onOpenTask: (taskId: string) => void;
   /** Timer on the card (play/pause + time per person). */
@@ -61,6 +80,7 @@ export function TaskBoard({
   stages,
   tasks,
   onTaskMoved,
+  onReorder,
   onAddTask,
   onOpenTask,
   currentUserId,
@@ -74,6 +94,8 @@ export function TaskBoard({
   onMenuAction,
 }: TaskBoardProps) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  // Line shown above/below the card the dragged one would land next to.
+  const [hint, setHint] = useState<{ cardId: string; where: "before" | "after" } | null>(null);
 
   // One shared clock for every card: ticks once a second only while some
   // task on the board has a running timer.
@@ -117,29 +139,57 @@ export function TaskBoard({
     setActiveTaskId(String(event.active.id));
   }
 
+  const stageOfCard = useCallback((cardId: string) => tasks.find((t) => t.id === cardId)?.stage_id ?? null, [tasks]);
+
+  function resolve(event: DragOverEvent | DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return null;
+    return resolveDrop({
+      overId: String(over.id),
+      stageOfCard,
+      overRect: over.rect,
+      activeRect: active.rect.current.translated,
+      activeId: String(active.id),
+    });
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const r = resolve(event);
+    if (!r || !r.overCardId || r.target === "top" || r.target === "end") {
+      setHint(null);
+      return;
+    }
+    setHint({ cardId: r.overCardId, where: "beforeId" in r.target ? "before" : "after" });
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     setActiveTaskId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const taskId = String(active.id);
-    const targetStageId = String(over.id);
-
+    setHint(null);
+    const r = resolve(event);
+    if (!r) return;
+    const taskId = String(event.active.id);
     const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.stage_id === targetStageId) return;
-    if (!sortedStages.some((s) => s.id === targetStageId)) return;
+    if (!task) return;
+    if (!sortedStages.some((s) => s.id === r.stageId)) return;
 
-    onTaskMoved(taskId, targetStageId);
+    if (onReorder) {
+      onReorder(taskId, r.stageId, r.target);
+    } else if (task.stage_id !== r.stageId) {
+      onTaskMoved(taskId, r.stageId);
+    }
   }
 
   function handleDragCancel() {
     setActiveTaskId(null);
+    setHint(null);
   }
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={detectCollisions}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -157,6 +207,7 @@ export function TaskBoard({
               onOpenTask={onOpenTask}
               timer={timer}
               onToggleStage={onToggleStage}
+              hint={hint}
             />
           );
         })}
@@ -186,6 +237,7 @@ function StageColumn({
   onOpenTask,
   timer,
   onToggleStage,
+  hint,
 }: {
   stage: BoardStage;
   tasks: Task[];
@@ -193,6 +245,7 @@ function StageColumn({
   onOpenTask: (taskId: string) => void;
   timer: CardTimerProps;
   onToggleStage?: (taskIds: string[], select: boolean) => void;
+  hint: { cardId: string; where: "before" | "after" } | null;
 }) {
   const t = useTranslations("Operational.tasks.board");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
@@ -233,7 +286,14 @@ function StageColumn({
           </div>
         ) : (
           tasks.map((task) => (
-            <DraggableTaskCard key={task.id} task={task} stage={stage} onOpen={onOpenTask} timer={timer} />
+            <DraggableTaskCard
+              key={task.id}
+              task={task}
+              stage={stage}
+              onOpen={onOpenTask}
+              timer={timer}
+              hint={hint?.cardId === task.id ? hint.where : null}
+            />
           ))
         )}
       </div>
@@ -256,24 +316,44 @@ function DraggableTaskCard({
   stage,
   onOpen,
   timer,
+  hint,
 }: {
   task: Task;
   stage: BoardStage;
   onOpen: (taskId: string) => void;
   timer: CardTimerProps;
+  hint: "before" | "after" | null;
 }) {
   // While something is selected a click selects, so dragging is paused.
   const selecting = !!timer.selectedIds && timer.selectedIds.size > 0;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, disabled: selecting });
+  // The card is also a drop spot: that is how the position inside a column is chosen.
+  const { setNodeRef: setDropRef } = useDroppable({ id: `${CARD_DROP_PREFIX}${task.id}` });
+  const setRefs = useCallback(
+    (el: HTMLDivElement | null) => {
+      setNodeRef(el);
+      setDropRef(el);
+    },
+    [setNodeRef, setDropRef],
+  );
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
+      className="relative"
       data-dnd-card="true"
       {...(selecting ? {} : listeners)}
       {...(selecting ? {} : attributes)}
       style={{ opacity: isDragging ? 0.3 : 1, touchAction: selecting ? "auto" : "none" }}
     >
+      {hint && (
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute left-1 right-1 z-10 h-0.5 rounded-full bg-primary ${
+            hint === "before" ? "-top-1.5" : "-bottom-1.5"
+          }`}
+        />
+      )}
       <TaskCard
         task={task}
         stage={stage}
