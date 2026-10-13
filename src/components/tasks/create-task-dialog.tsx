@@ -257,7 +257,7 @@ export function CreateTaskDialog({
                 <SelectTrigger className="w-full bg-muted border-border text-foreground">
                   <SelectValue>{stages.find((s) => s.id === stageId)?.name ?? ""}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   {stages.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
@@ -273,7 +273,7 @@ export function CreateTaskDialog({
                 <SelectTrigger className="w-full bg-muted border-border text-foreground">
                   <SelectValue>{tPriority(priority)}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   {PRIORITIES.map((p) => (
                     <SelectItem key={p} value={p}>
                       {tPriority(p)}
@@ -303,7 +303,7 @@ export function CreateTaskDialog({
                 <SelectTrigger className="w-full bg-muted border-border text-foreground">
                   <SelectValue>{sectors.find((s) => s.id === sectorId)?.name ?? t("none")}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   <SelectItem value="__none">{t("none")}</SelectItem>
                   {sectors.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
