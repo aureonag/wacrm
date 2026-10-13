@@ -1093,7 +1093,10 @@
       "highlightApply": "Apply",
       "pickerArea": "Saturation and brightness",
       "pickerHue": "Color (hue)",
-      "pickerEyedropper": "Eyedropper: pick a color from the screen"
+      "pickerEyedropper": "Eyedropper: pick a color from the screen",
+      "textSize": "Text size",
+      "normalText": "Normal",
+      "headingLevel": "Heading {level}"
     },
     "comments": {
       "edit": "Edit comment",

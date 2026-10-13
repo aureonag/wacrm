@@ -6,12 +6,13 @@ import StarterKit from "@tiptap/starter-kit";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import { Bold, ChevronDown, Highlighter, Italic, List, ListOrdered, LinkIcon, ImageIcon, Heading2, SquareCheck } from "lucide-react";
+import { Bold, Check, ChevronDown, Highlighter, Italic, List, ListOrdered, LinkIcon, ImageIcon, SquareCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DEFAULT_HIGHLIGHT, normalizeHex, readableTextColor } from "@/lib/tasks/color";
 import { HighlightColorPicker } from "./highlight-color-picker";
 import { EmojiPopover } from "@/components/ui/emoji-popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Briefing (item 5 do pedido): texto formatado, títulos, listas, links,
 // imagens — salvo como JSON nativo do Tiptap (tasks.briefing jsonb),
@@ -20,6 +21,17 @@ import { EmojiPopover } from "@/components/ui/emoji-popover";
 // Também: lista de tarefas com checkbox clicável (TaskList/TaskItem, igual a
 // um documento Word) e marca-texto ("grifar"). Os dois são nós/marcas novos
 // no mesmo JSON; briefings antigos continuam abrindo normalmente.
+
+/** Text sizes of the briefing: "Normal" plus six heading levels, largest first. */
+const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
+const HEADING_PREVIEW: Record<(typeof HEADING_LEVELS)[number], string> = {
+  1: "text-2xl font-bold",
+  2: "text-xl font-bold",
+  3: "text-lg font-semibold",
+  4: "text-base font-semibold",
+  5: "text-sm font-semibold",
+  6: "text-xs font-semibold",
+};
 
 /**
  * Marca-texto: <mark> com cor escolhida no seletor (atributo `color`, "#RRGGBB").
@@ -95,7 +107,8 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
         // rather than pulling in a whole prose plugin for one editor.
         class:
           "min-h-32 px-3 py-2 text-sm text-foreground focus:outline-none lg:min-h-full " +
-          "[&_h1]:mt-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:mt-2 [&_h2]:text-base [&_h2]:font-bold [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold " +
+          "[&_h1]:mt-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mt-3 [&_h2]:text-xl [&_h2]:font-bold [&_h3]:mt-2 [&_h3]:text-lg [&_h3]:font-semibold " +
+          "[&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_h5]:mt-2 [&_h5]:text-sm [&_h5]:font-semibold [&_h6]:mt-2 [&_h6]:text-xs [&_h6]:font-semibold " +
           "[&_ul]:ml-4 [&_ul]:list-disc [&_ol]:ml-4 [&_ol]:list-decimal [&_li]:my-0.5 " +
           "[&_ul[data-type=taskList]]:ml-0 [&_ul[data-type=taskList]]:list-none [&_li[data-checked]]:flex [&_li[data-checked]]:items-start [&_li[data-checked]]:gap-2 " +
           "[&_li[data-checked]>label]:mt-[3px] [&_li[data-checked]>label]:shrink-0 [&_li[data-checked]>div]:min-w-0 [&_li[data-checked]>div]:flex-1 " +
@@ -162,6 +175,9 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
     editor!.chain().focus().setImage({ src: url }).run();
   }
 
+  // Current text size, for the dropdown label ("Normal" or "Título N").
+  const activeLevel = HEADING_LEVELS.find((level) => editor.isActive("heading", { level })) ?? null;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {editable && (
@@ -172,9 +188,37 @@ export function BriefingEditor({ content, editable, onSave }: BriefingEditorProp
           <ToolbarButton active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} label={t("italic")}>
             <Italic className="h-3.5 w-3.5" />
           </ToolbarButton>
-          <ToolbarButton active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label={t("heading")}>
-            <Heading2 className="h-3.5 w-3.5" />
-          </ToolbarButton>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={t("textSize")}
+              title={t("textSize")}
+              // Keep the text selection: the click must not take the focus out of the editor.
+              onMouseDown={(e) => e.preventDefault()}
+              className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-popup-open:bg-muted data-popup-open:text-foreground"
+            >
+              <span className="min-w-12 text-left">{activeLevel ? t("headingLevel", { level: activeLevel }) : t("normalText")}</span>
+              <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" sideOffset={6} className="w-48 p-1.5">
+              {HEADING_LEVELS.map((level) => (
+                <DropdownMenuItem
+                  key={level}
+                  onClick={() => editor.chain().focus().setHeading({ level }).run()}
+                  className="gap-2 px-2.5 py-1.5"
+                >
+                  <span className={`flex-1 truncate ${HEADING_PREVIEW[level]}`}>{t("headingLevel", { level })}</span>
+                  {activeLevel === level && <Check className="h-3.5 w-3.5 text-primary" />}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem
+                onClick={() => editor.chain().focus().setParagraph().run()}
+                className="gap-2 px-2.5 py-1.5"
+              >
+                <span className="flex-1 truncate text-sm">{t("normalText")}</span>
+                {activeLevel === null && <Check className="h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ToolbarButton active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} label={t("bulletList")}>
             <List className="h-3.5 w-3.5" />
           </ToolbarButton>

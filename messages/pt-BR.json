@@ -1093,7 +1093,10 @@
       "highlightApply": "Aplicar",
       "pickerArea": "Saturação e brilho",
       "pickerHue": "Cor (matiz)",
-      "pickerEyedropper": "Conta-gotas: pegar uma cor da tela"
+      "pickerEyedropper": "Conta-gotas: pegar uma cor da tela",
+      "textSize": "Tamanho do texto",
+      "normalText": "Normal",
+      "headingLevel": "Título {level}"
     },
     "comments": {
       "edit": "Editar comentário",
