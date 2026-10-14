@@ -9,17 +9,17 @@ import {
 } from "./desktop-prefs";
 
 describe("isTypeEnabled", () => {
-  it("important types are on by default, small changes are not", () => {
-    expect(isTypeEnabled(DEFAULT_PREFS, "task_mention")).toBe(true);
-    expect(isTypeEnabled(DEFAULT_PREFS, "contract_signed")).toBe(true);
-    expect(isTypeEnabled(DEFAULT_PREFS, "task_moved")).toBe(false);
-    expect(isTypeEnabled(DEFAULT_PREFS, "task_updated")).toBe(false);
+  it("everything that happens on a task is on by default", () => {
+    for (const type of ["task_mention", "contract_signed", "task_moved", "task_updated", "task_transferred", "due_date_changed"] as const) {
+      expect(isTypeEnabled(DEFAULT_PREFS, type)).toBe(true);
+    }
   });
 
   it("the person's choice wins over the default", () => {
-    const prefs = { enabled: true, overrides: { task_moved: true, task_mention: false } };
-    expect(isTypeEnabled(prefs, "task_moved")).toBe(true);
+    const prefs = { enabled: true, overrides: { task_moved: false, task_mention: false } };
+    expect(isTypeEnabled(prefs, "task_moved")).toBe(false);
     expect(isTypeEnabled(prefs, "task_mention")).toBe(false);
+    expect(isTypeEnabled(prefs, "task_updated")).toBe(true);
   });
 
   it("the master switch turns everything off", () => {

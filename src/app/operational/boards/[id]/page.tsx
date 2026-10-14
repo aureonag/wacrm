@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -190,25 +190,100 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
     };
   }, [supabase, boardId]);
 
-  // Time tracked by other people (or in another tab/the drawer) shows up on
-  // the cards without a reload: any change to timesheet_entries refreshes the
-  // tasks of this board.
+  // The board is live: whatever anybody does to a card of this board (moves it,
+  // edits it, tags it, puts someone on it, ticks the checklist, comments, runs
+  // the timer) or to its stages shows up here without a reload. Events of other
+  // boards are ignored; the cards are re-read in one go after a short pause so
+  // a burst (bulk move) costs a single fetch.
+  const taskIdsRef = useRef<Set<string>>(new Set());
+  const movesInFlight = useRef(0);
   useEffect(() => {
-    let debounce: ReturnType<typeof setTimeout> | null = null;
+    taskIdsRef.current = new Set(tasks.map((x) => x.id));
+  }, [tasks]);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
-    const channel = supabase
-      .channel(`board-timesheet:${boardId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "timesheet_entries" }, () => {
-        if (debounce) clearTimeout(debounce);
-        debounce = setTimeout(async () => {
-          const rows = await loadBoardTasks(supabase, boardId);
-          if (!cancelled) setTasks(rows);
-        }, 400);
-      })
-      .subscribe();
+    let stagesChanged = false;
+    let everSubscribed = false;
+
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(async () => {
+        // Do not overwrite a move this person just made (the answer of the
+        // server would still show the old stage); try again right after.
+        if (movesInFlight.current > 0) {
+          refresh();
+          return;
+        }
+        const withStages = stagesChanged;
+        stagesChanged = false;
+        const [rows, stageRows] = await Promise.all([
+          loadBoardTasks(supabase, boardId),
+          withStages ? loadBoardStages(supabase, boardId) : Promise.resolve(null),
+        ]);
+        if (cancelled || movesInFlight.current > 0) return;
+        setTasks(rows);
+        if (stageRows) setStages(stageRows);
+      }, 300);
+    };
+
+    type Row = { id?: string; task_id?: string; board_id?: string };
+    const touchesThisBoard = (row: Row | undefined, byTaskId: boolean) => {
+      if (!row) return false;
+      if (byTaskId) return !!row.task_id && taskIdsRef.current.has(row.task_id);
+      return row.board_id === boardId || (!!row.id && taskIdsRef.current.has(row.id));
+    };
+
+    const channel = supabase.channel(`board-live:${boardId}`);
+    channel.on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, (payload) => {
+      if (!touchesThisBoard(payload.new as Row, false) && !touchesThisBoard(payload.old as Row, false)) return;
+      // Instant: the card changes the moment the event arrives (the stage it
+      // sits in, title, dates...). The re-read right after fills in the rest
+      // (people, tags, times) and confirms.
+      if (payload.eventType === "UPDATE") {
+        const row = payload.new as Task;
+        if (row.board_id === boardId && movesInFlight.current === 0) {
+          setTasks((prev) => prev.map((x) => (x.id === row.id ? { ...x, ...row } : x)));
+        }
+      } else if (payload.eventType === "DELETE") {
+        const gone = (payload.old as { id?: string }).id;
+        if (gone) setTasks((prev) => prev.filter((x) => x.id !== gone));
+      }
+      refresh();
+    });
+    for (const table of ["task_tags", "task_participants", "task_checklist_items", "task_comments", "timesheet_entries"]) {
+      channel.on("postgres_changes", { event: "*", schema: "public", table }, (payload) => {
+        if (touchesThisBoard(payload.new as Row, true) || touchesThisBoard(payload.old as Row, true)) refresh();
+      });
+    }
+    channel.on("postgres_changes", { event: "*", schema: "public", table: "board_stages" }, (payload) => {
+      const row = (payload.new as Row & { id?: string }) ?? undefined;
+      const old = payload.old as Row | undefined;
+      if (row?.board_id === boardId || old?.board_id === boardId) {
+        stagesChanged = true;
+        refresh();
+      }
+    });
+    channel.subscribe((status) => {
+      // After a reconnect: catch up with what happened while the line was down.
+      if (status === "SUBSCRIBED") {
+        if (everSubscribed) refresh();
+        everSubscribed = true;
+      }
+    });
+
+    const onWake = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("online", refresh);
+
     return () => {
       cancelled = true;
-      if (debounce) clearTimeout(debounce);
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("online", refresh);
       supabase.removeChannel(channel);
     };
   }, [supabase, boardId]);
@@ -240,11 +315,17 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
 
   async function handleTaskMoved(taskId: string, newStageId: string) {
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, stage_id: newStageId } : t)));
-    const res = await fetch(`/api/operational/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage_id: newStageId }),
-    });
+    movesInFlight.current += 1;
+    let res: Response;
+    try {
+      res = await fetch(`/api/operational/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage_id: newStageId }),
+      });
+    } finally {
+      movesInFlight.current -= 1;
+    }
     if (!res.ok) {
       toast.error(t("toastFailedMove"));
       reload();

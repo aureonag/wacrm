@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Notification } from "@/types";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistance } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useNotificationResync } from "@/hooks/use-notification-resync";
+import { useClockTick } from "@/hooks/use-clock-tick";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,6 +20,8 @@ export default function NotificationsPage() {
   const router = useRouter();
   const t = useTranslations("Notifications");
   const { accountId } = useAuth();
+  const locale = useLocale();
+  const now = useClockTick(true);
   const [notifications, setNotifications] = useState<Notification[] | null>(
     null,
   );
@@ -43,6 +48,10 @@ export default function NotificationsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  // Safety net for a sleeping/dropped live connection: re-read when the person
+  // returns, when the network comes back and every few seconds.
+  useNotificationResync(() => void load());
 
   // Realtime — new assignments appear without a refresh, and a
   // "mark all read" fired from another tab/device stays in sync here.
@@ -245,8 +254,9 @@ export default function NotificationsPage() {
                       </p>
                     )}
                     <p className="mt-1 text-[11px] text-muted-foreground/70">
-                      {formatDistanceToNow(new Date(n.created_at), {
+                      {formatDistance(new Date(n.created_at), new Date(now), {
                         addSuffix: true,
+                        locale: locale.startsWith("pt") ? ptBR : undefined,
                       })}
                     </p>
                   </div>

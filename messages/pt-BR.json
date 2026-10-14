@@ -2402,6 +2402,11 @@
   "Notifications": {
     "popupOpen": "Abrir",
     "popupList": "Ver notificações",
+    "enableTitle": "Ative os avisos na área de trabalho",
+    "enableBody": "Assim você é avisado de tarefas, menções e mudanças mesmo com o CRM em segundo plano.",
+    "enableAction": "Ativar",
+    "enableLater": "Depois",
+    "catchUp": "{count} novas notificações",
     "testTitle": "Avisos ativados",
     "testBody": "É assim que o aviso vai aparecer na sua área de trabalho.",
     "desktopPrompt": "Receba um aviso na área de trabalho quando te marcarem ou algo importante acontecer.",

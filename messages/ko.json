@@ -2402,6 +2402,11 @@
   "Notifications": {
     "popupOpen": "Open",
     "popupList": "View notifications",
+    "enableTitle": "데스크톱 알림 켜기",
+    "enableBody": "CRM이 백그라운드에 있어도 작업, 멘션, 변경 사항을 알려드립니다.",
+    "enableAction": "켜기",
+    "enableLater": "나중에",
+    "catchUp": "새 알림 {count}개",
     "testTitle": "Alerts turned on",
     "testBody": "This is how the alert will show up on your desktop.",
     "desktopPrompt": "Get a desktop alert when someone mentions you or something important happens.",

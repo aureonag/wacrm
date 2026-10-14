@@ -13,25 +13,8 @@ export const NOTIFICATION_GROUPS: { key: string; types: NotificationType[] }[] =
   { key: "business", types: ["contract_signed", "deal_won", "kickoff_task_created", "conversation_assigned"] },
 ];
 
-/** On from the start: what asks for the person's attention. The rest is only in the bell. */
-export const DEFAULT_DESKTOP_TYPES: NotificationType[] = [
-  "task_mention",
-  "task_assigned",
-  "task_reassigned",
-  "task_participant_added",
-  "task_comment",
-  "comment_reply",
-  "task_urgent",
-  "task_overdue",
-  "due_date_approaching",
-  "approval_requested",
-  "approval_approved",
-  "approval_rejected",
-  "contract_signed",
-  "deal_won",
-  "kickoff_task_created",
-  "conversation_assigned",
-];
+/** On from the start: everything that happens on a task or deal. The person can switch types off in the bell. */
+export const DEFAULT_DESKTOP_TYPES: NotificationType[] = NOTIFICATION_GROUPS.flatMap((group) => group.types);
 
 export interface DesktopPrefs {
   /** Master switch for the pop-ups of this browser. */

@@ -2402,6 +2402,11 @@
   "Notifications": {
     "popupOpen": "Open",
     "popupList": "View notifications",
+    "enableTitle": "Turn on desktop alerts",
+    "enableBody": "So you hear about tasks, mentions and changes even with the CRM in the background.",
+    "enableAction": "Turn on",
+    "enableLater": "Later",
+    "catchUp": "{count} new notifications",
     "testTitle": "Alerts turned on",
     "testBody": "This is how the alert will show up on your desktop.",
     "desktopPrompt": "Get a desktop alert when someone mentions you or something important happens.",

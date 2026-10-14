@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Bell, CheckCheck } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistance } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
 import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
+import { useClockTick } from "@/hooks/use-clock-tick";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TYPE_ICON, notificationHref, notificationsListHref } from "@/components/notifications/notification-meta";
 import { DesktopAlertsPanel } from "@/components/notifications/desktop-alerts-panel";
@@ -30,6 +31,9 @@ export function NotificationBell() {
   const pathname = usePathname();
   const unread = useUnreadNotifications();
   const [open, setOpen] = useState(false);
+  // "há 2 min" is measured on the database clock, so a PC whose own clock is a
+  // couple of minutes off does not show every notification as already old.
+  const now = useClockTick(open);
   const [items, setItems] = useState<Notification[] | null>(null);
 
   const load = useCallback(async () => {
@@ -150,7 +154,7 @@ export function NotificationBell() {
                         </span>
                         {n.body && <span className="mt-0.5 block truncate text-xs text-muted-foreground">{n.body}</span>}
                         <span className="mt-1 block text-[11px] text-muted-foreground/70">
-                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale })}
+                          {formatDistance(new Date(n.created_at), new Date(now), { addSuffix: true, locale: dateLocale })}
                         </span>
                       </span>
                     </button>

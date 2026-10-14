@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useNotificationResync } from "@/hooks/use-notification-resync";
 import type { Notification } from "@/types";
 
 /**
@@ -11,6 +12,10 @@ import type { Notification } from "@/types";
  * RLS on `notifications` already scopes every read to `auth.uid() =
  * user_id`, so no explicit filter is needed here — same pattern as
  * `useTotalUnread` for conversations.
+ *
+ * The live channel moves the number instantly; the count is also re-read from
+ * the database when the channel (re)connects, when the person returns to the
+ * tab and every few seconds, so a dropped connection never leaves it stale.
  */
 export function useUnreadNotifications(): number {
   const [count, setCount] = useState(0);
@@ -19,20 +24,25 @@ export function useUnreadNotifications(): number {
   // so each instance gets its own.
   const instanceId = useId();
 
+  const refetch = useCallback(async () => {
+    // head:true skips fetching rows — we only need the `count`
+    // supabase-js returns alongside the (empty) response body.
+    const { count: unreadCount, error } = await createClient()
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .is("read_at", null);
+    if (error) return;
+    setCount(unreadCount ?? 0);
+  }, []);
+
+  useNotificationResync(() => void refetch());
+
   useEffect(() => {
     const supabase = createClient();
     let cancelled = false;
 
-    (async () => {
-      // head:true skips fetching rows — we only need the `count`
-      // supabase-js returns alongside the (empty) response body.
-      const { count: unreadCount, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .is("read_at", null);
-      if (cancelled || error) return;
-      setCount(unreadCount ?? 0);
-    })();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch; setState happens after the await
+    void refetch().then(() => undefined);
 
     const channel = supabase
       .channel(`notifications-unread-count:${instanceId}`)
@@ -40,6 +50,7 @@ export function useUnreadNotifications(): number {
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
         (payload) => {
+          if (cancelled) return;
           if (payload.eventType === "INSERT") {
             const row = payload.new as Notification;
             if (!row.read_at) setCount((n) => n + 1);
@@ -55,13 +66,16 @@ export function useUnreadNotifications(): number {
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        // (Re)connected: whatever arrived while the line was down is counted now.
+        if (status === "SUBSCRIBED") void refetch();
+      });
 
     return () => {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [instanceId]);
+  }, [instanceId, refetch]);
 
   return count;
 }
