@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -22,6 +22,7 @@ import { TaskCard } from "./task-card";
 import type { TaskMenuAction, TaskMenuPerms } from "./task-card-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useClockTick } from "@/hooks/use-clock-tick";
+import { useHorizontalWheelScroll } from "@/hooks/use-horizontal-wheel-scroll";
 import { summarizeTaskTime } from "@/lib/tasks/timesheet";
 import { Button } from "@/components/ui/button";
 import { ChevronsRight, Plus } from "lucide-react";
@@ -171,6 +172,10 @@ export function TaskBoard({
     useSensor(KeyboardSensor),
   );
 
+  // A touchpad swipe over a card moves the board sideways, not only over the scrollbar.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useHorizontalWheelScroll(scrollRef);
+
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
 
   function handleDragStart(event: DragStartEvent) {
@@ -233,7 +238,10 @@ export function TaskBoard({
     >
       {/* Fills the height the page gives it: each column scrolls on its own, so the
           stage titles (and the "Adicionar tarefa" button) stay in view. */}
-      <div className="flex h-full min-h-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 lg:snap-none">
+      <div
+        ref={scrollRef}
+        className="flex h-full min-h-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 lg:snap-none"
+      >
         {sortedStages.map((stage) => {
           const stageTasks = tasksByStage.get(stage.id) ?? [];
           return (
@@ -364,7 +372,7 @@ function StageColumn({
 
       <div
         ref={setNodeRef}
-        className={`mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain rounded-lg pr-1 transition-all ${
+        className={`mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-y-contain rounded-lg pr-1 transition-all ${
           isOver ? "bg-primary/5 outline outline-2 outline-dashed outline-primary -outline-offset-2" : ""
         }`}
       >

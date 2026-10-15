@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
+import { useHorizontalWheelScroll } from "@/hooks/use-horizontal-wheel-scroll";
 import { formatCurrency } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import { CARD_DROP_PREFIX, resolveDrop, type DropTarget } from "@/lib/ordering/column-order";
@@ -85,6 +86,8 @@ export function PipelineBoard({
   const scrollRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ startX: number; startScrollLeft: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
+  // A touchpad swipe over a card moves the board sideways, not only over the scrollbar.
+  useHorizontalWheelScroll(scrollRef);
 
   function handleScrollPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType !== "mouse" || e.button !== 0) return;
