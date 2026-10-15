@@ -99,6 +99,45 @@ test('rejects invalid UTF-8 even with an explicitly matching fixture hash', () =
   assert.throws(() => extractOfficeInlinePng(source, {expectedSha256: hash(source), expectedCount: 0}), /canonical UTF-8/);
 });
 
+function nativeFixture(extraCount = 34) {
+  const images = Array.from({length:96}, (_, index) => png(index, 91, 11));
+  const values = images.map(uri);
+  const source = 'const nativeMaterialMasks=' + JSON.stringify(Object.fromEntries(values.map((value, index) => [index, value]))) + ';\n' +
+    'const registeredMaster={};\nconst walkingArms={};\nconst isolatedWalkLegs={};\n' +
+    'const repeated=' + JSON.stringify(values.slice(0, extraCount)) + ';\n' +
+    'const furniture=' + JSON.stringify(uri(b)) + ';\n';
+  return {source, images, values, count:97 + extraCount};
+}
+
+test('embedded native preloads eliminate separate avatar requests without changing any PNG bytes or unrelated furniture', () => {
+  const f = nativeFixture();
+  const result = extractOfficeInlinePng(f.source, {...options(f.source, f.count), embedNativePreloads:true});
+  assert.deepEqual(result.embeddedNativePreloads, {uniqueAssets:96, occurrences:130,
+    pngBytes:[...f.images, ...f.images.slice(0, 34)].reduce((sum, image) => sum + image.length, 0), byteExact:true});
+  assert.equal(result.assets.length, 97);
+  assert.deepEqual(result.assets.map(asset => asset.bytes), [...f.images, b]);
+  for (const value of f.values) assert.ok(result.text.includes(JSON.stringify(value)));
+  assert.equal(result.text.split(OFFICE_INLINE_URL_PREFIX).length - 1, 1);
+  assert.ok(result.text.includes(OFFICE_INLINE_URL_PREFIX + hash(b) + '.png'));
+  const restored = result.text.replace(/\/api\/office\/runtime\/assets\/inline-png\/([0-9a-f]{64})\.png/g,
+    (_url, sha) => uri(result.assets.find(asset => asset.sha256 === sha).bytes));
+  assert.equal(restored, f.source);
+});
+
+test('native embedding refuses changed declarations, counts and non-JSON code', () => {
+  const f = nativeFixture();
+  for (const [source, pattern] of [
+    [f.source.replace('const walkingArms={};', 'const walkingArms=(()=>{throw Error("must not execute")})();'), /invalid native preload JSON/],
+    [f.source + 'const walkingArms={};\n', /declaration changed/],
+    [nativeFixture(33).source, /native preload occurrence graph changed/],
+    [f.source.replace('const nativeMaterialMasks=', 'const other='), /declaration changed/],
+  ]) {
+    const count = source.split('data:image/png;base64,').length - 1;
+    assert.throws(() => extractOfficeInlinePng(source, {...options(source, count), embedNativePreloads:true}), pattern);
+  }
+  assert.throws(() => extractOfficeInlinePng(f.source, {...options(f.source, f.count), embedNativePreloads:1}), /must be boolean/);
+});
+
 test('approved local source: 350 occurrences / 305 unique PNGs; reversible and source remains unchanged', async t => {
   const sourcePath = new URL('../../aurion-escritorio-local/app.js', import.meta.url);
   let source;
@@ -119,5 +158,23 @@ test('approved local source: 350 occurrences / 305 unique PNGs; reversible and s
   assert.deepEqual(Buffer.from(restored), source);
   const after = await fs.stat(sourcePath);
   assert.equal(after.size, before.size); assert.equal(after.mtimeMs, before.mtimeMs);
+  assert.equal(hash(await fs.readFile(sourcePath)), OFFICE_INLINE_SOURCE_SHA256);
+});
+
+test('approved native preload optimization remains reversible and fits the guarded script transport', async t => {
+  const sourcePath = new URL('../../aurion-escritorio-local/app.js', import.meta.url);
+  let source;
+  try { source = await fs.readFile(sourcePath); }
+  catch (error) { if (error.code === 'ENOENT') { t.skip('Approved local source is unavailable in this checkout'); return; } throw error; }
+  const result = extractOfficeInlinePng(source, {embedNativePreloads:true});
+  assert.deepEqual(result.embeddedNativePreloads, {uniqueAssets:96, occurrences:130, pngBytes:3641148, byteExact:true});
+  assert.equal(result.assets.length, 305);
+  assert.equal(result.occurrences, 350);
+  assert.equal(result.text.split(OFFICE_INLINE_URL_PREFIX).length - 1, 220);
+  assert.ok(result.outputBytes < 10 * 1024 * 1024);
+  const byHash = new Map(result.assets.map(asset => [asset.sha256, asset]));
+  const restored = result.text.replace(/\/api\/office\/runtime\/assets\/inline-png\/([0-9a-f]{64})\.png/g,
+    (_url, sha) => uri(byHash.get(sha).bytes));
+  assert.deepEqual(Buffer.from(restored), source);
   assert.equal(hash(await fs.readFile(sourcePath)), OFFICE_INLINE_SOURCE_SHA256);
 });

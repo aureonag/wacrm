@@ -120,13 +120,29 @@ export function createOfficeCrmRuntime(env,limits){
  }
  const localStorage=facade(local,true),sessionStorage=facade(session,false);
  function loadScript(src){
-  if(env.loadScript)return env.loadScript(src);
   return new Promise((resolve,reject)=>{
-   const script=doc.createElement('script');script.src=src;script.async=false;
-   const onError=event=>{if(event.filename===new win.URL(src,win.location.href).href){cleanup();reject(Error('Falha ao iniciar um módulo do escritório.'));}};
-   const cleanup=()=>win.removeEventListener('error',onError);
-   win.addEventListener('error',onError);
-   script.onload=()=>{cleanup();resolve();};script.onerror=()=>{cleanup();reject(Error('Não foi possível carregar um módulo do escritório.'));};doc.body.append(script);
+   let script=null,onError=null,deadline=null,settled=false;
+   const cleanup=()=>{
+    if(deadline!==null){win.clearTimeout(deadline);deadline=null;}
+    if(onError)win.removeEventListener('error',onError);
+    if(script){script.onload=null;script.onerror=null;}
+   };
+   const finish=error=>{
+    if(settled)return;settled=true;cleanup();
+    if(error){script?.remove();reject(error);}else resolve();
+   };
+   const failed=()=>finish(Error('Não foi possível abrir o escritório. Tente novamente pelo CRM.'));
+   deadline=win.setTimeout(()=>finish(Error('O escritório demorou para carregar. Tente novamente pelo CRM.')),45000);
+   if(env.loadScript){
+    try{Promise.resolve(env.loadScript(src)).then(()=>finish(),failed);}catch{failed();}
+    return;
+   }
+   try{
+    script=doc.createElement('script');script.src=src;script.async=false;
+    onError=event=>{if(event.filename===new win.URL(src,win.location.href).href)failed();};
+    win.addEventListener('error',onError);
+    script.onload=()=>finish();script.onerror=failed;doc.body.append(script);
+   }catch{failed();}
   });
  }
  async function start(scripts){

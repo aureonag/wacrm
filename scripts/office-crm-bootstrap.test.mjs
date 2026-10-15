@@ -7,20 +7,22 @@ const identity={accountId:ACCOUNT,user:{id:USER,profileId:USER,name:'Membro test
 const approved={objects:[{id:71,type:'desk',x:224,y:368,direction:3}],floor:'#a27f6b',construction:[{id:'wall1',type:'wall',a:{x:1,y:2},b:{x:3,y:4},brandLogo:true}]};
 const clone=x=>structuredClone(x);
 const response=(status,body)=>({status,ok:status>=200&&status<300,json:async()=>body,clone:()=>response(status,body)});
-function harness(responder,document=null){
- const calls=[],messages=[],loaded=[],stopped=[],listeners=new Map(),registrations=[],timers=new Map();let serial=0;
- const win={location:{origin:'https://aureonag.com',href:'https://aureonag.com/api/office/runtime/'},parent:{postMessage:(...args)=>messages.push(args)},TextEncoder,AbortController,
-  setTimeout:fn=>{const id=++serial;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id),
+function harness(responder,document=null,loadScriptOverride){
+ const calls=[],messages=[],loaded=[],stopped=[],listeners=new Map(),registrations=[],timers=new Map(),timerDurations=new Map();let serial=0;
+ const win={location:{origin:'https://aureonag.com',href:'https://aureonag.com/api/office/runtime/'},parent:{postMessage:(...args)=>messages.push(args)},TextEncoder,AbortController,URL,
+  setTimeout:(fn,ms)=>{const id=++serial;timers.set(id,fn);timerDurations.set(id,ms);return id;},clearTimeout:id=>{timers.delete(id);timerDurations.delete(id);},
   CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}},
   addEventListener:(type,fn,options)=>{registrations.push({type,fn,options});const list=listeners.get(type)||[];list.push(fn);listeners.set(type,list);},
+  removeEventListener:(type,fn)=>listeners.set(type,(listeners.get(type)||[]).filter(listener=>listener!==fn)),
   dispatchEvent:event=>(listeners.get(event.type)||[]).forEach(fn=>fn(event)),
   aureonStopMicrophone:()=>stopped.push('mic'),aureonStopCamera:()=>stopped.push('camera'),aureonStopScreen:()=>stopped.push('screen'),
  };
  Object.defineProperty(win,'localStorage',{get(){throw Error('Actual localStorage must not be read');}});
  Object.defineProperty(win,'sessionStorage',{get(){throw Error('Actual sessionStorage must not be read');}});
  const fetch=async(url,options)=>{calls.push({url,options});return responder?responder(url,options):response(200,{identity:clone(identity),map:clone(approved),clientState:{}});};
- const runtime=createOfficeCrmRuntime({window:win,document,fetch,TextEncoder,loadScript:async src=>{loaded.push(src);}},CLIENT_STATE_LIMITS);
- return {runtime,win,calls,messages,loaded,stopped,listeners,registrations,timers};
+ const loader=loadScriptOverride===null?{}:{loadScript:src=>{loaded.push(src);return loadScriptOverride?loadScriptOverride(src):Promise.resolve();}};
+ const runtime=createOfficeCrmRuntime({window:win,document,fetch,TextEncoder,...loader},CLIENT_STATE_LIMITS);
+ return {runtime,win,calls,messages,loaded,stopped,listeners,registrations,timers,timerDurations};
 }
 test('context precedes modules; preferences and readonly full seed are isolated without actual browser storage',async()=>{
  const h=harness();
@@ -241,7 +243,7 @@ test('profile name and photo are CRM-managed while bio and timezone remain edita
 
 function tinyDocument(){
  const nodes=new Map();
- const make=tag=>({tagName:tag,style:{},children:[],setAttribute(){},append(...children){this.children.push(...children);for(const child of children)if(child.id)nodes.set(child.id,child);},prepend(child){this.children.unshift(child);if(child.id)nodes.set(child.id,child);},replaceChildren(...children){this.children=[];this.append(...children);},remove(){nodes.delete(this.id);}});
+ const make=tag=>({tagName:tag,style:{},children:[],setAttribute(){},append(...children){this.children.push(...children);for(const child of children){child.parentNode=this;if(child.id)nodes.set(child.id,child);}},prepend(child){this.children.unshift(child);child.parentNode=this;if(child.id)nodes.set(child.id,child);},replaceChildren(...children){this.children=[];this.append(...children);},remove(){nodes.delete(this.id);if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(child=>child!==this);this.parentNode=null;}});
  return {documentElement:{dataset:{}},readyState:'complete',head:make('head'),body:make('body'),createElement:make,getElementById:id=>nodes.get(id)||null};
 }
 test('a failed preference save shows one retry notice, keeps the office usable and clears after success',async()=>{
@@ -415,4 +417,74 @@ test('readonly pilot blocks only notes/station editors before writes and false s
  assert.equal(cancellations,7);
  assert.throws(()=>adaptOfficeCrm('app.js',appFixture.replace("function openObject(o,arrived=false){const action=actionFor(o);if(!action)return;if(!arrived)window.aureonCancelSeatApproach?.();",'function unexpectedObjectEditor(){')),/expected 1 anchor/);
  assert.throws(()=>adaptOfficeCrm('app.js',appFixture+'\n'+"function openObject(o,arrived=false){const action=actionFor(o);if(!action)return;if(!arrived)window.aureonCancelSeatApproach?.();"),/expected 1 anchor/);
+});
+
+function fireDeadline(h,milliseconds){
+ const found=[...h.timerDurations].find(([,ms])=>ms===milliseconds);
+ assert.ok(found,'Expected pending deadline '+milliseconds);
+ const [id]=found,callback=h.timers.get(id);h.timers.delete(id);h.timerDurations.delete(id);callback();
+}
+function assertScriptFailure(h,doc){
+ assert.equal(h.runtime.ready,false);assert.equal(h.runtime.active,false);
+ assert.equal(doc.documentElement.dataset.officeCrm,'unavailable');
+ assert.match(doc.getElementById('officeCrmStatus').textContent,/Tente novamente pelo CRM/);
+ assert.deepEqual(h.messages.map(message=>message[0].type),['aureon-office-unavailable']);
+ assert.deepEqual(h.stopped,['mic','camera','screen']);
+ assert.equal(h.timers.size,0);assert.equal(h.timerDurations.size,0);
+ assert.equal((h.listeners.get('error')||[]).length,0);
+ let blocked=0;h.win.dispatchEvent({type:'click',preventDefault(){blocked++;},stopImmediatePropagation(){blocked++;}});
+ assert.equal(blocked,2);
+}
+test('script fixture deadline stops the start after 45 seconds, never loads the next module or becomes ready on late completion',async()=>{
+ let finishLate;const doc=tinyDocument(),h=harness(undefined,doc,()=>new Promise(resolve=>{finishLate=resolve;}));
+ const starting=h.runtime.start(['/api/office/runtime/app.js','/api/office/runtime/next.js']);
+ await new Promise(setImmediate);
+ assert.deepEqual(h.loaded,['/api/office/runtime/app.js']);
+ assert.deepEqual([...h.timerDurations.values()],[45000]);
+ assert.equal(h.runtime.ready,false);
+ fireDeadline(h,45000);assert.equal(await starting,false);assertScriptFailure(h,doc);
+ finishLate();await new Promise(setImmediate);
+ assert.deepEqual(h.loaded,['/api/office/runtime/app.js']);assertScriptFailure(h,doc);
+});
+test('native script deadline removes its node, listener, timer and callbacks; saved late callbacks cannot advance startup',async()=>{
+ const doc=tinyDocument(),h=harness(undefined,doc,null);
+ const starting=h.runtime.start(['/api/office/runtime/app.js','/api/office/runtime/next.js']);
+ await new Promise(setImmediate);
+ const script=doc.body.children.find(node=>node.tagName==='script');assert.ok(script);
+ const lateLoad=script.onload,lateError=script.onerror;
+ assert.equal(script.src,'/api/office/runtime/app.js');assert.equal(script.async,false);
+ assert.equal((h.listeners.get('error')||[]).length,1);
+ fireDeadline(h,45000);assert.equal(await starting,false);assertScriptFailure(h,doc);
+ assert.equal(doc.body.children.includes(script),false);assert.equal(script.onload,null);assert.equal(script.onerror,null);
+ lateLoad();lateError();await new Promise(setImmediate);assertScriptFailure(h,doc);
+ assert.equal(doc.body.children.some(node=>node.tagName==='script'),false);
+});
+test('successful native script completion keeps the loaded node and clears only its temporary hooks and deadline',async()=>{
+ const doc=tinyDocument(),h=harness(undefined,doc,null);
+ const starting=h.runtime.start(['/api/office/runtime/app.js']);await new Promise(setImmediate);
+ const script=doc.body.children.find(node=>node.tagName==='script');assert.ok(script);
+ script.onload();assert.equal(await starting,true);
+ assert.equal(h.runtime.ready,true);assert.equal(h.runtime.active,true);
+ assert.equal(doc.body.children.includes(script),true);assert.equal(script.onload,null);assert.equal(script.onerror,null);
+ assert.equal(h.timers.size,0);assert.equal(h.timerDurations.size,0);assert.equal((h.listeners.get('error')||[]).length,0);
+ assert.deepEqual(h.stopped,[]);assert.deepEqual(h.messages.map(message=>message[0].type),['aureon-office-ready']);
+});
+test('script errors remove temporary native hooks, including matching runtime errors, without waiting for the deadline',async()=>{
+ for(const kind of ['element','runtime']){
+  const doc=tinyDocument(),h=harness(undefined,doc,null);
+  const starting=h.runtime.start(['/api/office/runtime/app.js','/api/office/runtime/next.js']);await new Promise(setImmediate);
+  const script=doc.body.children.find(node=>node.tagName==='script');
+  h.win.dispatchEvent({type:'error',filename:'https://aureonag.com/unrelated.js'});
+  assert.equal(h.runtime.active,true);assert.equal(h.timers.size,1);
+  if(kind==='element')script.onerror();else h.win.dispatchEvent({type:'error',filename:'https://aureonag.com/api/office/runtime/app.js'});
+  assert.equal(await starting,false);assertScriptFailure(h,doc);assert.equal(doc.body.children.includes(script),false);
+ }
+});
+test('fixture script rejection or synchronous failure clears its deadline without retrying or exposing technical errors',async()=>{
+ for(const loader of [()=>Promise.reject(Error('private implementation detail')),()=>{throw Error('private implementation detail');}]){
+  const doc=tinyDocument(),h=harness(undefined,doc,loader);
+  assert.equal(await h.runtime.start(['/api/office/runtime/app.js','/api/office/runtime/next.js']),false);
+  assert.deepEqual(h.loaded,['/api/office/runtime/app.js']);assertScriptFailure(h,doc);
+  assert.ok(!doc.getElementById('officeCrmStatus').textContent.includes('private implementation detail'));
+ }
 });

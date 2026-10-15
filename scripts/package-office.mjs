@@ -19,6 +19,7 @@ import { pathToFileURL } from 'node:url';
 import { adaptOfficeRuntime, ADAPTER_VERSION, OFFICE_RUNTIME_ADAPTERS } from './office-runtime-adapters.mjs';
 import { adaptOfficeCrm, CRM_BOOTSTRAP_VERSION } from './office-crm-bootstrap.mjs';
 import { extractOfficeInlinePng } from './office-inline-assets.mjs';
+import { buildOfficeScriptBundle, OFFICE_SCRIPT_BUNDLE_PATH } from './office-script-bundle.mjs';
 
 export const RUNTIME_BASE = '/api/office/runtime/';
 export const PUBLIC_ENTRIES = Object.freeze([
@@ -244,11 +245,13 @@ function transformEntry(entry,text,inline){
 }
 
 /** Plan only: reads public text/metadata and decodes pinned inline PNGs; never reads physical PNG bytes. */
-export async function planOfficePackage({ source, destination, optimizeInlineImages = true }) {
+export async function planOfficePackage({ source, destination, optimizeInlineImages = true, bundleScripts = false }) {
   if(typeof optimizeInlineImages!=='boolean')reject('optimizeInlineImages must be boolean');
+  if(typeof bundleScripts!=='boolean')reject('bundleScripts must be boolean');
   const locations = await validateLocations(source, destination);
   const selected = new Map();
   const virtualAssets = new Map();let inlineOptimization = null;
+  const bundleInputs=[];let scriptBundle=null;
   const entries = new Set();
   const pendingAssets = new Set();
   const checkedDirs = new Set();
@@ -270,7 +273,7 @@ export async function planOfficePackage({ source, destination, optimizeInlineIma
   const indexInfo = await checkFile('index.html');
   const indexBytes = await fs.readFile(path.join(locations.source, 'index.html'));
   const indexCrm = adaptOfficeCrm('index.html', transformIndex(indexBytes.toString('utf8'), addEntry, addAsset));
-  const outputIndex = indexCrm.text;
+  let outputIndex = indexCrm.text;
   selected.set('index.html', { ...indexInfo, outputBytes: Buffer.byteLength(outputIndex),
     sourceSha256: sha256(indexBytes), outputSha256: sha256(Buffer.from(outputIndex)),
     adapterRules: [{ rule: 'html-runtime-base', occurrences: 1 }, ...indexCrm.changes] });
@@ -278,19 +281,31 @@ export async function planOfficePackage({ source, destination, optimizeInlineIma
   for (const entry of entries) {
     const info = await checkFile(entry);
     const text = await fs.readFile(path.join(locations.source, entry), 'utf8');
-    const inline = entry === 'app.js' && optimizeInlineImages ? extractOfficeInlinePng(text) : null;
+    const inline = entry === 'app.js' && optimizeInlineImages ? extractOfficeInlinePng(text,{embedNativePreloads:bundleScripts}) : null;
     if(inline){const sourceSha=sha256(Buffer.from(text));
       const records=planOfficeInlineAssets(inline,sourceSha);
       for(const record of records)virtualAssets.set(record.path,record);
       inlineOptimization={extractor:'extractOfficeInlinePng',occurrences:inline.occurrences,uniqueAssets:records.length,
         pngBytes:records.reduce((sum,file)=>sum+file.bytes,0),inputAppBytes:inline.inputBytes,optimizedAppBytes:inline.outputBytes,
-        sourceSha256:sourceSha,byteExact:true};}
+        sourceSha256:sourceSha,byteExact:true,embeddedNativePreloads:inline.embeddedNativePreloads??null};}
     if (DATA_SCRIPTS.has(entry)) collectDataAssets(parseDataScript(text, DATA_SCRIPTS.get(entry), entry), addAsset);
     else inspectText(entry, text, addAsset, addEntry);
     const adapted = transformEntry(entry,text,inline);
+    if(bundleScripts&&entry.endsWith('.js'))bundleInputs.push({path:entry,text:adapted.text,sourceBytes:info.bytes,
+      sourceSha256:sha256(Buffer.from(text)),bytes:Buffer.byteLength(adapted.text),sha256:sha256(Buffer.from(adapted.text))});
     selected.set(entry, { ...info, outputBytes: Buffer.byteLength(adapted.text),
       sourceSha256: sha256(Buffer.from(text)), outputSha256: sha256(Buffer.from(adapted.text)),
       adapterRules: adapted.changes, preservedMetadataPaths: adapted.preservedMetadataPaths || [] });
+  }
+  if(bundleScripts){
+    const bundle=buildOfficeScriptBundle({index:outputIndex,scripts:bundleInputs,
+      allowedPaths:new Set(PUBLIC_ENTRIES.filter(file=>file.endsWith('.js')))});
+    outputIndex=bundle.index;scriptBundle=bundle.metadata;
+    const indexRecord=selected.get('index.html');
+    selected.set('index.html',{...indexRecord,outputBytes:Buffer.byteLength(outputIndex),outputSha256:sha256(Buffer.from(outputIndex)),
+      adapterRules:[...indexRecord.adapterRules,{rule:'ordered-script-bundle-index',occurrences:1}]});
+    if(selected.has(bundle.record.path))reject('generated bundle collision');
+    selected.set(bundle.record.path,bundle.record);
   }
   // Known dynamic UI image names, not a wildcard copy of assets/gather/.
   if (entries.has('replica-ui.js'))
@@ -321,11 +336,13 @@ export async function planOfficePackage({ source, destination, optimizeInlineIma
     crmBootstrapVersion: CRM_BOOTSTRAP_VERSION, crmSessionRequired: true, mapReadOnly: true, mapaReadOnly: true, spotifyEnabled: false,
     sourceMutated: false, assetsReadForHashing: false, inlineImagesDecodedAndHashed: !!inlineOptimization,
     scriptCount: [...entries].filter(f => f.endsWith('.js')).length,
+    entryScriptCount:scriptBundle?1:[...entries].filter(f=>f.endsWith('.js')).length,
+    bundleScripts,scriptBundle,generatedFileCount:scriptBundle?1:0,
     stylesheetCount: [...entries].filter(f => f.endsWith('.css')).length,
     inlineOptimized: !!inlineOptimization, inlineOptimization,
-    sourceFileCount: files.filter(file=>!file.virtual).length, virtualAssetCount: virtualAssets.size,
+    sourceFileCount: files.filter(file=>!file.virtual&&!file.generated).length, virtualAssetCount: virtualAssets.size,
     assetCount: pendingAssets.size + virtualAssets.size, fileCount: files.length,
-    sourceBytes: files.filter(file=>!file.virtual).reduce((sum, f) => sum + f.bytes, 0),
+    sourceBytes: files.filter(file=>!file.virtual&&!file.generated).reduce((sum, f) => sum + f.bytes, 0),
     outputBytes: files.reduce((sum, f) => sum + (f.outputBytes ?? f.bytes), 0),
     files, prefixAdapterVersion: ADAPTER_VERSION, prefixAdapterDefinitions: OFFICE_RUNTIME_ADAPTERS,
     adaptedFiles: files.filter(file => file.adapterRules?.length).map(file => ({ path: file.path, rules: file.adapterRules,
@@ -336,21 +353,65 @@ export async function planOfficePackage({ source, destination, optimizeInlineIma
   };
 }
 
+async function regenerateOfficeScriptBundle(plan,regeneratedInline,rawApp) {
+  const readSource=async record=>{
+    const filename=path.join(plan.source,...record.path.split('/'));
+    await noSymlinkAncestors(filename);
+    const info=await fs.stat(filename);
+    if(!info.isFile()||info.size!==record.bytes||info.mtimeMs!==record.mtimeMs)
+      reject('bundle source changed after planning: '+record.path);
+    const bytes=record.path==='app.js'&&rawApp?rawApp:await fs.readFile(filename);
+    if(sha256(bytes)!==record.sourceSha256)reject('bundle source SHA changed after planning: '+record.path);
+    return bytes;
+  };
+  const indexRecord=plan.files.find(file=>file.path==='index.html');
+  const sourceIndex=await readSource(indexRecord);
+  const adaptedIndex=adaptOfficeCrm('index.html',transformIndex(sourceIndex.toString('utf8'),()=>{},()=>{})).text;
+  const scripts=[];
+  for(const input of plan.scriptBundle.inputs){
+    const record=plan.files.find(file=>file.path===input.path);
+    if(!record||record.generated||record.virtual||!ENTRY_SET.has(record.path)||!record.path.endsWith('.js'))
+      reject('invalid generated bundle source');
+    const sourceBytes=await readSource(record);
+    const adapted=transformEntry(record.path,sourceBytes.toString('utf8'),record.path==='app.js'?regeneratedInline:null);
+    scripts.push({path:record.path,text:adapted.text,sourceBytes:sourceBytes.length,
+      sourceSha256:sha256(sourceBytes),bytes:Buffer.byteLength(adapted.text),sha256:sha256(Buffer.from(adapted.text))});
+  }
+  const bundle=buildOfficeScriptBundle({index:adaptedIndex,scripts,
+    allowedPaths:new Set(PUBLIC_ENTRIES.filter(file=>file.endsWith('.js')))});
+  const generated=plan.files.find(file=>file.generated);
+  if(JSON.stringify(bundle.record)!==JSON.stringify(generated)||JSON.stringify(bundle.metadata)!==JSON.stringify(plan.scriptBundle)||
+    sha256(Buffer.from(bundle.index))!==indexRecord.outputSha256)
+    reject('generated bundle changed after planning');
+  return bundle;
+}
+
 /** Re-plan before writing; creates a NEW directory and never overwrites it. */
-export async function writeOfficePackage({ source, destination, optimizeInlineImages = true }) {
-  const plan = await planOfficePackage({ source, destination, optimizeInlineImages });
+export async function writeOfficePackage({ source, destination, optimizeInlineImages = true, bundleScripts = false }) {
+  const plan = await planOfficePackage({ source, destination, optimizeInlineImages, bundleScripts });
   await validateLocations(source, destination);
   let regeneratedInline = null, rawApp = null;
   if(plan.inlineOptimized){rawApp=await fs.readFile(path.join(plan.source,'app.js'));
     if(sha256(rawApp)!==plan.inlineOptimization.sourceSha256)reject('inline PNG source changed after planning');
-    regeneratedInline=extractOfficeInlinePng(rawApp);
+    regeneratedInline=extractOfficeInlinePng(rawApp,{embedNativePreloads:bundleScripts});
     const regenerated=planOfficeInlineAssets(regeneratedInline,sha256(rawApp)).sort((a,b)=>a.path.localeCompare(b.path,'en'));
-    const planned=plan.files.filter(file=>file.virtual);
+    const planned=plan.files.filter(file=>file.virtual===true&&file.generated!==true);
     if(JSON.stringify(regenerated)!==JSON.stringify(planned))reject('extracted PNG graph changed after planning');}
   const inlineByPath=new Map(regeneratedInline?.assets.map(asset=>[asset.path,asset.bytes])||[]);
+  const regeneratedBundle=plan.bundleScripts?await regenerateOfficeScriptBundle(plan,regeneratedInline,rawApp):null;
   await fs.mkdir(plan.destination); // no recursive parents; an existing destination is an error
   const records = [];
   for (const record of plan.files) {
+    if(record.generated){
+      if(record.virtual||record.path!==OFFICE_SCRIPT_BUNDLE_PATH||!regeneratedBundle||record.outputSha256!==regeneratedBundle.metadata.sha256)
+        reject('invalid generated bundle write');
+      const bytes=Buffer.from(regeneratedBundle.text,'utf8');
+      if(bytes.length!==record.outputBytes||sha256(bytes)!==record.outputSha256)reject('generated bundle bytes changed');
+      await fs.writeFile(path.join(plan.destination,OFFICE_SCRIPT_BUNDLE_PATH),bytes,{flag:'wx'});
+      records.push({path:record.path,bytes:bytes.length,sha256:sha256(bytes),generated:true,generator:record.generator,
+        inputs:record.inputs,transformed:true,adapterRules:record.adapterRules,preservedMetadataPaths:[]});
+      continue;
+    }
     if(record.virtual){records.push(await writeOfficeInlineAsset(plan.destination,record,inlineByPath.get(record.path)));continue;}
     const sourceFile = path.join(plan.source, ...record.path.split('/'));
     await noSymlinkAncestors(sourceFile);
@@ -358,8 +419,9 @@ export async function writeOfficePackage({ source, destination, optimizeInlineIm
     if (!stat.isFile() || stat.size !== record.bytes || stat.mtimeMs !== record.mtimeMs)
       reject(`source changed while packaging: ${record.path}; incomplete output must not be served`);
     const sourceBytes = record.path === 'app.js' && rawApp ? rawApp : await fs.readFile(sourceFile);
+    if(record.sourceSha256&&sha256(sourceBytes)!==record.sourceSha256)reject('source SHA changed after planning: '+record.path);
     const bytes = record.path === 'index.html'
-      ? Buffer.from(adaptOfficeCrm('index.html', transformIndex(sourceBytes.toString('utf8'), () => {}, () => {})).text)
+      ? Buffer.from(regeneratedBundle?regeneratedBundle.index:adaptOfficeCrm('index.html', transformIndex(sourceBytes.toString('utf8'), () => {}, () => {})).text)
       : ENTRY_SET.has(record.path) ? Buffer.from(transformEntry(record.path,sourceBytes.toString('utf8'),record.path==='app.js'?regeneratedInline:null).text) : sourceBytes;
     if (record.outputSha256 && sha256(bytes) !== record.outputSha256)
       reject('transformation changed after planning: ' + record.path);
@@ -371,7 +433,8 @@ export async function writeOfficePackage({ source, destination, optimizeInlineIm
       transformed: !bytes.equals(sourceBytes), adapterRules: record.adapterRules || [],
       preservedMetadataPaths: record.preservedMetadataPaths || [] });
   }
-  const { files: _plannedFiles, ...summary } = plan;
+  const summary = {...plan};
+  delete summary.files;
   const manifest = { ...summary, mode: 'written', generatedAt: new Date().toISOString(),
     assetsReadForHashing: true, files: records };
   // The manifest deliberately does not hash itself. Its presence marks completion,
@@ -382,8 +445,8 @@ export async function writeOfficePackage({ source, destination, optimizeInlineIm
 
 export async function runCli(args, { optimizeInlineImages = true } = {}) {
   if (args.includes('--help')) {
-    return { usage: 'node scripts/package-office.mjs --source DIR --dest NEW_DIR [--dry-run | --write]',
-      defaultMode: 'dry-run', inlineOptimizationDefault: true, visualOnly: false, readyToServe: false };
+    return { usage: 'node scripts/package-office.mjs --source DIR --dest NEW_DIR [--bundle-scripts] [--dry-run | --write]',
+      defaultMode: 'dry-run', inlineOptimizationDefault: true, scriptBundlingDefault:false, visualOnly: false, readyToServe: false };
   }
   const options = {};
   let mode;
@@ -392,6 +455,9 @@ export async function runCli(args, { optimizeInlineImages = true } = {}) {
     if (arg === '--dry-run' || arg === '--write') {
       if (mode) reject('choose exactly one mode');
       mode = arg;
+    } else if(arg==='--bundle-scripts'){
+      if(options.bundleScripts!==undefined)reject('duplicate --bundle-scripts');
+      options.bundleScripts=true;
     } else if (arg === '--source' || arg === '--dest') {
       const key = arg === '--source' ? 'source' : 'destination';
       if (options[key] || !args[i + 1] || args[i + 1].startsWith('--')) reject(`invalid ${arg}`);

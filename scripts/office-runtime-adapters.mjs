@@ -12,6 +12,7 @@ export const OFFICE_RUNTIME_ADAPTERS=Object.freeze([
  {file:'gather-library-data.js',guards:['JSON assignment','original/improved fields','at least one root asset'],changes:['Prefix image fields; preserve non-path data.']},
  {file:'smart-object-art-core.js',guards:['6 root asset literals'],changes:['Prefix six state sprites.']},
  {file:'replica-decor.js',guards:['1 exact image'],changes:['Prefix legacy computer image.']},
+ {file:'replica-library.js',guards:['1 render/catalog boundary'],changes:['Skip catalog tile materialization only for the explicit read-only CRM pilot; keep map shapes/render.']},
  {file:'replica-ui.js',guards:['1 API base','1 UI image base'],changes:['Prefix URLs; leave bootstrap/identity untouched.']},
  {file:'gather-avatar-native-library.js',guards:['1 manifest fetch','1 image assignment','1 strict-mode scope'],changes:['Explicit native image/composition resolver.']},
  {file:'gather-avatar-native-scene.js',guards:['1 manifest fetch','1 image assignment','1 strict-mode scope'],changes:['Explicit native resolver; preserve compositor/cache/dimensions.']},
@@ -79,6 +80,12 @@ export function adaptOfficeRuntime(file,source){
    text=replaceExact(file,text,'"/assets/','"'+OFFICE_RUNTIME_BASE+'assets/',6);changes.push({rule:'smart-state-sprites',occurrences:6});break;
   case'replica-decor.js':
    text=replaceExact(file,text,"'/assets/gather/catalog/e5fed724-ad75-48aa-9f5b-255ada0e2d59.png'","'"+OFFICE_RUNTIME_BASE+"assets/gather/catalog/e5fed724-ad75-48aa-9f5b-255ada0e2d59.png'");changes.push({rule:'legacy-computer-image',occurrences:1});break;
+  case'replica-library.js':{
+   const before="const previousRender=render;render=function(){for(const o of objects){const m=models.get(o.type);if(m)o.label=m.label;}document.getElementById('office').classList.toggle('r-library-editing',!!editing);previousRender();};\nconst nativeBar=panel.querySelector('.r-decor-category-bar'),gatherBar=document.createElement('div');";
+   const after=before.replace('\nconst nativeBar=',"\nif(window.aureonOfficeBootstrap?.mapReadOnly===true){render();return;}\nconst nativeBar=");
+   text=replaceExact(file,text,before,after);
+   changes.push({rule:'pilot-readonly-catalog-no-thumbnails',occurrences:1});break;
+  }
   case'replica-ui.js':
    text=replaceExact(file,text,"'/api/interface/'","'"+OFFICE_INTERFACE_BASE+"'");
    text=replaceExact(file,text,"'/assets/gather/'","'"+OFFICE_RUNTIME_BASE+"assets/gather/'");
