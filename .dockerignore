@@ -15,3 +15,9 @@ docker-compose*.yml
 .vscode
 .idea
 coverage
+
+# Office bundles mount separately; never send local test state into a CRM build.
+.office-runtime
+.office-test
+
+.office-runtime-optimized

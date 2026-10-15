@@ -8,6 +8,7 @@ import { NextRequest } from "next/server";
 //                      i.e. the freshly *rotated* auth token. The whole point
 //                      of the test is that these must survive onto whatever
 //                      response the middleware returns — including redirects.
+let getUserCalls = 0;
 let mockUser: { id: string } | null = null;
 let refreshedCookies: Array<{
   name: string;
@@ -28,6 +29,7 @@ vi.mock("@supabase/ssr", () => ({
       // refreshed inside getUser(), which rotates the refresh token and
       // pushes the new cookies through setAll() before resolving.
       getUser: async () => {
+        getUserCalls += 1;
         if (refreshedCookies.length) opts.cookies.setAll(refreshedCookies);
         return { data: { user: mockUser } };
       },
@@ -42,6 +44,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
   mockUser = null;
+  getUserCalls = 0;
   refreshedCookies = [];
 });
 
@@ -54,6 +57,37 @@ const ROTATED = {
 };
 
 describe("middleware — refreshed auth cookies survive redirects", () => {
+  it("leaves the exact HMAC store callback independent of browser cookies", async () => {
+    refreshedCookies = [ROTATED];
+    const res = await middleware(new NextRequest("https://app.test/api/office/backend-store", { method: "POST" }));
+    expect(getUserCalls).toBe(0);
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+  it.each(["/api/office/context", "/api/office/backend-store-other", "/api/office/backend-store/nested"])("keeps browser session handling on %s", async pathname => {
+    refreshedCookies = [ROTATED];
+    const res = await middleware(new NextRequest("https://app.test" + pathname));
+    expect(getUserCalls).toBe(1);
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+  it("protects the office entry and preserves its login return path", async () => {
+    refreshedCookies = [{ ...ROTATED, value: "cleared" }];
+    const res = await middleware(new NextRequest("https://app.test/escritorio"));
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/escritorio");
+    expect(res.cookies.get(ROTATED.name)?.value).toBe("cleared");
+  });
+
+  it("preserves refreshed cookies on authenticated office requests", async () => {
+    mockUser = { id: "aureon-member" };
+    refreshedCookies = [ROTATED];
+    const res = await middleware(new NextRequest("https://app.test/escritorio"));
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
   it("carries the rotated token when redirecting a signed-in user off /login", async () => {
     mockUser = { id: "user-1" };
     refreshedCookies = [ROTATED];

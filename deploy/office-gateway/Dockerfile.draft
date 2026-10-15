@@ -1,0 +1,18 @@
+# DRAFT ONLY — not built, run or deployed by this change.
+# Build context must contain only the reviewed gateway-build/ output, never the CRM checkout.
+# Mount the separately verified v4 runtime privately/read-only at an absolute real path.
+# Configure AUREON_OFFICE_ENABLED, AUREON_OFFICE_GATEWAY_KEY (64 fictional-test/real-private hex chars),
+# AUREON_OFFICE_STORE_CALLBACK_URL (fixed HTTPS CRM callback) and AUREON_OFFICE_RUNTIME_DIR privately.
+# No Supabase SDK, service-role key, .env file or node_modules belongs in this image.
+# One process only. A future host publication MUST bind 127.0.0.1:4194:4194.
+# No compose, proxy/router, domain or public port publication is defined here.
+FROM node:24-alpine
+WORKDIR /opt/aureon-office-gateway
+COPY --chown=node:node gateway-build/package.json ./package.json
+COPY --chown=node:node gateway-build/gateway-build.json ./gateway-build.json
+COPY --chown=node:node gateway-build/start.mjs ./start.mjs
+COPY --chown=node:node gateway-build/lib ./lib
+USER node
+ENV NODE_ENV=production
+EXPOSE 4194
+CMD ["node", "start.mjs", "--host", "0.0.0.0", "--allow-container-bind", "--port", "4194"]

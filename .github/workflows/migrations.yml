@@ -73,3 +73,9 @@ jobs:
       # just the absence of an error.
       - name: Verify the resulting schema
         run: supabase db query --local --file supabase/ci/verify-schema.sql
+
+      - name: Verify office runtime isolation
+        run: supabase db query --local --file supabase/ci/verify-office-runtime.sql
+
+      - name: Verify office gateway cross-worker replay isolation
+        run: supabase db query --local --file supabase/ci/verify-office-gateway-nonces.sql

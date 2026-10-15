@@ -69,6 +69,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useTranslations } from "next-intl";
 import { AffiliatesNav } from "@/components/layout/affiliates-nav";
+import { OfficeNavLink } from "@/components/office/office-nav-link";
 
 // ============================================================
 // Unified primary sidebar (Allan, 2026-09-30) — replaces the old
@@ -731,6 +732,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <div className="my-4 border-t border-border" />
 
           <ul className="flex flex-col gap-1">
+            <OfficeNavLink />
             <li>
               <Link
                 href="/settings"

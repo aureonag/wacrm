@@ -1,0 +1,377 @@
+{
+  "version": 4,
+  "scope": "Aureon only",
+  "target": {
+    "origin": "https://aureonag.com",
+    "entry": "/escritorio",
+    "context": "/api/office/context"
+  },
+  "serverEnvironment": {
+    "AUREON_OFFICE_ACCOUNT_ID": "737433a3-ec29-4e90-b4ba-9989192ca735",
+    "AUREON_OFFICE_TRANSPORT": "gateway (deployment target; explicit local remains a test/deployment choice)",
+    "AUREON_OFFICE_GATEWAY_URL": "https://office-gateway.aureonag.com/v1/runtime (proposed, NXDOMAIN, not provisioned)",
+    "AUREON_OFFICE_GATEWAY_KEY": "same original separate32-byte key installed privately on VPS0600 root-owned; CRM Apply requested, awaiting success; material excluded",
+    "AUREON_OFFICE_PILOT_USER_IDS": "server-only verified owner auth UID for initial pilot; actual UID excluded from this record"
+  },
+  "accountEvidence": {
+    "source": "Existing authenticated CRM session, GET /api/account via browser UI",
+    "observedName": "Allan Giro",
+    "observedRole": "owner",
+    "boardIdIsNotAccountId": true
+  },
+  "implementation": {
+    "stage": "Restricted deployment192 in progress: SQL applied, upload received and VPS configuration installed; CRM Apply pending; office not published",
+    "codeIntegrated": true,
+    "fictionalBrowserValidated": true,
+    "authenticatedCrmBrowserValidated": false,
+    "hostedDatabaseMigrationApplied": true,
+    "localWasmDatabaseChecks": 29,
+    "multiComputerMediaValidated": false,
+    "deployed": false,
+    "gatewayCodeIntegrated": true,
+    "hostedGatewayInstalled": false,
+    "nonceMigrationApplied": true,
+    "hostedDatabaseMetadataInspected": true,
+    "hostedPilotGateValidated": false,
+    "realLoadCasNonceExecutionValidated": false,
+    "hostedGatewayConfigurationApplied": true,
+    "crmConfigurationApplyPending": true
+  },
+  "deploymentRules": [
+    "Use the existing CRM Supabase session and RLS client.",
+    "Set AUREON_OFFICE_ACCOUNT_ID only on the server. Missing or malformed configuration denies access.",
+    "Do not create a parallel name-only office account.",
+    "Authorize all office APIs and media credentials on the server before enabling the runtime.",
+    "Keep the office runtime package outside public; serve it only through a protected allowlist.",
+    "Gateway mode never falls back to an independent local process. Only CRM-signed fresh identities reach the VPS; the Supabase service-role key remains on the CRM host."
+  ],
+  "remaining": [
+    "Confirm CRM application of the same private HMAC key and disabled flag, revoke the temporary upload key, verify/extract only to the new release directory, then validate deployment before enabling the owner.",
+    "Prepare reviewed immutable gateway code and private v4 asset release on the separate VPS; validate Docker, Traefik reachability, DNS/HTTPS and actual limits.",
+    "156/157 and catalog ACL/RLS checks are applied in the target Supabase; still validate actual load/CAS, global nonce claims across workers, persistence and restart.",
+    "Run the integrated page with actual CRM sessions, including logout/account change and unauthorized accounts.",
+    "Provide authenticated temporary STUN/TURN or an approved media service and validate actual audio/camera/screen across networks.",
+    "Run a hosted pilot with3-5 Aureon members, reconnect/restart and rollback before enabling team use."
+  ],
+  "hosting": {
+    "observedAt": "2026-10-15",
+    "classification": "I",
+    "current": "Hostinger Business Node.js Web App",
+    "repository": "aureonag/wacrm",
+    "branch": "main",
+    "automaticDeploymentObserved": true,
+    "separateVps": "Docker manager lists evolution-api-nxzm and traefik; not the current CRM application",
+    "privateArtifactDeliveryVerified": true,
+    "singleProcessVerified": false,
+    "proposedOfficeBackend": {
+      "host": "srv1958606.hstgr.cloud",
+      "classification": "A read-only terminal inspection",
+      "os": "Ubuntu24.04.4",
+      "memoryAvailableObservedGiB": 3,
+      "port4194OccupiedAtInspection": false,
+      "traefikNetworkMode": "host",
+      "serviceInstalled": false,
+      "serviceRoleMoved": false,
+      "dockerVersionObserved": "29.7.2",
+      "composeVersionObserved": "5.5.0",
+      "composeConfigValidation": "A exit0 via stdin, no env resolution, no service/files/network created"
+    },
+    "currentCrmMoves": false,
+    "databaseMetadata": {
+      "classification": "A — Root executed SQL in real Supabase and captured catalog results; saved text reviewed here",
+      "postgresVersion": "17.6",
+      "officePrivateSchemaPresent": true,
+      "officeTablesPresent": true,
+      "officeRpcsPresent": true,
+      "aureonAccountPresent": true,
+      "businessRecordsRead": false,
+      "catalogAclAndForceRlsChecked": true,
+      "records": [
+        "192-supabase-migracoes-aplicadas.png",
+        "192-supabase-rpc-permissoes.txt",
+        "192-supabase-rpc-permissoes.png",
+        "192-supabase-tabelas-privadas.txt",
+        "192-supabase-tabelas-privadas.png"
+      ],
+      "sqlSha256": "4e7159a1c687ed45ce75fd13a61b3a127a791fa2b77d5c60b0b87cefb9178cf2",
+      "migrationHistorySchemaInspected192": false
+    },
+    "databaseMetadataBeforeMigration191": {
+      "classification": "A read-only SELECT in real SQL Editor",
+      "postgresVersion": "17.6",
+      "migrationHistorySchemaPresent": false,
+      "officeTablesPresent": false,
+      "officeRpcsPresent": false,
+      "aureonAccountPresent": true,
+      "businessRecordsRead": false,
+      "record": "191-supabase-metadados.json",
+      "officePrivateSchemaPresent": false
+    },
+    "extractionAndReadOnlyMountVerified": false
+  },
+  "localValidation": {
+    "approvedObjects": 122,
+    "approvedConstructionEntries": 296,
+    "objectTransformsCompared": true,
+    "uiFixturesOnly": true,
+    "privateMeetingsAndChat": "F v1; no real members",
+    "movementAndSeatSubset": "F optimized v2",
+    "frameByFrameCapture": false,
+    "sql": "C(SQLWASM), single connection, no hosted database",
+    "fullCrmSuite": {
+      "passed": 1457,
+      "failed": 5,
+      "skipped": 1,
+      "failuresReproducedOnPrimary": true
+    },
+    "integration191": {
+      "passed": 513,
+      "skipped": 1,
+      "files": 22,
+      "report": ".office-test/191-vitest-final.json",
+      "build": "webpack exit0, session44497; full TypeScript pass",
+      "eslint": "0 errors,1 existing middleware warning",
+      "sql157": "43/43 SQLWASM single-connection checks, no hosted DB",
+      "compiledUnauthenticatedHttp": true,
+      "spatialBrowserPublicationStillPending": true
+    },
+    "nodePackageGuards191": {
+      "passed": 61,
+      "skipped": 1,
+      "total": 62
+    },
+    "combinedSql191": {
+      "passed": 5,
+      "record": ".office-test/pg-fixture/combined-result-191.json",
+      "hosted": false
+    },
+    "integration192": {
+      "classification": "C — local build and mocked/fixture tests",
+      "report": ".office-test/192-final-review/summary.json",
+      "passed": 573,
+      "failed": 0,
+      "skipped": 1,
+      "files": 28,
+      "buildExitCode": 0,
+      "buildPublicConfiguration": "Fictitious nonsecret Supabase URL/key; local Next output must not be deployed",
+      "productionBuildConfigurationValidated": false,
+      "pilotGateImplemented": true,
+      "uniqueOwnerAuthUidConfirmedPrivately": true,
+      "realOwnerUidIncludedInGit": false,
+      "hostedPilotGateValidated": false
+    }
+  },
+  "updatedAt": "2026-10-15T23:00:43.045Z",
+  "deploymentRunbook": "docs/office-gateway-deployment.md",
+  "deliveryPackage191": {
+    "file": ".office-test/office-release-191-v1.tar.gz",
+    "bytes": 507549813,
+    "sha256": "b8d04af9f3290c7a937de021ed5733ca66f79719cd2dcb50d684244728265a34",
+    "files": 8516,
+    "directories": 28,
+    "allContentAndMetadataVerifiedWithoutExtraction": true,
+    "uploaded": true,
+    "uploadEvidence": {
+      "classification": "A — real SSH transfer; saved report read by this documentation task",
+      "report": ".office-test/192-upload-result.json",
+      "reportSha256": "b04eef93cfd3534a3b3af20296f6dfedea80d65686d695ded3031a5bb7c49661",
+      "exitCode": 0,
+      "seconds": 41.438,
+      "bytes": 507549813,
+      "sha256": "b8d04af9f3290c7a937de021ed5733ca66f79719cd2dcb50d684244728265a34",
+      "acknowledgement": "Release received.",
+      "hostKeyChecking": "pinned-ed25519-required",
+      "hostKeyFingerprint": "SHA256:rwPq/l56P+rziugKPECe6E3AKrizFl4F8gLY6gRtrIw",
+      "archiveExtractionConfirmed": false
+    }
+  },
+  "deliveryReview": {
+    "pushUrl": "https://github.com/aureonag/wacrm.git",
+    "remoteMainObserved": "bd99e5e9f590f1e952e15f8cf39b25059bb89ed4",
+    "dryRunPushRejectedBeforeExecution": false,
+    "reviewReason": "Human approved the restricted deployment; authorized dry-run executed successfully using normal Git authentication.",
+    "push": false,
+    "commit": false,
+    "pullRequest": false,
+    "gitHubCliAuthenticated": false,
+    "dryRunPushExecuted": true,
+    "dryRunPushResult": "Everything up-to-date",
+    "normalGitAuthenticationConfirmed": true,
+    "githubCliAuthenticationRechecked192": false
+  },
+  "deliveryReviewHistory191": {
+    "pushUrl": "https://github.com/aureonag/wacrm.git",
+    "remoteMainObserved": "bd99e5e9f590f1e952e15f8cf39b25059bb89ed4",
+    "dryRunPushRejectedBeforeExecution": true,
+    "reviewReason": "Remote delivery negotiation exceeded the recorded preparation authorization; no retry/workaround used.",
+    "push": false,
+    "commit": false,
+    "pullRequest": false,
+    "gitHubCliAuthenticated": false
+  },
+  "deployment192": {
+    "stage": 192,
+    "asOf": "2026-10-15T23:00:43.045Z",
+    "status": "restricted deployment in progress: upload received, VPS key installed, CRM apply awaiting confirmation; not published",
+    "authorization": "Explicit human authorization for the restricted deployment was received by Root.",
+    "database": {
+      "project": "heesqqbjssficymgkdme",
+      "classification": "A — Root executed SQL in real Supabase and captured catalog results; saved text reviewed here",
+      "combinedSqlSha256": "4e7159a1c687ed45ce75fd13a61b3a127a791fa2b77d5c60b0b87cefb9178cf2",
+      "combinedSqlBytes": 24714,
+      "migrations": [
+        156,
+        157
+      ],
+      "applied": true,
+      "executionReportedSuccess": true,
+      "rpcs": {
+        "count": 3,
+        "securityDefiner": true,
+        "anonCanExecute": false,
+        "authenticatedCanExecute": false,
+        "serviceRoleCanExecute": true,
+        "names": [
+          "office_gateway_claim_nonce",
+          "office_runtime_compare_and_swap",
+          "office_runtime_load"
+        ]
+      },
+      "tables": {
+        "names": [
+          "gateway_nonces",
+          "runtime_state"
+        ],
+        "rls": true,
+        "forceRls": true,
+        "directAclOnlyPostgres": true
+      },
+      "realLoadCasNonceExecutionValidated": false,
+      "multiSessionConcurrencyValidated": false,
+      "persistenceAfterRestartValidated": false,
+      "evidence": [
+        "192-supabase-migracoes-aplicadas.png",
+        "192-supabase-rpc-permissoes.txt",
+        "192-supabase-rpc-permissoes.png",
+        "192-supabase-tabelas-privadas.txt",
+        "192-supabase-tabelas-privadas.png"
+      ]
+    },
+    "linuxReceiver": {
+      "classification": "C — real Linux VPS fixture, Root-reported",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "productionUploadAccountCreated": true,
+      "provisioningApplied": true
+    },
+    "localReview": {
+      "classification": "C — local build and mocked/fixture tests",
+      "report": ".office-test/192-final-review/summary.json",
+      "passed": 573,
+      "failed": 0,
+      "skipped": 1,
+      "files": 28,
+      "buildExitCode": 0,
+      "buildPublicConfiguration": "Fictitious nonsecret Supabase URL/key; local Next output must not be deployed",
+      "productionBuildConfigurationValidated": false,
+      "pilotGateImplemented": true,
+      "uniqueOwnerAuthUidConfirmedPrivately": true,
+      "realOwnerUidIncludedInGit": false,
+      "hostedPilotGateValidated": false
+    },
+    "git": {
+      "classification": "A — Root-reported authorized dry-run",
+      "dryRunApproved": true,
+      "dryRunExecuted": true,
+      "dryRunResult": "Everything up-to-date",
+      "normalGitAuthenticationWorks": true,
+      "commit": false,
+      "push": false,
+      "pullRequest": false
+    },
+    "hmac": {
+      "localKeyGenerated": true,
+      "sameKeyInstalledOnCrmAndGateway": false,
+      "crmConfigurationApplied": false,
+      "gatewayConfigurationApplied": true,
+      "valuesOrKeyMaterialIncluded": false,
+      "automaticReviewRejections": [
+        {
+          "action": "Copy the existing HMAC key to an unencrypted temporary file",
+          "executed": false
+        },
+        {
+          "action": "Generate a different key only on CRM",
+          "executed": false
+        }
+      ],
+      "nextAction": "Confirm CRM Apply changes success for the same key and disabled office flag; confirm upload-key revocation and verified extraction before any service startup.",
+      "gatewayConfigurationMode": "0600 root-owned",
+      "gatewayConfigurationChannel": "direct stdin without echo",
+      "crmConfigurationApplyRequested": true,
+      "crmConfigurationSuccessConfirmed": false,
+      "sameOriginalKeyPreparedForBothHosts": true,
+      "officeEnabledOnGateway": false,
+      "officeEnabledOnCrmRequested": false,
+      "crmPendingParameterCount": 6,
+      "localMaterialAccessResolution": "Own-file ACL was empty; access was corrected only for Allan and SYSTEM, then the original material was read directly. No unencrypted temporary copy and no replacement key were created.",
+      "crmApplyAutomaticReview": {
+        "initialAttemptRejectedBeforeExecution": true,
+        "nonsecretVisibleValuesVerified": 5,
+        "keyValueMasked": true,
+        "laterAuthorizedToolActionExecuted": true,
+        "applicationSuccessConfirmed": false
+      }
+    },
+    "vpsConsole": {
+      "classification": "Root-reported",
+      "longBrowserCommandTimedOut": true,
+      "oldConsoleClosed": true,
+      "returnKeySentForDiscardedCommand": false,
+      "productionUploadUserCreated": true,
+      "provisioningConfirmedByLaterReviewedScript": true
+    },
+    "published": false,
+    "serviceStarted": false,
+    "archiveUploaded": true,
+    "archiveExtracted": false,
+    "hostedFunctionalAcceptance": false,
+    "provisioning": {
+      "classification": "A — Root executed reviewed provisioner on real VPS",
+      "scriptSha256": "d20b9b657777222017e9e677706ade5544ca601f2e9457a0ed9d0ad54db1be7c",
+      "exitCode": 0,
+      "uploadUserCreated": true,
+      "dedicatedUidConfirmed": true,
+      "uidValueExcluded": true,
+      "username": "aureon-office-upload",
+      "keyExpiryUtc": "20261016003358Z",
+      "uploadKeyRevocationConfirmed": false
+    },
+    "upload": {
+      "classification": "A — real SSH transfer; saved report read by this documentation task",
+      "report": ".office-test/192-upload-result.json",
+      "reportSha256": "b04eef93cfd3534a3b3af20296f6dfedea80d65686d695ded3031a5bb7c49661",
+      "exitCode": 0,
+      "seconds": 41.438,
+      "bytes": 507549813,
+      "sha256": "b8d04af9f3290c7a937de021ed5733ca66f79719cd2dcb50d684244728265a34",
+      "acknowledgement": "Release received.",
+      "hostKeyChecking": "pinned-ed25519-required",
+      "hostKeyFingerprint": "SHA256:rwPq/l56P+rziugKPECe6E3AKrizFl4F8gLY6gRtrIw",
+      "archiveExtractionConfirmed": false
+    },
+    "history": [
+      {
+        "asOf": "2026-10-15T22:56:59.868Z",
+        "status": "restricted deployment in progress; not published",
+        "checkpointSha256": "81fc22b1c047d02b60ced8dd89dacf2c17c6dd9b1110f73597e8c0f28bfd46af",
+        "archiveUploaded": false,
+        "productionUploadAccountCreated": false,
+        "vpsConfigurationApplied": false,
+        "crmConfigurationApplied": false,
+        "published": false
+      }
+    ]
+  }
+}

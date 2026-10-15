@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vendored minified opus-recorder encoder worker (served statically).
     "public/opus/**",
+    // Reviewed visual artifacts and local-only test data are generated separately.
+    ".office-runtime/**",
+    ".office-runtime-optimized/**",
+    ".office-test/**",
   ]),
 ]);
 

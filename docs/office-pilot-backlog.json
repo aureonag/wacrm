@@ -1,0 +1,645 @@
+{
+  "version": 4,
+  "createdAt": "2026-10-15T20:54:47.120Z",
+  "workspace": "E:/Claude/aureon-office-crm",
+  "readyForTeamPilot": false,
+  "scope": "Implantação192 restrita em andamento: banco aplicado, upload recebido e configuraçãoVPS instalada; aplicaçãoCRM aguarda confirmação; escritório ainda não publicado.",
+  "candidate": {
+    "path": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4",
+    "manifestSha256": "29010f611599f69485c1a326038c7750e6180bcfef6d26aee1d7f66e277db650",
+    "readyToServeRecord": false,
+    "functionalValidation": "F root: delta da estação v4 confirmada; demais evidências versionadas v1/v2/v3. Sem prontidão hospedada.",
+    "sourceAppSha256": "8246f010c4d23e5d57567162ea470dc7d204d4b2e0c9c802ad62f64113cadc50"
+  },
+  "evidenceClasses": {
+    "F": "Ação funcional executada no navegador; registros disponíveis são fixtures locais.",
+    "I": "Inspeção de interface/arquivo, sem comprovar efeito.",
+    "C": "Código, parse, hashes, testes ou simulação.",
+    "P": "Teste/configuração/decisão pendente.",
+    "A": "Execução ou artefato inspecionado diretamente; não substitui ação funcional no navegador."
+  },
+  "historicalFunctionalEvidence": [
+    {
+      "record": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-funcional-fixtures-v1.json",
+      "class": "F — harness fictício local",
+      "confirmed": [
+        "Chat direto nos dois sentidos",
+        "Tema após recarga",
+        "Pedido privado, rejeição, aprovação, chat de sessão e mão levantada"
+      ],
+      "notProven": [
+        "SSO CRM real",
+        "Banco real",
+        "Publicação espacial remota",
+        "Mídia física/rede real"
+      ]
+    },
+    {
+      "record": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-funcional-otimizado-v2.json",
+      "class": "F — harness fictício local",
+      "confirmed": [
+        "122 objetos por ID/transformação",
+        "4 direções e4 diagonais",
+        "Subconjunto de sofás/café e retorno à mesa"
+      ],
+      "notProven": [
+        "Todos os modelos/orientações",
+        "Cadência frame a frame",
+        "Publicação remota: ownership permaneceu paused"
+      ]
+    },
+    {
+      "record": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-funcional-v3-v4.json",
+      "class": "F — fixtures locais",
+      "confirmed": [
+        "Atividade por teclado restaura ausência automática preservando status manual alheio",
+        "Escape cancela retorno à mesa",
+        "Cor do cabelo persiste após recarga",
+        "V4 estação informa preparação sem formulário ou sucesso falso"
+      ],
+      "notProven": [
+        "SSO real",
+        "Mídia física",
+        "Publisher remoto",
+        "Quadro legado"
+      ]
+    }
+  ],
+  "availabilityRecords": {
+    "manifest": {
+      "readyToServe": false,
+      "identityEnabled": false,
+      "apiEnabled": false,
+      "interpretation": "Registros de estágio do artefato, não switches de autenticação ou prova de ativação do backend. Não alterar para fabricar prontidão."
+    },
+    "server": {
+      "gate": "AUREON_OFFICE_ENABLED precisa ser a string true; contexto desativado responde503 OFFICE_FEATURE_DISABLED.",
+      "identity": "getOfficeContext reutiliza sessão CRM, account_id obrigatório e perfil/membership SSR/RLS atual.",
+      "evidence": [
+        {
+          "file": "src/lib/office/runtime/server.ts",
+          "line": 10
+        },
+        {
+          "file": "src/app/api/office/context/route.ts",
+          "line": 17
+        }
+      ]
+    },
+    "legacyFacade": {
+      "persistedPreferenceKeys": [
+        "aureon-avatar-v1",
+        "aureon-gather-avatar-plan-v1",
+        "aureon-gather-avatar-applied-v1",
+        "aureon-window-frame-v1",
+        "aureon-camera-device",
+        "aureon-microphone-device",
+        "aureon-reactions-v1",
+        "aureon-soundboard-v1"
+      ],
+      "otherKeys": "Map em memória por página: não sobrevive à recarga nem é compartilhado.",
+      "clarification": "A whitelist de8chaves é só da facade de preferências antigas. Chat, perfil e configurações via APIs próprias são caminhos separados do snapshot.",
+      "evidence": [
+        {
+          "file": "scripts/office-crm-bootstrap.mjs",
+          "line": 104
+        },
+        {
+          "file": "src/lib/office/runtime/client-state.cjs",
+          "line": 3
+        }
+      ]
+    },
+    "map": {
+      "mode": "read-only",
+      "objects": 122,
+      "construction": 296
+    },
+    "spotify": {
+      "state": "explicitly unavailable",
+      "message": "Spotify indisponível no piloto.",
+      "evidence": {
+        "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-spotify.js",
+        "line": 3
+      }
+    },
+    "smartObjects": {
+      "state": "explicitly unavailable",
+      "httpStatus": 503,
+      "code": "OFFICE_FEATURE_UNAVAILABLE",
+      "evidence": {
+        "file": "src/app/api/office/smart-objects/[[...path]]/route.ts",
+        "line": 10
+      }
+    }
+  },
+  "items": [
+    {
+      "id": "PILOT-UI-TRUTH",
+      "priority": "P1",
+      "title": "Impedir nome/anotações com sucesso falso ou temporário",
+      "status": "C mitigado v4 e F estação confirmado; quadro legado P se exposto",
+      "blockingScope": "Antes de expor os controles ao time",
+      "facts": [
+        "v3 oferece Salvar nome→save()→Estação atualizada., mas save final restaura o mapa aprovado e descarta label.",
+        "object-notes/board-drawing/workstation estão fora das8chaves: só Map temporário.",
+        "Nove pc-gamer-v8 do seed entram em Abrir estação. Acesso concreto ao ramo antigo de quadro não foi testado.",
+        "v4 bloqueia apenas Abrir anotações/Abrir estação após cancelar aproximação; informa preparação e retorna antes de formulário."
+      ],
+      "nextAction": "Manter guard até persistência compartilhada autorizada/implementada. Verificar quadro legado se passar a existir no mapa.",
+      "acceptance": "Aviso honesto, sem escrita descartada; assento/gongo/jogos/melodia preservados.",
+      "evidence": [
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v3/app.js",
+          "line": 777
+        },
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v3/app.js",
+          "line": 778
+        },
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v3/app.js",
+          "line": 2293
+        },
+        {
+          "file": "scripts/office-crm-bootstrap.mjs",
+          "line": 236
+        },
+        {
+          "file": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-pacote-crm-v4.json",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "PILOT-IDENTITY",
+      "priority": "P0",
+      "title": "Validar sessão real CRM e revogação",
+      "status": "C implementado; F SSO real P",
+      "blockingScope": "Antes de habilitar o time",
+      "facts": [
+        "Conta e perfil atuais são lidos por SSR/RLS; nomes e UUID de board não autorizam.",
+        "Binding de cabeçalho complementa sessão; não autentica sozinho.",
+        "Fixtures não comprovam cookies/login/logout reais.",
+        "Gate opcional por authUID implementado e revisado; owner único confirmado em inspeção privada. O valor real não é registrado no Git.573PASS/1SKIP e build192 são evidência local, sem comprovar SSO hospedado."
+      ],
+      "nextAction": "Configurar a lista privada com o authUID confirmado do owner e executar aceite real: owner admitido, outro membro Aureon não listado403, outra conta negada e logout/remoção encerrando o acesso após detecção.",
+      "acceptance": "Identidade estável,401/403 corretos e bloqueio/captura encerrada após detecção; não prometer revogação instantânea de bytes já carregados.",
+      "evidence": [
+        {
+          "file": "src/lib/office/access.ts",
+          "line": 38
+        },
+        {
+          "file": "src/app/api/office/interface/[endpoint]/route.ts",
+          "line": 13
+        },
+        {
+          "file": "src/lib/office/http.ts",
+          "line": 88
+        }
+      ]
+    },
+    {
+      "id": "PILOT-DATABASE",
+      "priority": "P0",
+      "title": "Persistência real e recuperação",
+      "status": "A — migrações156/157 aplicadas e catálogo real aprovado; load/CAS/nonce/persistência/restart continuam P",
+      "blockingScope": "Antes de dados reais",
+      "facts": [
+        "RPCs load/CAS e segredo só no servidor; erro CAS incerto invalida cache sem repetir efeito.",
+        "PGlite/store fictício não comprovam Supabase/PostgREST, grants reais, multiconexão ou reinício.",
+        "Etapa192: roteiro combinado SHA2564e7159a1c687ed45ce75fd13a61b3a127a791fa2b77d5c60b0b87cefb9178cf2 aplicado com sucesso no Supabase alvo; três RPCs SECURITY DEFINER/anon=false/authenticated=false/backend=true e duas tabelas com FORCE RLS/ACL somente para postgres."
+      ],
+      "nextAction": "Não reaplicar migrações como atalho. Validar load/CAS/claim de nonce reais pelo callback, concorrência entre workers, persistência após restart e rollback sem reduzir revision.",
+      "acceptance": "Duráveis reaparecem sem vazamento; revisão antiga não sobrescreve nova; recuperação e rollback ensaiados.",
+      "evidence": [
+        {
+          "file": "src/lib/office/runtime/store.ts",
+          "line": 102
+        },
+        {
+          "file": "src/lib/office/runtime/store.ts",
+          "line": 119
+        },
+        {
+          "file": "src/lib/office/runtime/service.cjs",
+          "line": 149
+        },
+        {
+          "file": "supabase/migrations/156_office_runtime.sql",
+          "line": 1
+        },
+        {
+          "file": "docs/office-gateway-deployment.md",
+          "section": "Checkpoint192"
+        },
+        {
+          "file": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/192-supabase-rpc-permissoes.txt",
+          "line": 1
+        },
+        {
+          "file": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/192-supabase-tabelas-privadas.txt",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "PILOT-PRIVATE-DELIVERY",
+      "priority": "P0",
+      "title": "Entrega privada e processo único",
+      "status": "A — uploadSSH recebido e configuraçãoVPS instalada; aplicaçãoCRM aguarda confirmação; extração/serviço continuamP",
+      "blockingScope": "Antes de publicar/ativar",
+      "facts": [
+        "Loader exige caminho absoluto e recusa symlinks. Pacote atual é local.",
+        "Slots/sinais/chamadas são memória do processo: CAS não os compartilha entre réplicas.",
+        "Build limpo76821 confirmou14arquivos no trace,0privados após retirar fallback de diretório; globs Windows não foram a prova da solução.",
+        "Etapa191 mantém CRM na Business e prepara gateway único na VPS existente; biblioteca privada montada somente leitura, HMAC por solicitação e callback de persistência para CRM. Chave Supabase não vai à VPS.",
+        "O receptor passou25/25testes Linux, sem skips. O provisioner revisado foi aplicado e criou o usuário técnico restrito.",
+        "Transferência SSH com hostkey fixada concluiu em41,438s, exit0 e Release received.;507.549.813bytes/SHA256 conferidos pelo receptor.",
+        "A mesma chave HMAC original foi instalada naVPS em configuração0600 root-owned via stdin sem eco; o clique Aplicar mudanças noCRM foi executado e ainda aguarda confirmação de sucesso.",
+        "A correção de ACL dos arquivos originais limitou acesso a Allan eSYSTEM. Não houve cópia temporária sem criptografia nem criação de outra chave. A revisão do Apply foi resolvida conferindo cinco valores públicos exatos e a chave mascarada."
+      ],
+      "nextAction": "Confirmar sucesso da aplicaçãoCRM, revogação da chave deupload e extração para release nova. Depois validar imagem/mount privado, singleton, DNS/TLS e fluxo autenticado antes de habilitar o owner.",
+      "acceptance": "Artefato conferido após transporte, sem alias público, topologia única e flag false até aceite.",
+      "evidence": [
+        {
+          "file": "src/lib/office/runtime/asset-server.ts",
+          "line": 11
+        },
+        {
+          "file": "src/lib/office/runtime/assets.ts",
+          "line": 110
+        },
+        {
+          "file": "src/lib/office/runtime/service.cjs",
+          "line": 69
+        },
+        {
+          "file": "src/lib/office/runtime/vendor/interface-api.cjs",
+          "line": 19
+        },
+        {
+          "file": "next.config.mjs",
+          "line": 76
+        },
+        {
+          "file": "docs/office-crm-deployment.md",
+          "line": 1
+        },
+        {
+          "file": "docs/office-gateway-deployment.md",
+          "line": 1
+        },
+        {
+          "file": ".office-test/192-upload-result.json",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "PILOT-SHARED-SPATIAL",
+      "priority": "P1",
+      "title": "Movimento compartilhado com foco/posse real",
+      "status": "C backend; F publisher remoto P",
+      "blockingScope": "Antes de anunciar escritório compartilhado",
+      "facts": [
+        "Publisher exige visibilidade/foco ou posse existente; claim depende de input trusted.",
+        "F v1/v2 prova deslocamento local, não recepção remota; ownership permaneceu paused."
+      ],
+      "nextAction": "Duas sessões/PCs com foco legítimo: mover/observar nos dois sentidos, aba concorrente, perder/retomar foco, recarga e expiração/reconquista.",
+      "acceptance": "Atualizações remotas observadas, dono coerente, sem dois publishers; registrar latência real.",
+      "evidence": [
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-spatial-presence.js",
+          "line": 6
+        },
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-spatial-presence.js",
+          "line": 10
+        },
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-spatial-presence.js",
+          "line": 18
+        },
+        {
+          "file": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-funcional-otimizado-v2.json",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "PILOT-ACTIVITY",
+      "priority": "P1",
+      "title": "Concluir atividade e cancelamento de assento",
+      "status": "C e F v3 concluídos para atividade/ausência manual/Escape; mídia e revogação reais P",
+      "blockingScope": "Antes de concluir movimento estável",
+      "facts": [
+        "v2 marcou Ausente durante teclado; capture bloqueava listener antigo.",
+        "v3 earlycapture chama closure diretamente; callback/timer exigem active+identity. V4 preserva a correção.",
+        "Testes de ordem usam modelo unitário, não input real."
+      ],
+      "nextAction": "Preservar F v3/v4 registrado. Revalidar atividade/status/cancelamento no piloto hospedado e testar revogação com mídia real.",
+      "acceptance": "Input real mantém atividade; Escape cancela sem bloquear UI; nada é publicado depois do encerramento detectado.",
+      "evidence": [
+        {
+          "file": "scripts/office-crm-bootstrap.mjs",
+          "line": 169
+        },
+        {
+          "file": "scripts/office-crm-bootstrap.mjs",
+          "line": 232
+        },
+        {
+          "file": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-pacote-crm-v3.json",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "PILOT-MEDIA",
+      "priority": "P1",
+      "title": "Mídia entre computadores/redes",
+      "status": "C WebRTC local; mídia física/NAT P",
+      "blockingScope": "Antes de piloto com voz/câmera/tela",
+      "facts": [
+        "iceServers está vazio: não há STUN/TURN configurado. Isso não prova falha de toda conexão direta.",
+        "Sinalização por reunião/call existe; Connected em fixtures sem captura física não comprova transmissão real."
+      ],
+      "nextAction": "Planejar ICE config autenticada CRM com credencial temporária no servidor; testar dois PCs/redes, relay forçado, áudio/câmera/tela, permissões iframe e desconexão.",
+      "acceptance": "Recepção bilateral, RTP e candidate-pair registrados sem dados sensíveis; só pode adiar se piloto explicitamente chat/presença sem promessa audiovisual.",
+      "evidence": [
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-calls.js",
+          "line": 13
+        },
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-calls.js",
+          "line": 46
+        },
+        {
+          "file": "src/lib/office/runtime/vendor/interface-api.cjs",
+          "line": 181
+        }
+      ]
+    },
+    {
+      "id": "PILOT-UNAVAILABLE-AFFORDANCES",
+      "priority": "P2",
+      "title": "Funções fora do piloto devem parecer indisponíveis",
+      "status": "C Spotify/smart explícitos; outros caminhos não exaustivos",
+      "blockingScope": "Antes de prometer integrações/edições",
+      "facts": [
+        "Spotify informa indisponível; smart retorna503 OFFICE_FEATURE_UNAVAILABLE.",
+        "Mapa readonly apesar de capacidades de papel CRM existirem.",
+        "Configuração antiga de links externos chama save e anuncia link salvo; mapa aprovado pode revertê-lo."
+      ],
+      "nextAction": "Revisar UI e ocultar/desabilitar ações fora do escopo ou informar preparação antes de formular. Não converter503 de recurso em sessão expirada.",
+      "acceptance": "Sem toast falso ou aparência de integração ativa; não exige implementar tudo para o MVP.",
+      "evidence": [
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-spotify.js",
+          "line": 3
+        },
+        {
+          "file": "src/app/api/office/smart-objects/[[...path]]/route.ts",
+          "line": 10
+        },
+        {
+          "file": "E:/Claude/aureon-office-crm/.office-test/runtime-candidate-v4/replica-external-objects.js",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "id": "PILOT-TEAM-ACCEPTANCE",
+      "priority": "P1",
+      "title": "Aceite acompanhado com pequena equipe",
+      "status": "P",
+      "blockingScope": "Antes de ampliar uso",
+      "facts": [
+        "Fixtures no mesmo computador não substituem pessoas/infraestrutura reais.",
+        "Assentos e orientações têm cobertura parcial; não é réplica integral certificada."
+      ],
+      "nextAction": "Após os gates,3–5 membros testam CRM, presença/movimento/chat, acesso privado, recarga/reconexão e recuperação; nomear operador e rollback.",
+      "acceptance": "Registrar F/I/C/P por ação e limite, sem declarar todas as funcionalidades testadas.",
+      "evidence": [
+        {
+          "file": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-funcional-fixtures-v1.json",
+          "line": 1
+        },
+        {
+          "file": "E:/Claude/aurion-escritorio-local/auditoria-personagem-2026-10-08/replica-interface/190-funcional-otimizado-v2.json",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "outsideMinimumPilot": [
+    "Biblioteca/personalização integral do Gather",
+    "Frame a frame de toda animação",
+    "Calendário externo e integrações completas",
+    "CRUD colaborativo de mapa/objetos/notas/quadros com permissões próprias",
+    "Spotify e chaves de objetos inteligentes",
+    "Múltiplas instâncias com transporte compartilhado"
+  ],
+  "limits": [
+    "F v1/v2/v3/v4 são fixtures locais; não representam SSO/banco/mídia hospedados.",
+    "Histórico191: testes locais e inspeções remotas de leitura; naquela captura as estruturas do escritório ainda estavam ausentes. Etapa192 aplicou156/157 no banco real e verificou catálogo, conforme deployment192.",
+    "Sem leitura de .env, credenciais ou .aureon-local.",
+    "Fonte e releases anteriores preservados; nenhuma análise frame a frame foi executada.",
+    "DDL/catálogo reais e25testesLinux do receptor não comprovam load/CAS/nonce entreworkers, SSO ou persistência hospedada; esses testes continuam P.",
+    "HMAC foi gerado localmente e ainda não foi instalado emCRM/VPS. Duas propostas de configuração foram recusadas pela revisão automática antes de executar; não há chave ou UID real neste arquivo."
+  ],
+  "productionChangesExecuted": true,
+  "authorizationNote": "Usuário autorizou explicitamente a implantação restrita. Isso não transforma passos planejados em executados; as duas ações rejeitadas pela revisão automática não foram executadas.",
+  "updatedAt": "2026-10-15T23:00:43.045Z",
+  "gatewayDeployment": {
+    "runbook": "docs/office-gateway-deployment.md",
+    "configuration": "deploy/office-gateway/compose.draft.yml",
+    "proposedHostname": "office-gateway.aureonag.com",
+    "dnsObserved": "NXDOMAIN on2026-10-15",
+    "installed": false,
+    "realKeyCreated": true,
+    "dockerEngineValidation": "A config-only exit0 on VPS Docker29.7.2/Compose5.5.0; image/service/network P",
+    "yamlSyntaxParsed": true,
+    "keyInstalledOnCrmAndGateway": false,
+    "linuxReceiverTests": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "source": "Root reported real VPS execution"
+    },
+    "productionUploadUserCreated": true,
+    "keyInstalledOnVps": true,
+    "crmConfigurationApplyPending": true,
+    "archiveUploaded": true,
+    "archiveExtracted": false,
+    "uploadKeyRevocationConfirmed": false
+  },
+  "deployment192": {
+    "stage": 192,
+    "asOf": "2026-10-15T23:00:43.045Z",
+    "status": "restricted deployment in progress: upload received, VPS key installed, CRM apply awaiting confirmation; not published",
+    "authorization": "Explicit human authorization for the restricted deployment was received by Root.",
+    "database": {
+      "project": "heesqqbjssficymgkdme",
+      "classification": "A — Root executed SQL in real Supabase and captured catalog results; saved text reviewed here",
+      "combinedSqlSha256": "4e7159a1c687ed45ce75fd13a61b3a127a791fa2b77d5c60b0b87cefb9178cf2",
+      "combinedSqlBytes": 24714,
+      "migrations": [
+        156,
+        157
+      ],
+      "applied": true,
+      "executionReportedSuccess": true,
+      "rpcs": {
+        "count": 3,
+        "securityDefiner": true,
+        "anonCanExecute": false,
+        "authenticatedCanExecute": false,
+        "serviceRoleCanExecute": true,
+        "names": [
+          "office_gateway_claim_nonce",
+          "office_runtime_compare_and_swap",
+          "office_runtime_load"
+        ]
+      },
+      "tables": {
+        "names": [
+          "gateway_nonces",
+          "runtime_state"
+        ],
+        "rls": true,
+        "forceRls": true,
+        "directAclOnlyPostgres": true
+      },
+      "realLoadCasNonceExecutionValidated": false,
+      "multiSessionConcurrencyValidated": false,
+      "persistenceAfterRestartValidated": false,
+      "evidence": [
+        "192-supabase-migracoes-aplicadas.png",
+        "192-supabase-rpc-permissoes.txt",
+        "192-supabase-rpc-permissoes.png",
+        "192-supabase-tabelas-privadas.txt",
+        "192-supabase-tabelas-privadas.png"
+      ]
+    },
+    "linuxReceiver": {
+      "classification": "C — real Linux VPS fixture, Root-reported",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "productionUploadAccountCreated": true,
+      "provisioningApplied": true
+    },
+    "localReview": {
+      "classification": "C — local build and mocked/fixture tests",
+      "report": ".office-test/192-final-review/summary.json",
+      "passed": 573,
+      "failed": 0,
+      "skipped": 1,
+      "files": 28,
+      "buildExitCode": 0,
+      "buildPublicConfiguration": "Fictitious nonsecret Supabase URL/key; local Next output must not be deployed",
+      "productionBuildConfigurationValidated": false,
+      "pilotGateImplemented": true,
+      "uniqueOwnerAuthUidConfirmedPrivately": true,
+      "realOwnerUidIncludedInGit": false,
+      "hostedPilotGateValidated": false
+    },
+    "git": {
+      "classification": "A — Root-reported authorized dry-run",
+      "dryRunApproved": true,
+      "dryRunExecuted": true,
+      "dryRunResult": "Everything up-to-date",
+      "normalGitAuthenticationWorks": true,
+      "commit": false,
+      "push": false,
+      "pullRequest": false
+    },
+    "hmac": {
+      "localKeyGenerated": true,
+      "sameKeyInstalledOnCrmAndGateway": false,
+      "crmConfigurationApplied": false,
+      "gatewayConfigurationApplied": true,
+      "valuesOrKeyMaterialIncluded": false,
+      "automaticReviewRejections": [
+        {
+          "action": "Copy the existing HMAC key to an unencrypted temporary file",
+          "executed": false
+        },
+        {
+          "action": "Generate a different key only on CRM",
+          "executed": false
+        }
+      ],
+      "nextAction": "Confirm CRM Apply changes success for the same key and disabled office flag; confirm upload-key revocation and verified extraction before any service startup.",
+      "gatewayConfigurationMode": "0600 root-owned",
+      "gatewayConfigurationChannel": "direct stdin without echo",
+      "crmConfigurationApplyRequested": true,
+      "crmConfigurationSuccessConfirmed": false,
+      "sameOriginalKeyPreparedForBothHosts": true,
+      "officeEnabledOnGateway": false,
+      "officeEnabledOnCrmRequested": false,
+      "crmPendingParameterCount": 6,
+      "localMaterialAccessResolution": "Own-file ACL was empty; access was corrected only for Allan and SYSTEM, then the original material was read directly. No unencrypted temporary copy and no replacement key were created.",
+      "crmApplyAutomaticReview": {
+        "initialAttemptRejectedBeforeExecution": true,
+        "nonsecretVisibleValuesVerified": 5,
+        "keyValueMasked": true,
+        "laterAuthorizedToolActionExecuted": true,
+        "applicationSuccessConfirmed": false
+      }
+    },
+    "vpsConsole": {
+      "classification": "Root-reported",
+      "longBrowserCommandTimedOut": true,
+      "oldConsoleClosed": true,
+      "returnKeySentForDiscardedCommand": false,
+      "productionUploadUserCreated": true,
+      "provisioningConfirmedByLaterReviewedScript": true
+    },
+    "published": false,
+    "serviceStarted": false,
+    "archiveUploaded": true,
+    "archiveExtracted": false,
+    "hostedFunctionalAcceptance": false,
+    "provisioning": {
+      "classification": "A — Root executed reviewed provisioner on real VPS",
+      "scriptSha256": "d20b9b657777222017e9e677706ade5544ca601f2e9457a0ed9d0ad54db1be7c",
+      "exitCode": 0,
+      "uploadUserCreated": true,
+      "dedicatedUidConfirmed": true,
+      "uidValueExcluded": true,
+      "username": "aureon-office-upload",
+      "keyExpiryUtc": "20261016003358Z",
+      "uploadKeyRevocationConfirmed": false
+    },
+    "upload": {
+      "classification": "A — real SSH transfer; saved report read by this documentation task",
+      "report": ".office-test/192-upload-result.json",
+      "reportSha256": "b04eef93cfd3534a3b3af20296f6dfedea80d65686d695ded3031a5bb7c49661",
+      "exitCode": 0,
+      "seconds": 41.438,
+      "bytes": 507549813,
+      "sha256": "b8d04af9f3290c7a937de021ed5733ca66f79719cd2dcb50d684244728265a34",
+      "acknowledgement": "Release received.",
+      "hostKeyChecking": "pinned-ed25519-required",
+      "hostKeyFingerprint": "SHA256:rwPq/l56P+rziugKPECe6E3AKrizFl4F8gLY6gRtrIw",
+      "archiveExtractionConfirmed": false
+    },
+    "history": [
+      {
+        "asOf": "2026-10-15T22:56:59.868Z",
+        "status": "restricted deployment in progress; not published",
+        "checkpointSha256": "81fc22b1c047d02b60ced8dd89dacf2c17c6dd9b1110f73597e8c0f28bfd46af",
+        "archiveUploaded": false,
+        "productionUploadAccountCreated": false,
+        "vpsConfigurationApplied": false,
+        "crmConfigurationApplied": false,
+        "published": false
+      }
+    ]
+  }
+}

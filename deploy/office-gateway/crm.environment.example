@@ -1,0 +1,16 @@
+# EXAMPLE ONLY. Set through the existing private Hostinger configuration.
+# All values are server-only. Never add NEXT_PUBLIC_ aliases.
+AUREON_OFFICE_ENABLED=false
+AUREON_OFFICE_TRANSPORT=gateway
+AUREON_OFFICE_ACCOUNT_ID=737433a3-ec29-4e90-b4ba-9989192ca735
+# Owner-only pilot: set the verified owner auth.users.id, not profile/account/board ID.
+# Up to 20 unique comma-separated UUIDs. Present empty/invalid fails closed.
+# Removing this variable entirely admits all valid Aureon members again.
+AUREON_OFFICE_PILOT_USER_IDS=
+# Proposed DNS/HTTPS target; not currently provisioned:
+AUREON_OFFICE_GATEWAY_URL=https://office-gateway.aureonag.com/v1/runtime
+# Supply the same separate 32-byte / 64-hex gateway key privately on both ends.
+# An empty key fails closed. Never copy the Supabase service-role key to the VPS.
+AUREON_OFFICE_GATEWAY_KEY=
+# Existing Supabase settings stay only in the CRM.
+# AUREON_OFFICE_RUNTIME_DIR is not used by the CRM in gateway mode.

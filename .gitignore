@@ -45,3 +45,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Private office deployment bundle, generated separately from the CRM source.
+.office-runtime/
+.office-test/
+
+.office-runtime-optimized/

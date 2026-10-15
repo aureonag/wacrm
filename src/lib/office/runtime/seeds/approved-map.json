@@ -1,0 +1,4392 @@
+{
+  "version": 2,
+  "source": "approved-local-office",
+  "exportedAt": "2026-10-15T19:39:29.463Z",
+  "excludedAuditObjectIds": [
+    "1792081516383",
+    "1792081528237"
+  ],
+  "map": {
+    "objects": [
+      {
+        "id": 1791325784467,
+        "type": "mesa-gamer-v8",
+        "x": 432,
+        "y": 310,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784467",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791325784468,
+        "type": "pc-gamer-v8",
+        "x": 432,
+        "y": 285,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784467",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791325784469,
+        "type": "cadeira-gamer-v8",
+        "x": 432,
+        "y": 384,
+        "direction": 1,
+        "furnitureGroup": "gamer-1791325784467",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791325784473,
+        "type": "mesa-gamer-v8",
+        "x": 616,
+        "y": 310,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784473",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791325784474,
+        "type": "pc-gamer-v8",
+        "x": 616,
+        "y": 285,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784473",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791325784475,
+        "type": "cadeira-gamer-v8",
+        "x": 616,
+        "y": 384,
+        "direction": 1,
+        "furnitureGroup": "gamer-1791325784473",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791325784479,
+        "type": "mesa-gamer-v8",
+        "x": 800,
+        "y": 310,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784479",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791325784480,
+        "type": "pc-gamer-v8",
+        "x": 800,
+        "y": 285,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784479",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791325784481,
+        "type": "cadeira-gamer-v8",
+        "x": 800,
+        "y": 384,
+        "direction": 1,
+        "furnitureGroup": "gamer-1791325784479",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791325784470,
+        "type": "mesa-gamer-v8",
+        "x": 984,
+        "y": 310,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784470",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791325784471,
+        "type": "pc-gamer-v8",
+        "x": 984,
+        "y": 285,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791325784470",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791325784472,
+        "type": "cadeira-gamer-v8",
+        "x": 984,
+        "y": 384,
+        "direction": 1,
+        "furnitureGroup": "gamer-1791325784470",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791330964668,
+        "type": "mesa-gamer-v8",
+        "x": 432,
+        "y": 535,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964668",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791330964669,
+        "type": "pc-gamer-v8",
+        "x": 432,
+        "y": 510,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964668",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791330964670,
+        "type": "cadeira-gamer-v8",
+        "x": 432,
+        "y": 609,
+        "direction": 1,
+        "furnitureGroup": "operational-set-1791330964668",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791330964671,
+        "type": "mesa-gamer-v8",
+        "x": 616,
+        "y": 535,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964671",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791330964672,
+        "type": "pc-gamer-v8",
+        "x": 616,
+        "y": 510,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964671",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791330964673,
+        "type": "cadeira-gamer-v8",
+        "x": 616,
+        "y": 609,
+        "direction": 1,
+        "furnitureGroup": "operational-set-1791330964671",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791330964674,
+        "type": "mesa-gamer-v8",
+        "x": 800,
+        "y": 535,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964674",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791330964675,
+        "type": "pc-gamer-v8",
+        "x": 800,
+        "y": 510,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964674",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791330964676,
+        "type": "cadeira-gamer-v8",
+        "x": 800,
+        "y": 609,
+        "direction": 1,
+        "furnitureGroup": "operational-set-1791330964674",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791330964677,
+        "type": "mesa-gamer-v8",
+        "x": 984,
+        "y": 535,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964677",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791330964678,
+        "type": "pc-gamer-v8",
+        "x": 984,
+        "y": 510,
+        "direction": 0,
+        "furnitureGroup": "operational-set-1791330964677",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791330964679,
+        "type": "cadeira-gamer-v8",
+        "x": 984,
+        "y": 609,
+        "direction": 1,
+        "furnitureGroup": "operational-set-1791330964677",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791332920648,
+        "type": "cadeira-couro-marrom",
+        "x": 1192,
+        "y": 1183,
+        "label": "Cadeira de couro marrom",
+        "direction": 0,
+        "flip": false
+      },
+      {
+        "id": 1791332920649,
+        "type": "balcao-recepcao",
+        "x": 1192,
+        "y": 1214,
+        "label": "Balcão da recepção"
+      },
+      {
+        "id": 1791335329593,
+        "type": "tapete-couro-vaca",
+        "x": 1192,
+        "y": 1440,
+        "direction": 0,
+        "label": "Tapete de couro de vaca",
+        "flip": false
+      },
+      {
+        "id": 1791335751528,
+        "type": "sofa-marrom-couro",
+        "x": 985,
+        "y": 1440,
+        "direction": 3,
+        "label": "Sofá de couro marrom",
+        "flip": false
+      },
+      {
+        "id": 1791335751529,
+        "type": "sofa-marrom-couro",
+        "x": 1399,
+        "y": 1440,
+        "direction": 2,
+        "label": "Sofá de couro marrom"
+      },
+      {
+        "id": 1791343509105,
+        "type": "gong",
+        "x": 1118.34521484375,
+        "y": 315.8142395019531
+      },
+      {
+        "id": 1791377287678,
+        "type": "bambu-vaso-preto",
+        "x": 1488,
+        "y": 1184
+      },
+      {
+        "id": 1791377292709,
+        "type": "bambu-vaso-preto",
+        "x": 896,
+        "y": 1184
+      },
+      {
+        "id": 1791404624300,
+        "type": "cafe-balcao-madeira-v1",
+        "x": 2032,
+        "y": 1360,
+        "label": "Balcão de madeira · café"
+      },
+      {
+        "id": 1791404624301,
+        "type": "cafe-balcao-pia-v1",
+        "x": 2176,
+        "y": 1360,
+        "label": "Balcão preto com pia"
+      },
+      {
+        "id": 1791404624302,
+        "type": "cafe-cafeteira-v1",
+        "x": 2000,
+        "y": 1312,
+        "surfaceId": 1791404624300,
+        "surfaceParentX": 2032,
+        "surfaceParentY": 1360,
+        "label": "Cafeteira · café"
+      },
+      {
+        "id": 1791404624303,
+        "type": "cafe-utensilios-v1",
+        "x": 2064,
+        "y": 1312,
+        "surfaceId": 1791404624300,
+        "surfaceParentX": 2032,
+        "surfaceParentY": 1360,
+        "label": "Porta-utensílios"
+      },
+      {
+        "id": 1791404991135,
+        "type": "painel-ripado",
+        "x": 1788,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791405394307,
+        "type": "fita-led",
+        "x": 1830.2325439453125,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791405517022,
+        "type": "mesa-cafe-refeicoes-v1",
+        "x": 2160,
+        "y": 1504,
+        "direction": 0,
+        "label": "Mesa de refeições · café",
+        "flip": false
+      },
+      {
+        "id": 1791405517023,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2080,
+        "y": 1472,
+        "direction": 0,
+        "label": "Cadeira clara · café",
+        "flip": false
+      },
+      {
+        "id": 1791405517024,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2080,
+        "y": 1536,
+        "direction": 1,
+        "label": "Cadeira clara · café"
+      },
+      {
+        "id": 1791405517025,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2160,
+        "y": 1472,
+        "direction": 0,
+        "label": "Cadeira clara · café"
+      },
+      {
+        "id": 1791405517026,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2160,
+        "y": 1536,
+        "direction": 1,
+        "label": "Cadeira clara · café"
+      },
+      {
+        "id": 1791405517027,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2240,
+        "y": 1472,
+        "direction": 0,
+        "label": "Cadeira clara · café"
+      },
+      {
+        "id": 1791405517028,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2240,
+        "y": 1536,
+        "direction": 1,
+        "label": "Cadeira clara · café"
+      },
+      {
+        "id": 1791405875956,
+        "type": "painel-ripado",
+        "x": 1982.1995849609375,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791405878287,
+        "type": "painel-ripado",
+        "x": 2049.1224365234375,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791405906507,
+        "type": "painel-ripado",
+        "x": 2122.56298828125,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791405942587,
+        "type": "painel-ripado",
+        "x": 2160,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791405967005,
+        "type": "painel-ripado",
+        "x": 2185.0615234375,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791405983135,
+        "type": "fita-led",
+        "x": 1939.221923828125,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791407370111,
+        "type": "sofa-cafe-roxo-v1",
+        "x": 1888,
+        "y": 1472,
+        "direction": 0,
+        "label": "Sofá roxo · café"
+      },
+      {
+        "id": 1791407370112,
+        "type": "mesa-cafe-centro-v1",
+        "x": 1888,
+        "y": 1520,
+        "direction": 0,
+        "label": "Mesa de centro · café"
+      },
+      {
+        "id": 1791407370113,
+        "type": "poltrona-cafe-clara-v1",
+        "x": 1920,
+        "y": 1584,
+        "direction": 1,
+        "label": "Poltrona clara · café",
+        "flip": false
+      },
+      {
+        "id": 1791407370114,
+        "type": "tapete-cafe-claro-v1",
+        "x": 1888,
+        "y": 1488,
+        "direction": 0,
+        "label": "Tapete claro · café"
+      },
+      {
+        "id": 1791407506459,
+        "type": "poltrona-cafe-clara-v1",
+        "x": 1856,
+        "y": 1584,
+        "direction": 1,
+        "label": "Poltrona clara · café",
+        "flip": false
+      },
+      {
+        "id": 1791408750224,
+        "type": "painel-ripado",
+        "x": 1986.8201904296875,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408787778,
+        "type": "painel-ripado",
+        "x": 1788,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408797077,
+        "type": "painel-ripado",
+        "x": 2080.98779296875,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408807939,
+        "type": "painel-ripado",
+        "x": 2273.975341796875,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408819220,
+        "type": "fita-led",
+        "x": 2079.012451171875,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408827334,
+        "type": "fita-led",
+        "x": 2276.93798828125,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408836605,
+        "type": "fita-led",
+        "x": 1987.9505615234375,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408844721,
+        "type": "fita-led",
+        "x": 1786.07421875,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408860847,
+        "type": "painel-ripado",
+        "x": 128,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408866712,
+        "type": "painel-ripado",
+        "x": 628,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408876934,
+        "type": "painel-ripado",
+        "x": 547.1920776367188,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408883579,
+        "type": "painel-ripado",
+        "x": 212.78817749023438,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408894620,
+        "type": "fita-led",
+        "x": 503.04620361328125,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408902989,
+        "type": "fita-led",
+        "x": 255.73956298828125,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408932361,
+        "type": "painel-ripado",
+        "x": 128,
+        "y": 1184,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408936614,
+        "type": "painel-ripado",
+        "x": 208,
+        "y": 1184,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408941159,
+        "type": "painel-ripado",
+        "x": 624,
+        "y": 1184,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408944969,
+        "type": "painel-ripado",
+        "x": 544,
+        "y": 1184,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408949184,
+        "type": "fita-led",
+        "x": 498.7708435058594,
+        "y": 1184,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408953297,
+        "type": "fita-led",
+        "x": 256,
+        "y": 1184,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791408987436,
+        "type": "frigobar-cafe-vidro-v1",
+        "label": "Frigobar de vidro · café",
+        "x": 2272,
+        "y": 1376,
+        "direction": 0,
+        "flip": false
+      },
+      {
+        "id": 1791409323346,
+        "type": "painel-ripado",
+        "x": 2272,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791409625122,
+        "type": "planta-cafe-folhas-largas-v2",
+        "label": "Planta de folhas largas · café",
+        "x": 1780,
+        "y": 1390,
+        "direction": 0,
+        "flip": false
+      },
+      {
+        "id": 1791410137621,
+        "type": "placa-cafe-aurion-v1",
+        "x": 1883.7027587890625,
+        "y": 1344,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791410137622,
+        "type": "placa-reuniao-aurion-v1",
+        "x": 1887.1240234375,
+        "y": 1167.2501220703125,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791412750975,
+        "type": "placa-reuniao-aurion-v1",
+        "x": 587.7759602864584,
+        "y": 816,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791412766643,
+        "type": "placa-reuniao-aurion-v1",
+        "x": 2178.1707356770835,
+        "y": 1166.374267578125,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791413528120,
+        "type": "tv",
+        "x": 2177.5185546875,
+        "y": 766.3047485351562,
+        "stand": false
+      },
+      {
+        "id": 1791413987903,
+        "type": "tv",
+        "x": 1887.1817626953125,
+        "y": 762.39892578125,
+        "stand": false
+      },
+      {
+        "id": 1791414479283,
+        "type": "mesa-reuniao-metal-v1",
+        "x": 1888,
+        "y": 944,
+        "label": "Mesa de reunião grande",
+        "meetingSet": "meeting-table-1888",
+        "meetingVertical": true
+      },
+      {
+        "id": 1791414479284,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1811,
+        "y": 925,
+        "direction": 3,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479285,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1965,
+        "y": 925,
+        "direction": 2,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479286,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1811,
+        "y": 975,
+        "direction": 3,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479287,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1965,
+        "y": 975,
+        "direction": 2,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479288,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1811,
+        "y": 1025,
+        "direction": 3,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479289,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1965,
+        "y": 1025,
+        "direction": 2,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479291,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1861,
+        "y": 1080,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479293,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 1915,
+        "y": 1080,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-1888"
+      },
+      {
+        "id": 1791414479294,
+        "type": "mesa-reuniao-metal-v1",
+        "x": 2176,
+        "y": 944,
+        "label": "Mesa de reunião grande",
+        "meetingSet": "meeting-table-2176",
+        "meetingVertical": true
+      },
+      {
+        "id": 1791414479295,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2099,
+        "y": 925,
+        "direction": 3,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791414479296,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2253,
+        "y": 925,
+        "direction": 2,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791414479297,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2099,
+        "y": 975,
+        "direction": 3,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791414479298,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2253,
+        "y": 975,
+        "direction": 2,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791414479299,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2099,
+        "y": 1025,
+        "direction": 3,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791414479300,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2253,
+        "y": 1025,
+        "direction": 2,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791414479302,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2149,
+        "y": 1080,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791414479304,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 2203,
+        "y": 1080,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "meeting-table-2176"
+      },
+      {
+        "id": 1791415987255,
+        "type": "tv",
+        "x": 381.0371398925781,
+        "y": 768
+      },
+      {
+        "id": 1791415990682,
+        "type": "tv",
+        "x": 376.6304626464844,
+        "y": 1133.8778076171875
+      },
+      {
+        "id": 1791424058904,
+        "type": "mesa-reuniao-oito-v1",
+        "x": 368,
+        "y": 1008,
+        "label": "Mesa metálica · oito lugares",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058905,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 400,
+        "y": 912,
+        "direction": 0,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058906,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 336,
+        "y": 1056,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058907,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 336,
+        "y": 912,
+        "direction": 0,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058908,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 400,
+        "y": 1056,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058909,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 272,
+        "y": 912,
+        "direction": 0,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058910,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 272,
+        "y": 1056,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058911,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 464,
+        "y": 912,
+        "direction": 0,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058912,
+        "type": "cadeira-cafe-refeicoes-v1",
+        "x": 464,
+        "y": 1056,
+        "direction": 1,
+        "label": "Cadeira clara · reunião",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058913,
+        "type": "quadro-postits-reuniao-v1",
+        "x": 208,
+        "y": 1168,
+        "label": "Quadro de anotações",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791424058915,
+        "type": "planta-cafe-folhas-largas-v2",
+        "x": 112,
+        "y": 848,
+        "direction": 0,
+        "label": "Planta de folhas largas",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791463692286,
+        "type": "estante-reuniao-v1",
+        "x": 128,
+        "y": 1216,
+        "label": "Estante industrial · preta e madeira",
+        "meetingSet": "large-lower-meeting"
+      },
+      {
+        "id": 1791463829469,
+        "type": "placa-reuniao-aurion-v1",
+        "x": 582.5128173828125,
+        "y": 1184,
+        "wallFaceHeight": 100
+      },
+      {
+        "id": 1791483773030,
+        "type": "mesa-gamer-v8",
+        "x": 1520,
+        "y": 528,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791483773030",
+        "label": "Mesa gamer"
+      },
+      {
+        "id": 1791483773031,
+        "type": "pc-gamer-v8",
+        "x": 1520,
+        "y": 503,
+        "direction": 0,
+        "furnitureGroup": "gamer-1791483773030",
+        "label": "Computador gamer"
+      },
+      {
+        "id": 1791483773032,
+        "type": "cadeira-gamer-v8",
+        "x": 1520,
+        "y": 602,
+        "direction": 1,
+        "furnitureGroup": "gamer-1791483773030",
+        "label": "Cadeira gamer"
+      },
+      {
+        "id": 1791542018943,
+        "type": "gather-item-3f124c69-d6b5-4339-82d1-6b4af1bca7cc",
+        "x": 352,
+        "y": -64,
+        "label": "Weeping Willow"
+      }
+    ],
+    "floor": "#a27f6b",
+    "construction": [
+      {
+        "id": 1791329987670.7886,
+        "type": "carpet",
+        "a": {
+          "x": 464,
+          "y": 720
+        },
+        "b": {
+          "x": 352,
+          "y": 656
+        }
+      },
+      {
+        "id": 1791329991817.5498,
+        "type": "carpet",
+        "a": {
+          "x": 80,
+          "y": 656
+        },
+        "b": {
+          "x": 400,
+          "y": 720
+        }
+      },
+      {
+        "id": 1791329995807.4575,
+        "type": "carpet",
+        "a": {
+          "x": 464,
+          "y": 656
+        },
+        "b": {
+          "x": 1648,
+          "y": 720
+        }
+      },
+      {
+        "id": 1791330153157.482,
+        "type": "carpet",
+        "a": {
+          "x": 1648,
+          "y": 656
+        },
+        "b": {
+          "x": 2320,
+          "y": 720
+        }
+      },
+      {
+        "id": "operational-glass-front-v2",
+        "type": "glass",
+        "a": {
+          "x": 80,
+          "y": 720
+        },
+        "b": {
+          "x": 2320,
+          "y": 720
+        }
+      },
+      {
+        "id": "operational-glass-entrance-v2",
+        "type": "door",
+        "wallId": "operational-glass-front-v2",
+        "x": 1200,
+        "y": 720
+      },
+      {
+        "id": 1791331320684.0295,
+        "type": "wall",
+        "a": {
+          "x": 80,
+          "y": 96
+        },
+        "b": {
+          "x": 80,
+          "y": 1712
+        }
+      },
+      {
+        "id": 1791331337558.3408,
+        "type": "wall",
+        "a": {
+          "x": 2320,
+          "y": 96
+        },
+        "b": {
+          "x": 2320,
+          "y": 1296
+        }
+      },
+      {
+        "id": 1791331345366.5872,
+        "type": "wall",
+        "a": {
+          "x": 2320,
+          "y": 1296
+        },
+        "b": {
+          "x": 2320,
+          "y": 1712
+        }
+      },
+      {
+        "id": "lower-glass-front",
+        "type": "glass",
+        "a": {
+          "x": 80,
+          "y": 1700
+        },
+        "b": {
+          "x": 2320,
+          "y": 1700
+        }
+      },
+      {
+        "id": "lower-glass-entrance",
+        "type": "door",
+        "wallId": "lower-glass-front",
+        "x": 1200,
+        "y": 1700
+      },
+      {
+        "id": 1791331887517.3103,
+        "type": "wall",
+        "a": {
+          "x": 848,
+          "y": 1052
+        },
+        "b": {
+          "x": 848,
+          "y": 1703
+        }
+      },
+      {
+        "id": 1791331901655.5168,
+        "type": "wall",
+        "a": {
+          "x": 1536,
+          "y": 1052
+        },
+        "b": {
+          "x": 1536,
+          "y": 1703
+        }
+      },
+      {
+        "id": 1791331920930.7039,
+        "type": "wall",
+        "a": {
+          "x": 848,
+          "y": 1152
+        },
+        "b": {
+          "x": 1536,
+          "y": 1152
+        },
+        "height": 200,
+        "brandLogo": true
+      },
+      {
+        "id": 1791334974188.9229,
+        "type": "wall",
+        "a": {
+          "x": 80,
+          "y": 1184
+        },
+        "b": {
+          "x": 672,
+          "y": 1184
+        }
+      },
+      {
+        "id": 1791335019078.9338,
+        "type": "wall",
+        "a": {
+          "x": 672,
+          "y": 1024
+        },
+        "b": {
+          "x": 672,
+          "y": 1696
+        }
+      },
+      {
+        "id": 1791335026361.5063,
+        "type": "wall",
+        "a": {
+          "x": 672,
+          "y": 1024
+        },
+        "b": {
+          "x": 672,
+          "y": 640
+        }
+      },
+      {
+        "id": 1791335056828.0322,
+        "type": "door",
+        "windowStyle": "grid",
+        "wallId": 1791335019078.9338,
+        "x": 672,
+        "y": 1392
+      },
+      {
+        "id": 1791335148474.014,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 624
+        },
+        "b": {
+          "x": 1744,
+          "y": 1152
+        }
+      },
+      {
+        "id": 1791335156574.2014,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 848,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335178099.367,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 976
+        },
+        "b": {
+          "x": 2096,
+          "y": 976
+        }
+      },
+      {
+        "id": 1791335182210.2065,
+        "type": "wall",
+        "a": {
+          "x": 2096,
+          "y": 976
+        },
+        "b": {
+          "x": 2320,
+          "y": 976
+        }
+      },
+      {
+        "id": 1791335195155.3362,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 1344
+        },
+        "b": {
+          "x": 2320,
+          "y": 1344
+        }
+      },
+      {
+        "id": 1791335216675.5076,
+        "type": "demolition",
+        "wallKey": "built-1791335182210.2065",
+        "cut": {
+          "x": 2091,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335217358.3254,
+        "type": "demolition",
+        "wallKey": "built-1791335182210.2065",
+        "cut": {
+          "x": 2155,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335217830.1763,
+        "type": "demolition",
+        "wallKey": "built-1791335182210.2065",
+        "cut": {
+          "x": 2219,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335218925.7246,
+        "type": "demolition",
+        "wallKey": "built-1791335182210.2065",
+        "cut": {
+          "x": 2261,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335219810.4014,
+        "type": "demolition",
+        "wallKey": "built-1791335182210.2065",
+        "cut": {
+          "x": 2091,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335220470.6252,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1995,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335221228.5925,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 2037,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335221933.2156,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1931,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335222449.1968,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1867,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335223080.7632,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1803,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335223650.0317,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335224326.6948,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335224761.8857,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335225158.8325,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335225308.0427,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335225443.586,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335227701.5742,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 1104,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335227993.1052,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 1104,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335228773.713,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 1040,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335229486.6597,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 976,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335231007.266,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335231331.6882,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335231510.0964,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335231712.57,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335231924.3447,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335232104.9553,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335232321.4583,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335233100.2446,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335233401.0886,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335233602.6538,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335233873.037,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335253408.7344,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 1168,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335253637.071,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 1168,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335255804.1963,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335256156.8765,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335256435.4495,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335256659.6406,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335256855.449,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335257057.2087,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335257252.2078,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335257439.6233,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335257642.2837,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335257784.2576,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335257965.53,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335258152.942,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335258549.5476,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335258744.3381,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335259944.7502,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335260147.086,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335260327.8281,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335260531.1003,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 976,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335260716.4692,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 976,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335261310.2458,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335261661.9773,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 848,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335261917.3916,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335262209.787,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335262375.8408,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335262563.811,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335262758.1646,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335262923.712,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335263110.002,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335263673.0525,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335263867.8113,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335264108.9255,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335264295.7566,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335264444.7305,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335264647.3047,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335264812.217,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335265015.6287,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335265697.1123,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335265922.6567,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335266117.07,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335266327.1802,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335269244.0674,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 1232,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335271217.9626,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335274014.5425,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335274727.0474,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335274937.3557,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335275186.4053,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335275388.1948,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335275650.1372,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335275860.0383,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335276114.437,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 976,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335276557.305,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335276744.268,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335276954.8606,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335277134.5146,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335277345.8855,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335277690.1829,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335277870.0237,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335278042.43,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335372255.0662,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335372915.9412,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335373726.4634,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335374296.054,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335374671.4934,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335374896.3467,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335375076.7285,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335375338.9622,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335375601.659,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335375841.6091,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335376261.7805,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335376493.6042,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335376733.9768,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335376936.4993,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335377183.0027,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335377461.7273,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335377761.495,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335377986.1748,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2029.718181818182,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335379156.2078,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335379486.3884,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335379710.1655,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335379929.182,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335380146.0544,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335380431.7515,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335380656.1218,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335380850.2705,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335381038.6392,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335381262.7556,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335381496.2434,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335381728.8308,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335381909.979,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335382223.907,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335382456.1436,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335382651.8162,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335385373.0193,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2223.1727272727276,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335385643.556,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335385876.9358,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 2126.4454545454546,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335386086.7502,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335386288.209,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335386483.5134,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1932.990909090909,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335386686.8828,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335387166.4436,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335387518.7468,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335387780.525,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335388238.352,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335388538.5825,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335388755.9536,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335389003.9666,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335390270.5442,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335390608.532,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335390901.1738,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335393084.737,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335393279.6257,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335393498.086,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335393684.2358,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335393901.7275,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335395071.0554,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335395380.0317,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335396856.1975,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1867,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        }
+      },
+      {
+        "id": 1791335409023.2651,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335409877.4714,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1836.2636363636366,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791335541837.4124,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 640,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335542722.8682,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 704,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335544297.1494,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 832,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335544965.6108,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 832,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335545385.2478,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 896,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335545655.1584,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 960,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335546945.019,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 768,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335547478.279,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 832,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335547695.8867,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 896,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335548610.9087,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 832,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335548775.127,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 832,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335548948.844,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 661,
+          "y": 832,
+          "width": 24,
+          "height": 64
+        }
+      },
+      {
+        "id": 1791335568890.9336,
+        "type": "wall",
+        "a": {
+          "x": 608,
+          "y": 880
+        },
+        "b": {
+          "x": 80,
+          "y": 880
+        }
+      },
+      {
+        "id": 1791335576195.0542,
+        "type": "wall",
+        "a": {
+          "x": 608,
+          "y": 880
+        },
+        "b": {
+          "x": 672,
+          "y": 880
+        }
+      },
+      {
+        "id": 1791335863738.6528,
+        "type": "door",
+        "windowStyle": "grid",
+        "wallId": 1791331887517.3103,
+        "x": 848,
+        "y": 1312
+      },
+      {
+        "id": 1791335866445.2612,
+        "type": "door",
+        "windowStyle": "grid",
+        "wallId": 1791331901655.5168,
+        "x": 1536,
+        "y": 1312
+      },
+      {
+        "id": "reception-concrete-floor",
+        "type": "concrete",
+        "a": {
+          "x": 852,
+          "y": 1052
+        },
+        "b": {
+          "x": 1532,
+          "y": 1700
+        }
+      },
+      {
+        "id": 1791375560296.836,
+        "type": "demolition",
+        "wallKey": "built-1791335026361.5063",
+        "cut": {
+          "x": 660,
+          "y": 837,
+          "width": 24,
+          "height": 118
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375563821.0864,
+        "type": "demolition",
+        "wallKey": "built-1791335019078.9338",
+        "cut": {
+          "x": 661,
+          "y": 1024,
+          "width": 24,
+          "height": 64
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375568284.1438,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1732,
+          "y": 1093,
+          "width": 24,
+          "height": 118
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375571247.8208,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375571869.855,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1732,
+          "y": 805,
+          "width": 24,
+          "height": 118
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375572604.463,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375572904.0383,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375573144.871,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375573375.677,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375573617.2383,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375573857.3137,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375574217.6814,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375574484.031,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375574697.5627,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375574900.9565,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 944,
+          "width": 24,
+          "height": 64
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375575106.756,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 944,
+          "width": 24,
+          "height": 64
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375575635.2551,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375575885.2346,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375576137.0256,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375576700.941,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375576895.619,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375577067.832,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375577255.3347,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375577435.8965,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375577707.31,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375577930.4353,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375578117.8108,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375578313.9197,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375578620.2302,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375579228.374,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375580037.1208,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 752,
+          "width": 24,
+          "height": 64
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375581050.479,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1733,
+          "y": 688,
+          "width": 24,
+          "height": 64
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375584823.6506,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375585618.9443,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375586578.0017,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375589323.7366,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375589863.0667,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375590278.503,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375590606.511,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375590839.5156,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375591061.9556,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375591348.1475,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375591605.6333,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375592241.7617,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375592751.9495,
+        "type": "demolition",
+        "wallKey": "built-operational-glass-front-v2",
+        "cut": {
+          "x": 1739.5363636363638,
+          "y": 616,
+          "width": 96.92727272727274,
+          "height": 112
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375664661.3572,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375681996.7344,
+        "type": "demolition",
+        "wallKey": "built-1791335148474.014",
+        "cut": {
+          "x": 1732,
+          "y": 1445,
+          "width": 24,
+          "height": 118
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375683187.0635,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375683400.8054,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375683601.344,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375683758.64,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375683932.2837,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375684450.903,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375684594.7554,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375684802.0044,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375685169.8806,
+        "type": "demolition",
+        "wallKey": "built-1791335178099.367",
+        "cut": {
+          "x": 1739,
+          "y": 868,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375700379.9866,
+        "type": "wall",
+        "a": {
+          "x": 672,
+          "y": 784
+        },
+        "b": {
+          "x": 672,
+          "y": 1104
+        }
+      },
+      {
+        "id": 1791375709822.777,
+        "type": "door",
+        "windowStyle": "grid",
+        "wallId": 1791335026361.5063,
+        "x": 672,
+        "y": 965
+      },
+      {
+        "id": 1791375729893.1138,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 1248
+        },
+        "b": {
+          "x": 1744,
+          "y": 1696
+        }
+      },
+      {
+        "id": 1791375748860.3208,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 1248
+        },
+        "b": {
+          "x": 1744,
+          "y": 880
+        }
+      },
+      {
+        "id": 1791375771671.3848,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 880
+        },
+        "b": {
+          "x": 2192,
+          "y": 880
+        }
+      },
+      {
+        "id": 1791375777145.5596,
+        "type": "wall",
+        "a": {
+          "x": 2112,
+          "y": 880
+        },
+        "b": {
+          "x": 2320,
+          "y": 880
+        }
+      },
+      {
+        "id": 1791375810080.966,
+        "type": "demolition",
+        "wallKey": "built-1791375748860.3208",
+        "cut": {
+          "x": 1731,
+          "y": 1199,
+          "width": 26,
+          "height": 50
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375811115.7498,
+        "type": "demolition",
+        "wallKey": "built-1791375748860.3208",
+        "cut": {
+          "x": 1731,
+          "y": 1135,
+          "width": 26,
+          "height": 66
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375816118.9443,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 1739,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375816935.5212,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 1867,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375817703.4236,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 1803,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375818188.7773,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 1995,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375818835.6367,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 1931,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375819215.1353,
+        "type": "demolition",
+        "wallKey": "built-1791375777145.5596",
+        "cut": {
+          "x": 2107,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375819710.0117,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 2059,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375820325.4219,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 2123,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375820813.5193,
+        "type": "demolition",
+        "wallKey": "built-1791375777145.5596",
+        "cut": {
+          "x": 2171,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375830668.696,
+        "type": "demolition",
+        "wallKey": "built-1791375777145.5596",
+        "cut": {
+          "x": 2235,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375832056.2297,
+        "type": "demolition",
+        "wallKey": "built-1791375771671.3848",
+        "cut": {
+          "x": 2133,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375833699.9226,
+        "type": "demolition",
+        "wallKey": "built-1791375777145.5596",
+        "cut": {
+          "x": 2261,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791375846141.0322,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 816
+        },
+        "b": {
+          "x": 2320,
+          "y": 816
+        }
+      },
+      {
+        "id": 1791375852711.1724,
+        "type": "wall",
+        "a": {
+          "x": 1744,
+          "y": 816
+        },
+        "b": {
+          "x": 1744,
+          "y": 896
+        }
+      },
+      {
+        "id": 1791375863790.5,
+        "type": "glass",
+        "a": {
+          "x": 1744,
+          "y": 720
+        },
+        "b": {
+          "x": 2320,
+          "y": 720
+        }
+      },
+      {
+        "id": 1791375903249.5095,
+        "type": "glass",
+        "a": {
+          "x": 1744,
+          "y": 1184
+        },
+        "b": {
+          "x": 2320,
+          "y": 1184
+        }
+      },
+      {
+        "id": 1791375924745.7634,
+        "type": "wall",
+        "a": {
+          "x": 2032,
+          "y": 1120
+        },
+        "b": {
+          "x": 2032,
+          "y": 816
+        }
+      },
+      {
+        "id": 1791375953899.0388,
+        "type": "door",
+        "windowStyle": "grid",
+        "wallId": 1791375903249.5095,
+        "x": 1888,
+        "y": 1184
+      },
+      {
+        "id": 1791375958070.3433,
+        "type": "door",
+        "windowStyle": "grid",
+        "wallId": 1791375903249.5095,
+        "x": 2176,
+        "y": 1184
+      },
+      {
+        "id": 1791375967775.2212,
+        "type": "door",
+        "windowStyle": "grid",
+        "wallId": 1791375729893.1138,
+        "x": 1744,
+        "y": 1472
+      },
+      {
+        "id": 1791376247431.7944,
+        "type": "carpet",
+        "a": {
+          "x": 1744,
+          "y": 816
+        },
+        "b": {
+          "x": 2320,
+          "y": 1184
+        }
+      },
+      {
+        "id": 1791376257152.6245,
+        "type": "carpet",
+        "a": {
+          "x": 80,
+          "y": 880
+        },
+        "b": {
+          "x": 672,
+          "y": 1696
+        }
+      },
+      {
+        "id": 1791376265582.9966,
+        "type": "concrete",
+        "a": {
+          "x": 1744,
+          "y": 1344
+        },
+        "b": {
+          "x": 2320,
+          "y": 1696
+        }
+      },
+      {
+        "id": 1791376603911.8635,
+        "type": "demolition",
+        "wallKey": "built-1791335576195.0542",
+        "cut": {
+          "x": 603,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376605606.9023,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 549,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376606070.564,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 523,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376606497.7463,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 395,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376606962.6733,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 459,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376607652.0723,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 331,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376608080.0117,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 267,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376608635.5442,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 203,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376609094.8667,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 139,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376609512.0571,
+        "type": "demolition",
+        "wallKey": "built-1791335568890.9336",
+        "cut": {
+          "x": 75,
+          "y": 772,
+          "width": 64,
+          "height": 120
+        },
+        "glassCutVersion": 2
+      },
+      {
+        "id": 1791376616509.8328,
+        "type": "wall",
+        "a": {
+          "x": 80,
+          "y": 816
+        },
+        "b": {
+          "x": 672,
+          "y": 816
+        }
+      },
+      {
+        "id": 1791376632039.894,
+        "type": "wall",
+        "a": {
+          "x": 672,
+          "y": 720
+        },
+        "b": {
+          "x": 672,
+          "y": 624
+        }
+      },
+      {
+        "id": 1791376645048.5305,
+        "type": "carpet",
+        "a": {
+          "x": 80,
+          "y": 816
+        },
+        "b": {
+          "x": 672,
+          "y": 896
+        }
+      },
+      {
+        "id": 1791383681399.1628,
+        "type": "demolition",
+        "windowKey": "window-794-115"
+      },
+      {
+        "id": 1791383682680.4875,
+        "type": "demolition",
+        "windowKey": "window-140-115"
+      },
+      {
+        "id": 1791383691065.5527,
+        "type": "demolition",
+        "windowKey": "window-1180-115"
+      },
+      {
+        "id": 1791383692558.414,
+        "type": "demolition",
+        "windowKey": "window-2034-115"
+      }
+    ]
+  }
+}

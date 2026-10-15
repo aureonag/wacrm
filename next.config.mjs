@@ -72,6 +72,11 @@ const nextConfig = {
   // Harmless outside Docker: `next start` keeps working as before.
   output: "standalone",
 
+  // The private office bundle is mounted read-only at runtime, separately from this image.
+  outputFileTracingExcludes: {
+    "**/*": ["**/.office-runtime/**", "**/.office-runtime-optimized/**", "**/.office-test/**"],
+  },
+
   /**
    * Route @xyflow/react's pre-built stylesheet around our own
    * PostCSS/Tailwind pipeline (`type: "css"` skips the PostCSS/
@@ -176,6 +181,21 @@ const nextConfig = {
         // policy don't hurt).
         source: "/:path*",
         headers: [...SECURITY_HEADERS],
+      },
+      {
+        // Office media is available only to these same-origin, authenticated routes.
+        source: "/escritorio",
+        headers: [{ key: "Cache-Control", value: "private, no-store, max-age=0" }, { key: "Permissions-Policy", value: "camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=()" }],
+      },
+      {
+        // The approved runtime is embedded only by this CRM origin. Other routes keep DENY.
+        source: "/api/office/runtime/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=()" },
+          ...SECURITY_HEADERS.filter(header => header.key === "Content-Security-Policy-Report-Only")
+            .map(header => ({ ...header, value: header.value.replace("frame-ancestors 'none'", "frame-ancestors 'self'") })),
+        ],
       },
     ];
   },

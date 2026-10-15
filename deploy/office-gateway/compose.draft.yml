@@ -1,0 +1,54 @@
+# DRAFT: preparation only; no service has been installed or published.
+# Adds a separate office backend; preserves the CRM and Evolution processes.
+# Secret env file stays outside the checkout/image, with restricted permissions.
+services:
+  office-gateway:
+    image: ${AUREON_OFFICE_IMAGE:?Set reviewed image tag or digest}
+    container_name: aureon-office-gateway
+    init: true
+    restart: unless-stopped
+    read_only: true
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 1g
+    cpus: 0.50
+    stop_grace_period: 20s
+    env_file:
+      - /srv/aureon-office/config/gateway.env
+    environment:
+      NODE_ENV: production
+      AUREON_OFFICE_RUNTIME_DIR: /opt/aureon-office-runtime
+      AUREON_OFFICE_STORE_CALLBACK_URL: https://aureonag.com/api/office/backend-store
+    ports:
+      - "127.0.0.1:4194:4194"
+    volumes:
+      - type: bind
+        source: ${AUREON_OFFICE_RELEASE_DIR:?Set absolute verified release directory}
+        target: /opt/aureon-office-runtime
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - office-gateway
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: aureon-office-gateway
+      traefik.http.routers.aureon-office-gateway.rule: "Host(`office-gateway.aureonag.com`) && Path(`/v1/runtime`)"
+      traefik.http.routers.aureon-office-gateway.entrypoints: websecure
+      traefik.http.routers.aureon-office-gateway.tls: "true"
+      traefik.http.routers.aureon-office-gateway.tls.certresolver: letsencrypt
+      traefik.http.routers.aureon-office-gateway.service: aureon-office-gateway
+      traefik.http.services.aureon-office-gateway.loadbalancer.server.port: "4194"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+networks:
+  office-gateway:
+    name: aureon-office-gateway
+    driver: bridge

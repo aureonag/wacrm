@@ -1,0 +1,8 @@
+# EXAMPLE ONLY. Eventual private VPS file: /srv/aureon-office/config/gateway.env.
+# Keep outside Git/image and owner-readable only. This example has no key.
+AUREON_OFFICE_ENABLED=false
+AUREON_OFFICE_GATEWAY_KEY=
+# Compose fixes these values; repeated here to show the contract.
+AUREON_OFFICE_STORE_CALLBACK_URL=https://aureonag.com/api/office/backend-store
+AUREON_OFFICE_RUNTIME_DIR=/opt/aureon-office-runtime
+# No Supabase key, CRM cookie, database password, or browser token belongs here.

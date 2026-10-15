@@ -3,6 +3,12 @@ import { safeNextPath } from '@/lib/auth/next-path'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // The server callback has its own strict HMAC gate. Never refresh a browser
+  // session or propagate cookies for this exact server-to-server route.
+  if (request.nextUrl.pathname === '/api/office/backend-store') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -117,7 +123,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected pages - redirect to login if not authenticated
-  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/financeiro', '/operational', '/chat']
+  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/financeiro', '/operational', '/chat', '/escritorio']
   if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     const url = request.nextUrl.clone()
     const back = request.nextUrl.pathname + request.nextUrl.search

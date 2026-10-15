@@ -53,5 +53,13 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Office package guards
+        env:
+          AUREON_RELEASE_PYTHON: /usr/bin/python3
+        run: npm run test:office-package
+
+      - name: Office transfer guard (Linux filesystem)
+        run: python3 -m unittest discover -s deploy/office-gateway -p "test_receive_release.py"
+
       - name: Build
         run: npm run build
