@@ -71,7 +71,7 @@ function createCrmInterfaceService({store, approvedMap, now = () => Date.now()} 
   const mapSeed = approvedMap === undefined ? undefined : structuredClone(approvedMap);
   const queues = new Map(), slots = new Map();
   const spatial = (method, pathname) =>
-    method === 'GET' && (pathname === '/spatial-state' || pathname === '/spatial-control') ||
+    method === 'GET' && (pathname === '/spatial-state' || pathname === '/spatial-control' || pathname === '/proximity') ||
     method === 'POST' && pathname === '/spatial-presence';
 
   function matchesIdentity(slot, identity) {

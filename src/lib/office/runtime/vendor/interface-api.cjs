@@ -3,6 +3,8 @@
 const crypto = require('node:crypto');
 const spotifyLinks = require('./spotify-links.js');
 const {validatePortrait}=require('./avatar-portrait.cjs');
+const {publicAvatarAppearance}=require('./avatar-appearance.cjs');
+const {proximityRoom}=require('./proximity-core.cjs');
 const {normalizeZone}=require('./profile-details-core.js');
 const {createSpatialPresence}=require('./spatial-presence-core.cjs');
 const {readClientState,patchClientState}=require('../client-state.cjs');
@@ -41,7 +43,8 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
     return u;
   };
   const disconnectCalls = uid => {for(const key of callSessions.keys())if(key.endsWith(':'+uid))callSessions.delete(key);signals=signals.filter(s=>s.from!==uid&&s.to!==uid);};
-  const publicUser = u => {const spatialPosition=spatialPresence.snapshot(u);return {id:u.id,name:u.name,bio:u.bio||'',status:u.status||'online',statusText:u.statusText||'',presenceVersion:u.presenceVersion||0,lastSeen:u.lastSeen,avatarUrl:u.avatarUrl||'',profilePhotoUrl:u.profilePhotoUrl||'',timeZone:u.timeZone||'',role:u.role,preferences:u.preferences||{},...(spatialPosition?{spatialPosition}:{})};};
+  const appearance = u => {try{return publicAvatarAppearance(readClientState(state,u.id));}catch{return publicAvatarAppearance();}};
+  const publicUser = u => {const spatialPosition=spatialPresence.snapshot(u);return {id:u.id,name:u.name,bio:u.bio||'',status:u.status||'online',statusText:u.statusText||'',presenceVersion:u.presenceVersion||0,lastSeen:u.lastSeen,avatarUrl:u.avatarUrl||'',avatarAppearance:appearance(u),profilePhotoUrl:u.profilePhotoUrl||'',timeZone:u.timeZone||'',role:u.role,preferences:u.preferences||{},...(spatialPosition?{spatialPosition}:{})};};
   const canChannel = (u,c) => c && (!c.private || c.members.includes(u.id));
   const conversation = (u,key) => {
     if(typeof key !== 'string') fail(400,'Escolha uma conversa.');
@@ -72,6 +75,8 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
     for(let cycle=1;cycle<=cycles;cycle++){if(rest<focus)return {phase:'focus',remaining:focus-rest,elapsed,cycle,paused:!!m.paused};rest-=focus;if(cycle<cycles){if(rest<pause)return {phase:'break',remaining:pause-rest,elapsed,cycle,paused:!!m.paused};rest-=pause;}}
     return {phase:'completed',remaining:0,elapsed,cycle:cycles,paused:!!m.paused};
   };
+  const proximity = u => proximityRoom(u,{users:state.users,meetings:state.meetings,snapshot:spatialPresence.snapshot,phase:meetingPhase,now:now()});
+  const callRoom=(u,room)=>{const explicit=state.meetings.find(m=>m.id===room&&!m.ended);if(explicit)return explicit;const nearby=proximity(u);return nearby?.id===room?nearby:null;};
   const publicMeeting = (u,m) => ({...m,...meetingPhase(m),requests:(m.owner===u.id?m.requests:m.requests.filter(r=>r.userId===u.id)).map(r=>({...r,state:r.state==='pending'&&r.time<now()-120000?'expired':r.state}))});
   const hasActiveMeeting = (userId,exceptId) => state.meetings.some(m=>m.id!==exceptId&&!m.ended&&m.members.includes(userId)&&meetingPhase(m).phase!=='completed');
   const messageAccess = (u,m) => {
@@ -91,11 +96,12 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
     }
     if(method==='GET' && pathname==='/client-state')return {clientState:readClientState(state,u.id)};
     if(method==='POST' && pathname==='/client-state')return {clientState:patchClientState(state,u.id,body)};
-    if(method==='GET' && pathname==='/state') return {revision:state.revision,user:{...publicUser(u),unreadMessages:u.unreadMessages||[],unreadConversations:[...new Set(state.messages.filter(m=>(u.unreadMessages||[]).includes(m.id)&&!m.deleted).map(m=>m.conversation))]},historyUsers:state.users.filter(p=>p.archived).map(publicUser),users:state.users.filter(p=>!p.archived).map(p=>({...publicUser(p),status:p.lastSeen<now()-45000?'offline':p.status})),channels:state.channels.filter(c=>canChannel(u,c)),events:state.events.filter(e=>!e.deleted),activity:state.activity.filter(a=>a.recipients.includes(u.id)).slice(-200),meetings:state.meetings.filter(m=>!m.ended).map(m=>publicMeeting(u,m)),authentication:'crm',capabilities:{...identity.capabilities,profileDetails:true,avatarSync:true,spatialPresence:true,spatialSnapshots:true,spatialOwnership:true}};
+    if(method==='GET' && pathname==='/state') return {revision:state.revision,user:{...publicUser(u),unreadMessages:u.unreadMessages||[],unreadConversations:[...new Set(state.messages.filter(m=>(u.unreadMessages||[]).includes(m.id)&&!m.deleted).map(m=>m.conversation))]},historyUsers:state.users.filter(p=>p.archived).map(publicUser),users:state.users.filter(p=>!p.archived).map(p=>({...publicUser(p),status:p.lastSeen<now()-45000?'offline':p.status})),channels:state.channels.filter(c=>canChannel(u,c)),events:state.events.filter(e=>!e.deleted),activity:state.activity.filter(a=>a.recipients.includes(u.id)).slice(-200),meetings:state.meetings.filter(m=>!m.ended).map(m=>publicMeeting(u,m)),authentication:'crm',capabilities:{...identity.capabilities,profileDetails:true,avatarSync:true,spatialPresence:true,spatialSnapshots:true,spatialOwnership:true,proximityAudio:true}};
     if(method==='GET' && pathname==='/spatial-state') {
-      const users=state.users.flatMap(p=>{const spatialPosition=spatialPresence.snapshot(p);if(!spatialPosition||p.lastSeen<now()-45000)return [];return [{id:p.id,name:p.name,status:p.status,avatarUrl:p.avatarUrl||'',spatialPosition}];});
+      const users=state.users.flatMap(p=>{const spatialPosition=spatialPresence.snapshot(p);if(!spatialPosition||p.lastSeen<now()-45000)return [];return [{id:p.id,name:p.name,status:p.status,avatarUrl:p.avatarUrl||'',avatarAppearance:appearance(p),spatialPosition}];});
       return {userId:u.id,serverTime:now(),users};
     }
+    if(method==='GET' && pathname==='/proximity')return {room:proximity(u)};
     if(method==='GET' && pathname==='/spatial-control') return spatialPresence.control(u);
     if(method==='POST' && pathname==='/spatial-presence') {
       if(body.clear===true){spatialPresence.clear(u,body);return {position:null,control:spatialPresence.control(u)};}
@@ -105,7 +111,7 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
     if(method==='POST' && pathname==='/presence') {
       if(!['online','busy','away','offline'].includes(body.status))fail(400,'Status inválido.');
       if(body.expectedPresenceVersion!==undefined){if(!Number.isInteger(body.expectedPresenceVersion)||body.expectedPresenceVersion<0)fail(400,'Versão de status inválida.');if(body.expectedPresenceVersion!==(u.presenceVersion||0))fail(409,'O status foi atualizado em outra guia.');}
-      const statusText=text(body.statusText||'',120,false);const changed=u.status!==body.status || u.statusText!==statusText;u.status=body.status;u.statusText=statusText;u.lastSeen=now();if(!['online','busy'].includes(u.status))spatialPresence.remove(u.id);if(u.status==='offline')disconnectCalls(u.id);
+      const statusText=text(body.statusText||'',120,false);const changed=u.status!==body.status || u.statusText!==statusText;u.status=body.status;u.statusText=statusText;u.lastSeen=now();if(!['online','busy','away'].includes(u.status))spatialPresence.remove(u.id);if(u.status==='offline')disconnectCalls(u.id);
       if(changed){u.presenceVersion=(u.presenceVersion||0)+1;await save();}return {user:publicUser(u)};
     }
     if(method==='POST' && pathname==='/profile') {
@@ -179,15 +185,15 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
       const m=state.meetings.find(m=>m.id===body.id&&!m.ended);if(!m||!m.members.includes(u.id))fail(403,'Entre na reunião para levantar a mão.');
       if(typeof body.raised!=='boolean')fail(400,'Estado de mão inválido.');m.hands={...(m.hands||{}),[u.id]:body.raised};await save();return {ok:true};
     }
-    if(method==='POST' && pathname==='/call-session') {if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');const m=state.meetings.find(m=>m.id===body.meeting&&!m.ended);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');const call={id:id(),lastSeen:now()};callSessions.set(m.id+':'+u.id,call);return {callId:call.id};}
+    if(method==='POST' && pathname==='/call-session') {if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');const m=callRoom(u,body.meeting);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');const call={id:id(),lastSeen:now()};callSessions.set(m.id+':'+u.id,call);return {callId:call.id};}
     if(method==='GET' && pathname==='/signals') {
       if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');
-      const m=state.meetings.find(m=>m.id===query.meeting&&!m.ended);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');
-      const call=callSessions.get(m.id+':'+u.id);if(!call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(call.id!==query.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');call.lastSeen=now();const roster=Object.fromEntries(m.members.map(uid=>[uid,callSessions.get(m.id+':'+uid)]).filter(([uid,c])=>c&&c.lastSeen>now()-45000&&state.users.some(p=>p.id===uid&&!p.archived&&p.status!=='offline')).map(([uid,c])=>[uid,c.id]));signals=signals.filter(s=>s.time>now()-90000);return {signals:signals.filter(s=>s.meeting===m.id&&s.to===u.id&&s.toCall===call.id&&s.sequence>(Number(query.after)||0)),cursor:signalSequence,members:m.members,roster};
+      const m=callRoom(u,query.meeting);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');
+      const call=callSessions.get(m.id+':'+u.id);if(!call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(call.id!==query.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');call.lastSeen=now();const roster=Object.fromEntries(m.members.map(uid=>[uid,callSessions.get(m.id+':'+uid)]).filter(([uid,c])=>c&&c.lastSeen>now()-45000&&state.users.some(p=>p.id===uid&&!p.archived&&p.status!=='offline')).map(([uid,c])=>[uid,c.id]));signals=signals.filter(s=>s.time>now()-90000);return {signals:signals.filter(s=>s.meeting===m.id&&s.to===u.id&&s.toCall===call.id&&m.members.includes(s.from)&&s.sequence>(Number(query.after)||0)),cursor:signalSequence,members:m.members,roster};
     }
     if(method==='POST' && pathname==='/signal') {
       if(u.status==='offline'||!state.users.some(p=>p.id===body.to&&!p.archived&&p.status!=='offline'))fail(403,'Sinalização exige participantes conectados ao escritório.');
-      const m=state.meetings.find(m=>m.id===body.meeting&&!m.ended);if(!m||!m.members.includes(u.id)||!m.members.includes(body.to)||body.to===u.id)fail(403,'Sinalização permitida somente entre participantes.');
+      const m=callRoom(u,body.meeting);if(!m||!m.members.includes(u.id)||!m.members.includes(body.to)||body.to===u.id)fail(403,'Sinalização permitida somente entre participantes.');
       const caller=callSessions.get(m.id+':'+u.id),recipient=callSessions.get(m.id+':'+body.to);if(!caller)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(caller.id!==body.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');if(!recipient||recipient.id!==body.toCall)fail(409,'A chamada foi reiniciada.','OFFICE_SIGNAL_RECIPIENT_STALE');
       const signal=body.signal;if(!signal||!['offer','answer','candidate','renegotiate'].includes(signal.type))fail(400,'Sinal inválido.');
       let safe;

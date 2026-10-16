@@ -16,7 +16,7 @@ function validPoint(p){return p&&typeof p==='object'&&Number.isFinite(p.x)&&Numb
 function areaForPosition(point){if(!validPoint(point))return null;const id=resolve(regions,point);return id<0?null:{areaId:id,areaName:regions[id].name,floorId:'office-1'};}
 function createSpatialPresence({now=()=>Date.now(),ttlMs=20000,leaseMs=7000,initialState=null}={}){
  if(!Number.isFinite(ttlMs)||ttlMs<=0||!Number.isFinite(leaseMs)||leaseMs<=0||leaseMs>ttlMs)throw new Error('Prazo de presença espacial inválido.');
- const records=new Map(initialState?.records||[]),leases=new Map(initialState?.leases||[]),versions=new Map(initialState?.versions||[]),active=u=>u&&typeof u.id==='string'&&u.id.length>0&&!u.archived&&['online','busy'].includes(u.status);
+ const records=new Map(initialState?.records||[]),leases=new Map(initialState?.leases||[]),versions=new Map(initialState?.versions||[]),active=u=>u&&typeof u.id==='string'&&u.id.length>0&&!u.archived&&['online','busy','away'].includes(u.status);
  const fail=(status,message)=>{const error=Error(message);error.status=status;throw error;},version=id=>versions.get(id)||0;
  const liveLease=(id,time)=>{const lease=leases.get(id);return lease&&time>=lease.started&&time<lease.until?lease:null;};
  function remove(id){const had=records.has(id)||leases.has(id);records.delete(id);leases.delete(id);if(had)versions.set(id,version(id)+1);}

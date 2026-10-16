@@ -1,0 +1,2 @@
+function setRoom(i,move=true){current=i;const r=rooms[i];if(move)position={x:r.x+r.w/2,y:r.y+r.h-45};$('roomName').textContent=r.name;$('roomHint').textContent=r.hint;$('profileStatus').textContent=`Disponível · ${r.name}`;document.querySelectorAll('.channel').forEach((b,j)=>b.classList.toggle('active',i===j));if(move)render()}
+const oldSetRoom=setRoom;setRoom=function(i,moveToRoom=true){if(moveToRoom){route=[];facing='down';walking=false;pressed.clear()}oldSetRoom(i,moveToRoom);if(moveToRoom){clearSpawn();render()}};
