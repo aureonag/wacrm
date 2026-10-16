@@ -201,7 +201,8 @@ test('copied app restores exact objects, directions and constructions after migr
 test('call disconnect stops captures even before wasJoined, and 401 is handled alongside 403',()=>{
  const source=String.raw`(()=>{let wasJoined=false,testAudio={getTracks:()=>[{stop:()=>globalThis.trackStopped++}]},testContext={close:()=>Promise.resolve()};function closeAll(){globalThis.closed++;}
 function disconnectSession(){if(wasJoined){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();}wasJoined=false;closeAll();}
-async function tick(){if(ticking||!state.data)return;try{}catch(error){if(error.status===403){disconnectSession();}}}
+async function tick(){if(ticking||!state.data)return;try{const m=meeting();if(!m){disconnectSession();return;}}catch(error){if(error.status===403){disconnectSession();}}}
+window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});
 function broadcastReaction(){}function toggleHand(){}
 window.aureonReplicaCalls={broadcastReaction,toggleHand};})();`;
  const stopped=[],window={aureonOfficeBootstrap:{active:true},aureonStopMicrophone:()=>stopped.push('mic'),aureonStopCamera:()=>stopped.push('camera'),aureonStopScreen:()=>stopped.push('screen'),addEventListener(){}};

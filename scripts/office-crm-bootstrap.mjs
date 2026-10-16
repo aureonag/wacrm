@@ -274,8 +274,10 @@ export function adaptOfficeCrm(file,source){
   text=replace(file,text,'if(ticking||!state.data)return;','if(ticking||!state.data||!window.aureonOfficeBootstrap.active)return;');
   text=replace(file,text,'if(error.status===403){disconnectSession();}','if(error.status===401||error.status===403){disconnectSession();}');
   text=replace(file,text,'function disconnectSession(){if(wasJoined){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();}wasJoined=false;closeAll();}','function disconnectSession(){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();testAudio?.getTracks().forEach(track=>track.stop());testAudio=null;testContext?.close().catch(()=>{});testContext=null;wasJoined=false;closeAll();}');
+  text=replace(file,text,'const m=meeting();if(!m){disconnectSession();return;}','const m=meeting();if(!m){if(wasJoined)disconnectSession();return;}');
+  text=replace(file,text,"window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});","window.addEventListener('aureon-interface-state',()=>{if(!meeting()&&wasJoined)disconnectSession();tick()});");
   text=replace(file,text,'window.aureonReplicaCalls={broadcastReaction,toggleHand};',"window.addEventListener('aureon-office-session-ended',disconnectSession);window.aureonReplicaCalls={broadcastReaction,toggleHand,disconnectSession};");
-  changes.push({rule:'disconnect-media-on-expired-crm-session',occurrences:1});
+  changes.push({rule:'disconnect-media-on-expired-crm-session',occurrences:1},{rule:'preserve-local-capture-outside-active-calls',occurrences:2});
  }
  if(file==='replica-spotify.js'){
   text=replace(file,text,'const U=window.aureonReplicaUI;if(!U)return;',"const U=window.aureonReplicaUI;if(!U)return;window.aureonSpotify={open:()=>U.toast('Spotify indisponível no piloto.'),render:()=>{}};return;");

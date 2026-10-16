@@ -38,7 +38,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:office-package": "node --test scripts/package-office.test.mjs scripts/office-runtime-adapters.test.mjs scripts/office-crm-bootstrap.test.mjs scripts/office-inline-assets.test.mjs scripts/build-office-gateway.test.mjs scripts/package-office-release.test.mjs",
+    "test:office-package": "node --test scripts/package-office.test.mjs scripts/office-runtime-adapters.test.mjs scripts/office-crm-bootstrap.test.mjs scripts/office-inline-assets.test.mjs scripts/build-office-gateway.test.mjs scripts/package-office-release.test.mjs scripts/office-calls-media-boundary.test.mjs",
     "build:office-gateway": "node scripts/build-office-gateway.mjs",
     "package:office-release": "node scripts/package-office-release.mjs"
   },
