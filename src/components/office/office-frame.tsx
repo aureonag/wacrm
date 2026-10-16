@@ -118,14 +118,17 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
         {expired ? (
           <Link href="/login?next=%2Fescritorio" className={buttonVariants()}>Entrar pelo CRM</Link>
         ) : (
-          <button type="button" className={buttonVariants()} onClick={() => {
-            const current = lifecycle.current;
-            if (!current.active || current.phase !== "unavailable") return;
-            current.attempt += 1;
-            current.phase = "opening";
-            setAttempt(current.attempt);
-            setPhase("opening");
-          }}>Tentar novamente</button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" className={buttonVariants()} onClick={() => {
+              const current = lifecycle.current;
+              if (!current.active || current.phase !== "unavailable") return;
+              current.attempt += 1;
+              current.phase = "opening";
+              setAttempt(current.attempt);
+              setPhase("opening");
+            }}>Tentar novamente</button>
+            <a href="/api/office/runtime/index.html" target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir em tela cheia</a>
+          </div>
         )}
       </section>
     );
@@ -135,7 +138,10 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
     <section className="flex min-h-0 flex-1 flex-col gap-3">
       <header className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Escritório Aureon</h1>
-        {phase === "opening" && <p className="text-muted-foreground text-sm" role="status">Abrindo escritório…</p>}
+        <div className="flex items-center gap-3">
+          {phase === "opening" && <p className="text-muted-foreground text-sm" role="status">Abrindo escritório…</p>}
+          <a href="/api/office/runtime/index.html" target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir em tela cheia</a>
+        </div>
       </header>
       <iframe
         key={attempt}
