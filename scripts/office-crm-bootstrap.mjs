@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {createOfficePresentation} from './office-presentation.mjs';
 
 export const CLIENT_STATE_LIMITS=Object.freeze({
  'aureon-avatar-v1':32768,'aureon-gather-avatar-plan-v1':16384,'aureon-gather-avatar-applied-v1':16384,
@@ -35,6 +36,7 @@ export function createOfficeCrmRuntime(env,limits){
   box.textContent=text||'';
  }
  function stopMedia(){
+  try{env.presentation?.close?.();}catch{}
   for(const fn of ['aureonStopMicrophone','aureonStopCamera','aureonStopScreen'])try{const result=win[fn]?.();result?.catch?.(()=>{});}catch{}
   for(const fn of ['aureonAudioStream','aureonCameraStream','aureonScreenStream'])try{win[fn]?.()?.getTracks().forEach(track=>track.stop());}catch{}
   try{win.aureonReplicaCalls?.disconnectSession?.();}catch{}
@@ -183,6 +185,7 @@ export function createOfficeCrmRuntime(env,limits){
    if(!active)return false;
    if(win.aureonReplicaUI?.refresh)await win.aureonReplicaUI.refresh(true);
    if(!active)return false;
+   env.presentation?.start?.();
    ready=true;show('ready','');post('aureon-office-ready');return true;
   }catch(error){reportStartupFailure(stage,error);if(endedStatus===null)unavailable();return false;}
  }
@@ -219,8 +222,8 @@ export function bootstrapIndex(source){
  });
  if(redirects>1||!scripts.length)guard('index.html','missing/duplicate script list');
  if(!/<\/head>/i.test(html))guard('index.html','head missing');
- const code='\nconst aureonOfficeCrmRuntime=('+createOfficeCrmRuntime.toString()+')({window,document,fetch:window.fetch.bind(window)},'+JSON.stringify(CLIENT_STATE_LIMITS)+');\nconst localStorage=aureonOfficeCrmRuntime.localStorage;\nconst sessionStorage=aureonOfficeCrmRuntime.sessionStorage;\naureonOfficeCrmRuntime.start('+JSON.stringify(scripts)+');\n';
- return {text:html.replace(/<\/head>/i,'<script>'+code+'</script></head>'),changes:[{rule:'crm-bootstrap-before-modules',occurrences:scripts.length},{rule:'remove-localhost-redirect',occurrences:redirects}]};
+ const code='\nconst aureonOfficePresentation=('+createOfficePresentation.toString()+')({window,document});\nconst aureonOfficeCrmRuntime=('+createOfficeCrmRuntime.toString()+')({window,document,fetch:window.fetch.bind(window),presentation:aureonOfficePresentation},'+JSON.stringify(CLIENT_STATE_LIMITS)+');\nconst localStorage=aureonOfficeCrmRuntime.localStorage;\nconst sessionStorage=aureonOfficeCrmRuntime.sessionStorage;\naureonOfficeCrmRuntime.start('+JSON.stringify(scripts)+');\n';
+ return {text:html.replace(/<\/head>/i,'<script>'+code+'</script></head>'),changes:[{rule:'crm-bootstrap-before-modules',occurrences:scripts.length},{rule:'screen-presentation-mini-expanded-fullscreen',occurrences:1},{rule:'remove-localhost-redirect',occurrences:redirects}]};
 }
 export function adaptOfficeCrm(file,source){
  let text=source;const changes=[];

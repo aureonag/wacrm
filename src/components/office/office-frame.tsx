@@ -106,7 +106,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   const expired = phase === "expired" || identityChanged;
   if (expired || phase === "unavailable") {
     return (
-      <section className="mx-auto max-w-2xl space-y-6 py-8">
+      <section className="mx-auto min-h-0 max-w-2xl space-y-6 overflow-y-auto py-8">
         <Alert>
           <Building2 aria-hidden="true" />
           <AlertTitle>{expired ? "Sua sessão do escritório foi encerrada" : "O escritório está indisponível"}</AlertTitle>
@@ -136,7 +136,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex shrink-0 items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Escritório Aureon</h1>
         <div className="flex items-center gap-3">
           {phase === "opening" && <p className="text-muted-foreground text-sm" role="status">Abrindo escritório…</p>}
@@ -149,7 +149,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
         title="Escritório virtual Aureon"
         src="/api/office/runtime/index.html"
         allow="camera 'self'; microphone 'self'; display-capture 'self'; autoplay 'self'; fullscreen 'self'"
-        className="bg-background min-h-[72vh] w-full flex-1 rounded-lg border"
+        className="bg-background min-h-0 w-full flex-1 rounded-lg border"
         onLoad={() => {
           const documentType = iframe.current?.contentDocument?.contentType;
           if (documentType && documentType !== "text/html") transition("unavailable", attempt);

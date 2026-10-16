@@ -7,7 +7,7 @@ const identity={accountId:ACCOUNT,user:{id:USER,profileId:USER,name:'Membro test
 const approved={objects:[{id:71,type:'desk',x:224,y:368,direction:3}],floor:'#a27f6b',construction:[{id:'wall1',type:'wall',a:{x:1,y:2},b:{x:3,y:4},brandLogo:true}]};
 const clone=x=>structuredClone(x);
 const response=(status,body)=>({status,ok:status>=200&&status<300,json:async()=>body,clone:()=>response(status,body)});
-function harness(responder,document=null,loadScriptOverride){
+function harness(responder,document=null,loadScriptOverride,presentation){
  const calls=[],messages=[],loaded=[],stopped=[],logs=[],listeners=new Map(),registrations=[],timers=new Map(),timerDurations=new Map();let serial=0;
  const win={console:{error:(...args)=>logs.push(args)},location:{origin:'https://aureonag.com',href:'https://aureonag.com/api/office/runtime/'},parent:{postMessage:(...args)=>messages.push(args)},TextEncoder,AbortController,URL,
   setTimeout:(fn,ms)=>{const id=++serial;timers.set(id,fn);timerDurations.set(id,ms);return id;},clearTimeout:id=>{timers.delete(id);timerDurations.delete(id);},
@@ -21,7 +21,7 @@ function harness(responder,document=null,loadScriptOverride){
  Object.defineProperty(win,'sessionStorage',{get(){throw Error('Actual sessionStorage must not be read');}});
  const fetch=async(url,options)=>{calls.push({url,options});return responder?responder(url,options):response(200,{identity:clone(identity),map:clone(approved),clientState:{}});};
  const loader=loadScriptOverride===null?{}:{loadScript:src=>{loaded.push(src);return loadScriptOverride?loadScriptOverride(src):Promise.resolve();}};
- const runtime=createOfficeCrmRuntime({window:win,document,fetch,TextEncoder,...loader},CLIENT_STATE_LIMITS);
+ const runtime=createOfficeCrmRuntime({window:win,document,fetch,TextEncoder,...loader,presentation},CLIENT_STATE_LIMITS);
  return {runtime,win,calls,messages,loaded,stopped,logs,listeners,registrations,timers,timerDurations};
 }
 test('context precedes modules; preferences and readonly full seed are isolated without actual browser storage',async()=>{
@@ -41,6 +41,27 @@ test('context precedes modules; preferences and readonly full seed are isolated 
  assert.equal(JSON.parse(h.runtime.localStorage.getItem('aurion-office-v1')).objects.length,1);
  assert.ok(h.runtime.localStorage.getItem('aureon-office-construction-v1'));
  assert.equal(h.messages.at(-1)[0].type,'aureon-office-ready');
+});
+
+test('presentation starts after modules and the authenticated interface, then closes on session expiry',async()=>{
+ const order=[];
+ const h=harness(undefined,null,()=>order.push('module'),{
+  start(){assert.equal(h.runtime.active,true);order.push('presentation');},
+  close(){order.push('closed');},
+ });
+ h.win.aureonReplicaUI={ready:Promise.resolve(),refresh:async()=>order.push('interface')};
+ assert.equal(await h.runtime.start(['/api/office/runtime/app.js']),true);
+ assert.deepEqual(order,['module','interface','presentation']);
+ h.runtime.endSession(401);h.runtime.endSession(403);
+ assert.deepEqual(order,['module','interface','presentation','closed']);
+ assert.deepEqual(h.stopped,['mic','camera','screen']);
+});
+
+test('an unauthenticated office never installs presentation controls',async()=>{
+ let starts=0,closes=0;
+ const h=harness(()=>response(401,{}),null,undefined,{start(){starts++;},close(){closes++;}});
+ assert.equal(await h.runtime.start(['/api/office/runtime/app.js']),false);
+ assert.equal(starts,0);assert.equal(closes,1);assert.deepEqual(h.loaded,[]);
 });
 test('only the eight bounded preference keys are persisted; removals are tombstones and no tokens enter storage',async()=>{
  const h=harness((url)=>url==='/api/office/bootstrap'?response(200,{identity,map:approved,clientState:{'aureon-avatar-v1':'{"shirt":"#45434e"}','aureon-interface-session-principal':'secret','unknown':'x'}}):response(200,{clientState:{}}));
