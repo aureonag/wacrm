@@ -16,11 +16,9 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   const { user, loading, accountId: currentAccountId, profileLoading } = useAuth();
   const [phase, setPhase] = useState<OfficePhase>("opening");
   const [attempt, setAttempt] = useState(0);
-  const [armedAttempt, setArmedAttempt] = useState<number | null>(null);
-  const sourceArmed = armedAttempt === attempt;
 
-  const lifecycle = useRef<{ active: boolean; attempt: number; phase: OfficePhase; target: Window | null; armedAttempt: number | null }>({
-    active: false, attempt: 0, phase: "opening", target: null, armedAttempt: null,
+  const lifecycle = useRef<{ active: boolean; attempt: number; phase: OfficePhase; target: Window | null }>({
+    active: false, attempt: 0, phase: "opening", target: null,
   });
   const identityChanged = (!loading && user?.id !== userId) ||
     (!profileLoading && currentAccountId !== accountId);
@@ -47,7 +45,6 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
     return () => {
       current.active = false;
       current.target = null;
-      current.armedAttempt = null;
       stopOfficeFrameMedia(target);
     };
   }, [attempt]);
@@ -61,7 +58,6 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== iframe.current?.contentWindow) return;
-      if (lifecycle.current.armedAttempt !== attempt || iframe.current?.getAttribute("src") !== "/api/office/runtime/index.html") return;
       if (event.data?.type === "aureon-office-ready") transition("ready", attempt);
       if (event.data?.type === "aureon-office-session-ended") transition("expired", attempt);
       if (event.data?.type === "aureon-office-unavailable") transition("unavailable", attempt);
@@ -71,21 +67,12 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   }, [attempt, transition]);
 
   useEffect(() => {
-    const current = lifecycle.current;
-    if (!current.active || current.phase !== "opening" || identityChanged) return;
-    current.armedAttempt = attempt;
-    // Defer navigation until after hydration and the message listener setup.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Navigation must start only after client effects are installed.
-    setArmedAttempt(attempt);
-  }, [attempt, identityChanged]);
-
-  useEffect(() => {
-    if (!sourceArmed || phase !== "opening" || identityChanged) return;
+    if (phase !== "opening" || identityChanged) return;
     const deadline = window.setTimeout(() => {
       if (lifecycle.current.phase === "opening") transition("unavailable", attempt);
     }, 90_000);
     return () => window.clearTimeout(deadline);
-  }, [attempt, phase, sourceArmed, identityChanged, transition]);
+  }, [attempt, phase, identityChanged, transition]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -168,15 +155,14 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
         key={attempt}
         ref={iframe}
         title="Escritório virtual Aureon"
-        src={sourceArmed ? "/api/office/runtime/index.html" : undefined}
+        src="/api/office/runtime/index.html"
         allow="camera 'self'; microphone 'self'; display-capture 'self'; autoplay 'self'; fullscreen 'self'"
         className="bg-background min-h-0 w-full flex-1 rounded-lg border"
         onLoad={() => {
-          if (!sourceArmed) return;
           const documentType = iframe.current?.contentDocument?.contentType;
           if (documentType && documentType !== "text/html") transition("unavailable", attempt);
         }}
-        onError={() => { if (sourceArmed) transition("unavailable", attempt); }}
+        onError={() => transition("unavailable", attempt)}
       />
     </section>
   );
