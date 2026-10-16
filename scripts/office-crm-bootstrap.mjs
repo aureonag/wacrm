@@ -175,6 +175,7 @@ export function createOfficeCrmRuntime(env,limits){
    if(doc?.readyState==='loading')await new Promise(resolve=>doc.addEventListener('DOMContentLoaded',resolve,{once:true}));
    show('loading','Carregando seu escritório…');
    stage='scripts';
+   env.presentation?.prepareInput?.();
    for(const src of scripts){
     if(!active)throw Object.assign(Error('Sessão encerrada.'),{status:401});
     if(!/^\/api\/office\/runtime\/[a-zA-Z0-9_-]+\.js$/.test(src))throw Error('Módulo inválido.');

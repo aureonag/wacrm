@@ -46,14 +46,15 @@ test('context precedes modules; preferences and readonly full seed are isolated 
 test('presentation starts after modules and the authenticated interface, then closes on session expiry',async()=>{
  const order=[];
  const h=harness(undefined,null,()=>order.push('module'),{
+  prepareInput(){order.push('prepare-input');},
   start(){assert.equal(h.runtime.active,true);order.push('presentation');},
   close(){order.push('closed');},
  });
  h.win.aureonReplicaUI={ready:Promise.resolve(),refresh:async()=>order.push('interface')};
  assert.equal(await h.runtime.start(['/api/office/runtime/app.js']),true);
- assert.deepEqual(order,['module','interface','presentation']);
+ assert.deepEqual(order,['prepare-input','module','interface','presentation']);
  h.runtime.endSession(401);h.runtime.endSession(403);
- assert.deepEqual(order,['module','interface','presentation','closed']);
+ assert.deepEqual(order,['prepare-input','module','interface','presentation','closed']);
  assert.deepEqual(h.stopped,['mic','camera','screen']);
 });
 

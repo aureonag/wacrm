@@ -10,7 +10,13 @@ function fixture() {
     listeners = new Map();
     addEventListener(type, callback) { const set = this.listeners.get(type) || new Set(); set.add(callback); this.listeners.set(type, set); }
     removeEventListener(type, callback) { this.listeners.get(type)?.delete(callback); }
-    dispatch(type, event = {}) { return Promise.all([...this.listeners.get(type) || []].map(callback => callback({type, preventDefault() { event.prevented = true; }, ...event}))); }
+    dispatch(type, event = {}) {
+      const dispatched = {type, currentTarget: this, target: this, preventDefault() { event.prevented = true; },
+        stopPropagation() { event.stopped = true; }, stopImmediatePropagation() { event.stopped = true; event.immediateStopped = true; }, ...event};
+      const results = [];
+      for (const callback of this.listeners.get(type) || []) { results.push(callback(dispatched)); if (event.immediateStopped) break; }
+      return Promise.all(results);
+    }
   }
   const document = new Events();
   class Element extends Events {
@@ -18,11 +24,13 @@ function fixture() {
       super(); this.tagName = tag.toUpperCase(); this.nodeType = 1; this.namespaceURI = 'http://www.w3.org/1999/xhtml';
       this.children = []; this.parentNode = null; this.attributes = new Map(); this.className = ''; this.id = ''; this.hidden = false;
       this.style = {}; this._text = ''; this.srcObject = null; this.currentSrc = ''; this.ended = false; this.open = false;
-      this.playCount = 0; this.pauseCount = 0; this.loadCount = 0; this.showCount = 0;
+      this.playCount = 0; this.pauseCount = 0; this.loadCount = 0; this.showCount = 0; this.captures = new Set(); this.rect = null;
     }
     get parentElement() { return this.parentNode instanceof Element ? this.parentNode : null; }
     get isConnected() { return this.parentNode === document || this.parentNode?.isConnected === true; }
-    get classList() { return {contains: name => this.className.split(/\s+/).includes(name)}; }
+    get classList() { return {contains: name => this.className.split(/\s+/).includes(name),
+      add: name => { if (!this.className.split(/\s+/).includes(name)) this.className += ' ' + name; },
+      remove: name => { this.className = this.className.split(/\s+/).filter(value => value !== name).join(' '); }}; }
     get textContent() { return this._text + this.children.map(child => child.textContent).join(''); }
     set textContent(text) { this._text = text; for (const child of this.children) child.parentNode = null; this.children = []; }
     append(...nodes) { for (const node of nodes) { node.remove(); node.parentNode = this; this.children.push(node); } }
@@ -52,22 +60,39 @@ function fixture() {
     showModal() { this.open = true; this.showCount++; }
     close() { this.open = false; void this.dispatch('close'); }
     requestFullscreen() { if (this.tagName === 'DIALOG') return Promise.reject(Error('Dialog is not fullscreen eligible')); document.fullscreenElement = this; void document.dispatch('fullscreenchange'); return Promise.resolve(); }
+    getBoundingClientRect() {
+      if (this.rect) return {...this.rect, right: this.rect.left + this.rect.width, bottom: this.rect.top + this.rect.height};
+      const left = parseFloat(this.style.left) || 0, top = parseFloat(this.style.top) || 0;
+      const width = parseFloat(this.style.width) || 0, height = parseFloat(this.style.height) || 0;
+      return {left, top, width, height, right: left + width, bottom: top + height};
+    }
+    setPointerCapture(id) { this.captures.add(id); }
+    hasPointerCapture(id) { return this.captures.has(id); }
+    releasePointerCapture(id) { this.captures.delete(id); }
   }
   document.createElement = tag => new Element(tag);
   document.head = new Element('head'); document.head.parentNode = document;
   document.body = new Element('body'); document.body.parentNode = document;
   document.getElementById = id => [document.head, document.body].flatMap(root => root.querySelectorAll('#' + id))[0] || null;
   document.querySelectorAll = selector => document.body.querySelectorAll(selector);
+  document.querySelector = selector => document.querySelectorAll(selector)[0] || null;
   document.fullscreenElement = null; document.exitCalls = 0;
   document.exitFullscreen = () => { document.exitCalls++; document.fullscreenElement = null; void document.dispatch('fullscreenchange'); return Promise.resolve(); };
-  const microtasks = [], observers = [];
+  const microtasks = [], observers = [], sizeObservers = [];
   const window = new Events();
+  window.innerWidth = 1200; window.innerHeight = 800;
   window.queueMicrotask = callback => microtasks.push(callback);
   window.getComputedStyle = node => ({display: node.style.display || 'block', visibility: node.style.visibility || 'visible'});
   window.MutationObserver = class {
     constructor(callback) { this.callback = callback; this.active = false; observers.push(this); }
     observe() { this.active = true; }
     disconnect() { this.active = false; }
+  };
+  window.ResizeObserver = class {
+    constructor(callback) { this.callback = callback; this.targets = new Set(); sizeObservers.push(this); }
+    observe(node) { this.targets.add(node); }
+    unobserve(node) { this.targets.delete(node); }
+    disconnect() { this.targets.clear(); }
   };
   let captureCalls = 0;
   window.navigator = {mediaDevices: {getUserMedia() { captureCalls++; throw Error('No devices permitted'); }, getDisplayMedia() { captureCalls++; throw Error('No devices permitted'); }}};
@@ -77,13 +102,14 @@ function fixture() {
     const media = new Events(); media.getVideoTracks = () => [track]; media.getTracks = () => [track];
     return {media, track};
   }
-  function video(id = '', parent = document.body) { const node = new Element('video'); node.id = id; const media = stream(); node.srcObject = media.media; parent.append(node); return {node, ...media}; }
+  function video(id = '', parent = document.body) { const node = new Element('video'); node.id = id; node.videoWidth = 1280; node.videoHeight = 960; const media = stream(); node.srcObject = media.media; parent.append(node); return {node, ...media}; }
+  function layout(className, left, top, width, height) { const node = new Element('div'); node.className = className; node.rect = {left, top, width, height}; document.body.append(node); return node; }
   function flush() { let count = 0; while (microtasks.length) { if (++count > 100) throw Error('Observer/microtask loop'); microtasks.shift()(); } }
   function mutate(target, options = {}) { for (const observer of observers) if (observer.active) observer.callback([{target, type: options.type || 'childList', addedNodes: options.addedNodes || [], removedNodes: options.removedNodes || [], ...options}]); flush(); }
   function button(label, root = document.body) { const found = root.querySelectorAll('button').find(node => node.textContent === label); assert.ok(found, 'Missing button: ' + label); return found; }
   const serialized = new vm.Script('(' + createOfficePresentation.toString() + ')').runInNewContext({}, {timeout: 1000});
   const presentation = serialized({window, document});
-  return {document, window, observers, presentation, video, mutate, flush, button, get captureCalls() { return captureCalls; }};
+  return {document, window, observers, sizeObservers, presentation, video, layout, mutate, flush, button, get captureCalls() { return captureCalls; }};
 }
 
 test('factory is serializable and lazy; starting twice keeps the original preview/stream and one set of controls', () => {
@@ -197,4 +223,114 @@ test('a file video fixture can be enlarged without constructing a MediaStream', 
   const viewer = h.document.body.querySelector('dialog').querySelector('video');
   assert.equal(viewer.srcObject, null); assert.equal(viewer.getAttribute('src'), '/fixture-screen.webm');
   h.presentation.close(); assert.equal(viewer.getAttribute('src'), null); assert.equal(local.node.currentSrc, '/fixture-screen.webm');
+});
+
+function officeFixture() {
+  const h = fixture();
+  h.map = h.layout('map-viewport', 280, 40, 900, 740);
+  h.sidebar = h.layout('sidebar', 0, 0, 270, 800);
+  h.nav = h.layout('office-map-nav', 1120, 500, 48, 220);
+  h.dock = h.layout('call-dock', 550, 724, 480, 48);
+  h.local = h.video('screenPreview');
+  h.presentation.start();
+  h.wrapper = h.local.node.parentElement;
+  return h;
+}
+function expectClear(h) {
+  const rect = h.wrapper.getBoundingClientRect(), bounds = h.map.getBoundingClientRect();
+  assert.ok(rect.left >= bounds.left && rect.top >= bounds.top, 'Preview stays inside map at top/left');
+  assert.ok(rect.right <= bounds.right && rect.bottom <= bounds.bottom, 'Preview stays inside map at bottom/right');
+  for (const node of [h.nav, h.dock, h.sidebar]) {
+    const obstacle = node.getBoundingClientRect();
+    assert.ok(rect.right <= obstacle.left - 11.9 || rect.left >= obstacle.right + 11.9 || rect.bottom <= obstacle.top - 11.9 || rect.top >= obstacle.bottom + 11.9,
+      'Preview leaves space around ' + node.className);
+  }
+  assert.equal(h.local.node.srcObject, h.local.media); assert.equal(h.local.track.stopCalls, 0); assert.equal(h.captureCalls, 0);
+  return rect;
+}
+async function pointerStart(h, target, extra = {}) {
+  const event = {pointerId: 7, clientX: 400, clientY: 200, button: 0, isPrimary: true, target, ...extra};
+  await (target.classList.contains('aureon-screen-resize') ? target : h.wrapper).dispatch('pointerdown', event);
+  return event;
+}
+
+test('default preview sits left of map controls and above the dock, excluding the sidebar', () => {
+  const h = officeFixture(), rect = expectClear(h);
+  assert.ok(rect.right <= h.nav.rect.left - 12); assert.equal(rect.width, 320);
+  assert.equal(h.wrapper.querySelectorAll('.aureon-screen-resize').length, 8);
+  assert.ok(h.sizeObservers[0].targets.has(h.map)); assert.ok(h.sizeObservers[0].targets.has(h.nav));
+});
+
+test('dragging the video captures its pointer, clamps to the map and cannot cover either menu', async () => {
+  const h = officeFixture(), down = await pointerStart(h, h.local.node);
+  assert.equal(down.prevented, true); assert.equal(down.stopped, true); assert.equal(h.wrapper.hasPointerCapture(7), true);
+  await h.window.dispatch('pointermove', {pointerId: 7, clientX: -10000, clientY: -10000});
+  let rect = expectClear(h); assert.equal(rect.left, h.map.rect.left + 12); assert.equal(rect.top, h.map.rect.top + 12);
+  await h.window.dispatch('pointermove', {pointerId: 7, clientX: 10000, clientY: 10000});
+  rect = expectClear(h); assert.ok(rect.right <= h.map.rect.left + h.map.rect.width);
+  await h.window.dispatch('pointerup', {pointerId: 7}); assert.equal(h.wrapper.hasPointerCapture(7), false);
+});
+
+test('resize edges and corners change dimensions while preserving clear regions and live media', async () => {
+  for (const edge of ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw']) {
+    const h = officeFixture(), handle = h.wrapper.querySelector('.aureon-screen-resize-' + edge);
+    const before = h.wrapper.getBoundingClientRect();
+    await pointerStart(h, handle);
+    await h.window.dispatch('pointermove', {pointerId: 7, clientX: edge.includes('w') ? -3000 : 5000, clientY: edge.includes('n') ? -3000 : 5000});
+    const after = expectClear(h);
+    assert.ok(after.width >= 240 && after.height >= 144, edge + ' retains useful minimum size');
+    assert.ok(after.width !== before.width || after.height !== before.height, edge + ' resizes');
+    await h.window.dispatch('pointerup', {pointerId: 7}); assert.equal(handle.hasPointerCapture(7), false);
+  }
+});
+
+test('touch pointer cancel restores the starting card and unrelated pointers cannot move it', async () => {
+  const h = officeFixture(), before = expectClear(h);
+  await pointerStart(h, h.local.node, {pointerType: 'touch'});
+  await h.window.dispatch('pointermove', {pointerId: 99, clientX: 0, clientY: 0});
+  assert.deepEqual(h.wrapper.getBoundingClientRect(), before);
+  await h.window.dispatch('pointermove', {pointerId: 7, clientX: 0, clientY: 0});
+  assert.notDeepEqual(h.wrapper.getBoundingClientRect(), before);
+  await h.window.dispatch('pointercancel', {pointerId: 7});
+  assert.deepEqual(h.wrapper.getBoundingClientRect(), before); assert.equal(h.wrapper.hasPointerCapture(7), false); expectClear(h);
+});
+
+test('amplify button does not start dragging; minimize keeps the moved position and size', async () => {
+  const h = officeFixture(), amplify = h.button('Ampliar compartilhamento');
+  const down = await pointerStart(h, amplify); assert.equal(down.prevented, undefined); assert.equal(h.wrapper.hasPointerCapture(7), false);
+  await pointerStart(h, h.local.node);
+  await h.window.dispatch('pointermove', {pointerId: 7, clientX: 20, clientY: 80}); await h.window.dispatch('pointerup', {pointerId: 7});
+  const position = expectClear(h);
+  await amplify.dispatch('click'); await h.button('Minimizar').dispatch('click');
+  assert.deepEqual(h.wrapper.getBoundingClientRect(), position); expectClear(h);
+});
+
+test('window and observed map resizing re-fit the preview without clipping or covering controls on a narrow display', async () => {
+  const h = officeFixture(); await pointerStart(h, h.local.node);
+  await h.window.dispatch('pointermove', {pointerId: 7, clientX: 200, clientY: 100}); await h.window.dispatch('pointerup', {pointerId: 7});
+  h.window.innerWidth = 420; h.window.innerHeight = 500;
+  h.map.rect = {left: 100, top: 20, width: 310, height: 470}; h.sidebar.rect = {left: 0, top: 0, width: 90, height: 500};
+  h.nav.rect = {left: 350, top: 280, width: 48, height: 140}; h.dock.rect = {left: 130, top: 438, width: 205, height: 40};
+  await h.window.dispatch('resize'); h.flush(); let rect = expectClear(h);
+  assert.ok(rect.width < 320); assert.ok(rect.width > 0 && rect.height > 0);
+  h.nav.rect = {left: 350, top: 180, width: 48, height: 240}; h.sizeObservers[0].callback(); h.flush(); rect = expectClear(h);
+  assert.ok(rect.width < 240, 'Minimum adapts to the actual free width on a narrow map');
+  h.presentation.destroy(); assert.equal(h.sizeObservers[0].targets.size, 0);
+});
+
+test('early keyboard preparation prevents the legacy capture listener from moving the avatar', async () => {
+  const h = fixture(); h.presentation.prepareInput(); h.presentation.prepareInput();
+  let avatarMoves = 0; h.window.addEventListener('keydown', () => { avatarMoves++; }, true);
+  h.local = h.video('screenPreview'); h.presentation.start(); h.wrapper = h.local.node.parentElement;
+  const bar = h.wrapper.querySelector('.aureon-screen-actions'), before = h.wrapper.getBoundingClientRect();
+  const arrow = {target: bar, key: 'ArrowLeft'}; await h.window.dispatch('keydown', arrow);
+  assert.equal(avatarMoves, 0); assert.equal(arrow.prevented, true); assert.equal(arrow.immediateStopped, true);
+  assert.equal(h.wrapper.getBoundingClientRect().left, before.left - 10);
+  const handle = h.wrapper.querySelector('.aureon-screen-resize-w'), width = h.wrapper.getBoundingClientRect().width;
+  await h.window.dispatch('keydown', {target: handle, key: 'ArrowLeft', shiftKey: true});
+  assert.equal(h.wrapper.getBoundingClientRect().width, width + 40); assert.equal(avatarMoves, 0);
+  const position = h.wrapper.getBoundingClientRect();
+  await h.window.dispatch('keydown', {target: h.button('Ampliar compartilhamento'), key: 'ArrowRight'});
+  assert.deepEqual(h.wrapper.getBoundingClientRect(), position); assert.equal(avatarMoves, 0);
+  await h.window.dispatch('keydown', {target: h.document.body, key: 'ArrowRight'}); assert.equal(avatarMoves, 1);
 });
