@@ -75,29 +75,48 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   }, [attempt, phase, identityChanged, transition]);
 
   useEffect(() => {
-    const controller = new AbortController();
+    type ContextRequest = { controller: AbortController; deadline: number | null };
     let active = true;
+    let inFlight: ContextRequest | null = null;
+    const owns = (request: ContextRequest) => active && inFlight === request && !request.controller.signal.aborted;
+    function release(request: ContextRequest, abort = false) {
+      if (request.deadline !== null) {
+        window.clearTimeout(request.deadline);
+        request.deadline = null;
+      }
+      // A timed-out request may settle after a fresh check has already started.
+      if (inFlight === request) inFlight = null;
+      if (abort) request.controller.abort();
+    }
     async function verify() {
+      if (!active || inFlight) return;
       const verifiedAttempt = lifecycle.current.attempt;
+      const request: ContextRequest = { controller: new AbortController(), deadline: null };
+      inFlight = request;
+      request.deadline = window.setTimeout(() => release(request, true), 10_000);
       try {
         const response = await fetch("/api/office/context", {
-          credentials: "same-origin", cache: "no-store", signal: controller.signal,
+          credentials: "same-origin", cache: "no-store", signal: request.controller.signal,
         });
+        if (!owns(request)) return;
         const body: unknown = response.status === 503 ? await response.json().catch(() => null) : null;
+        if (!owns(request)) return;
         const nextPhase = officeContextPhase(response.status, body);
-        if (active && nextPhase) {
+        if (nextPhase) {
           // Revocation applies across retries; an old rollback response does not.
           transition(nextPhase, nextPhase === "expired" ? undefined : verifiedAttempt);
         }
       } catch {
         // A temporary network failure must not masquerade as revoked membership.
+      } finally {
+        release(request);
       }
     }
     const interval = window.setInterval(verify, 15_000);
     window.addEventListener("focus", verify);
     return () => {
       active = false;
-      controller.abort();
+      if (inFlight) release(inFlight, true);
       window.clearInterval(interval);
       window.removeEventListener("focus", verify);
     };
@@ -116,7 +135,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
           <AlertTitle>{expired ? "Sua sessão do escritório foi encerrada" : "O escritório está indisponível"}</AlertTitle>
           <AlertDescription>
             {expired ? "Entre novamente pelo CRM para voltar ao escritório."
-              : "Não conseguimos abrir o espaço agora. Tente novamente em alguns instantes."}
+              : "Não conseguimos abrir o espaço nesta tela. Tente novamente ou abra em outra guia."}
           </AlertDescription>
         </Alert>
         {expired ? (
@@ -131,7 +150,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
               setAttempt(current.attempt);
               setPhase("opening");
             }}>Tentar novamente</button>
-            <a href="/api/office/runtime/index.html" target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir em tela cheia</a>
+            <a href="/api/office/runtime/index.html" target="_blank" rel="noopener noreferrer" title="Abre o escritório em outra guia do navegador" className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir em outra guia</a>
           </div>
         )}
       </section>
@@ -148,7 +167,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
         <h1 className="text-xl font-semibold">Escritório Aureon</h1>
         <div className="flex items-center gap-3">
           {phase === "opening" && <p className="text-muted-foreground text-sm" role="status">Abrindo escritório…</p>}
-          <a href="/api/office/runtime/index.html" target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir em tela cheia</a>
+          <a href="/api/office/runtime/index.html" target="_blank" rel="noopener noreferrer" title="Abre o escritório em outra guia do navegador" className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir em outra guia</a>
         </div>
       </header>
       <iframe

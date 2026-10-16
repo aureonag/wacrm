@@ -9,9 +9,10 @@ const approved={objects:[{id:71,type:'desk',x:224,y:368,direction:3}],floor:'#a2
 const clone=x=>structuredClone(x);
 const response=(status,body)=>({status,ok:status>=200&&status<300,json:async()=>body,clone:()=>response(status,body)});
 function harness(responder,document=null,loadScriptOverride,presentation){
- const calls=[],messages=[],loaded=[],stopped=[],logs=[],listeners=new Map(),registrations=[],timers=new Map(),timerDurations=new Map();let serial=0;
+ const calls=[],messages=[],loaded=[],stopped=[],logs=[],listeners=new Map(),registrations=[],timers=new Map(),timerDurations=new Map(),intervals=new Map();let serial=0;
  const win={console:{error:(...args)=>logs.push(args)},location:{origin:'https://aureonag.com',href:'https://aureonag.com/api/office/runtime/'},parent:{postMessage:(...args)=>messages.push(args)},TextEncoder,AbortController,URL,
   setTimeout:(fn,ms)=>{const id=++serial;timers.set(id,fn);timerDurations.set(id,ms);return id;},clearTimeout:id=>{timers.delete(id);timerDurations.delete(id);},
+  setInterval:(fn,ms)=>{const id=++serial;intervals.set(id,{fn,ms});return id;},clearInterval:id=>intervals.delete(id),
   CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}},
   addEventListener:(type,fn,options)=>{registrations.push({type,fn,options});const list=listeners.get(type)||[];list.push(fn);listeners.set(type,list);},
   removeEventListener:(type,fn)=>listeners.set(type,(listeners.get(type)||[]).filter(listener=>listener!==fn)),
@@ -23,8 +24,91 @@ function harness(responder,document=null,loadScriptOverride,presentation){
  const fetch=async(url,options)=>{calls.push({url,options});return responder?responder(url,options):response(200,{identity:clone(identity),map:clone(approved),clientState:{}});};
  const loader=loadScriptOverride===null?{}:{loadScript:src=>{loaded.push(src);return loadScriptOverride?loadScriptOverride(src):Promise.resolve();}};
  const runtime=createOfficeCrmRuntime({window:win,document,fetch,TextEncoder,...loader,presentation},CLIENT_STATE_LIMITS);
- return {runtime,win,calls,messages,loaded,stopped,logs,listeners,registrations,timers,timerDurations};
+ return {runtime,win,calls,messages,loaded,stopped,logs,listeners,registrations,timers,timerDurations,intervals};
 }
+
+const bootResponse=()=>response(200,{identity:clone(identity),map:clone(approved),clientState:{}});
+async function dedicated(responder,document=null){
+ const h=harness((url,options)=>url==='/api/office/bootstrap'?bootResponse():responder(url,options),document);
+ h.win.parent=h.win;
+ assert.equal(await h.runtime.start([]),true);
+ return h;
+}
+const settle=()=>new Promise(setImmediate);
+
+test('embedded runtime keeps context verification with its parent, without a duplicate monitor',async()=>{
+ const h=harness();await h.runtime.start([]);
+ assert.equal(h.intervals.size,0);assert.equal(h.listeners.get('focus')?.length||0,0);
+ h.win.dispatchEvent({type:'focus'});assert.equal(h.calls.length,1);
+});
+
+test('dedicated context checks coalesce focus/interval, abort at deadline, and ignore an older request settling during a new one',async()=>{
+ const requests=[];
+ const h=await dedicated((_url,options)=>new Promise(resolve=>requests.push({resolve,signal:options.signal})));
+ assert.equal(h.intervals.size,1);assert.equal([...h.intervals.values()][0].ms,15000);
+ h.win.dispatchEvent({type:'focus'});
+ for(let i=0;i<50;i++){h.win.dispatchEvent({type:'focus'});void [...h.intervals.values()][0].fn();}
+ assert.equal(requests.length,1);assert.equal(requests[0].signal.aborted,false);
+ assert.deepEqual(h.calls[1].options,{credentials:'same-origin',cache:'no-store',signal:requests[0].signal});
+ fireDeadline(h,10000);assert.equal(requests[0].signal.aborted,true);assert.equal(h.runtime.active,true);
+ h.win.dispatchEvent({type:'focus'});assert.equal(requests.length,2);
+ requests[0].resolve(response(401,{}));await settle();
+ h.win.dispatchEvent({type:'focus'});assert.equal(requests.length,2);assert.equal(h.runtime.active,true);
+ assert.equal(requests[1].signal.aborted,false);assert.equal(h.timers.size,1);
+ requests[1].resolve(response(200,identity));await settle();
+ assert.equal(h.runtime.active,true);assert.equal(h.timers.size,0);
+ h.runtime.endSession(401);assert.equal(h.intervals.size,0);
+});
+
+for(const status of [401,403])test('dedicated context '+status+' stops media, removes monitoring, and cannot revive on focus',async()=>{
+ const doc=tinyDocument(),h=await dedicated(()=>response(status,{}),doc);
+ h.win.dispatchEvent({type:'focus'});await settle();
+ assert.equal(h.runtime.active,false);assert.equal(h.runtime.ready,false);assert.equal(h.runtime.sessionStatus,status);
+ assert.equal(doc.documentElement.dataset.officeCrm,'expired');assert.deepEqual(h.stopped,['mic','camera','screen']);
+ assert.equal(h.intervals.size,0);assert.equal(h.timers.size,0);
+ assert.equal(h.listeners.get('focus').length,0);assert.equal(h.listeners.get('pagehide').length,0);
+ h.win.dispatchEvent({type:'focus'});assert.equal(h.calls.length,2);
+});
+
+test('dedicated explicit feature rollback stops media as unavailable; transient 503/network/invalid JSON do not expire the session',async()=>{
+ let next=()=>response(503,{code:'UPSTREAM_UNAVAILABLE'});
+ const doc=tinyDocument(),h=await dedicated(()=>next(),doc);
+ for(const reply of [()=>response(503,{}),()=>response(200,{}),()=>{throw Error('network');},()=>({status:503,json:async()=>{throw Error('invalid JSON');}})]){
+  next=reply;h.win.dispatchEvent({type:'focus'});await settle();
+  assert.equal(h.runtime.active,true);assert.equal(h.runtime.ready,true);assert.equal(h.runtime.sessionStatus,null);assert.deepEqual(h.stopped,[]);
+ }
+ next=()=>response(503,{code:'OFFICE_FEATURE_DISABLED'});h.win.dispatchEvent({type:'focus'});await settle();
+ assert.equal(h.runtime.active,false);assert.equal(h.runtime.ready,false);assert.equal(h.runtime.sessionStatus,null);
+ assert.equal(doc.documentElement.dataset.officeCrm,'unavailable');assert.deepEqual(h.stopped,['mic','camera','screen']);
+ assert.equal(h.intervals.size,0);assert.equal(h.timers.size,0);assert.equal(h.listeners.get('focus').length,0);
+});
+
+for(const field of ['account','user'])test('dedicated fresh context with a different '+field+' ends the old identity',async()=>{
+ const changed=clone(identity);if(field==='account')changed.accountId='22222222-3333-4444-8555-666666666666';else changed.user.id='bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+ const h=await dedicated(()=>response(200,changed));h.win.dispatchEvent({type:'focus'});await settle();
+ assert.equal(h.runtime.active,false);assert.equal(h.runtime.sessionStatus,403);assert.deepEqual(h.stopped,['mic','camera','screen']);
+});
+
+for(const status of [200,503])test('dedicated '+status+' JSON parsing is bounded; late rollback or identity changes cannot affect a fresh request',async()=>{
+ let finishBody;let calls=0;
+ const h=await dedicated(()=>++calls===1?{status,json:()=>new Promise(resolve=>{finishBody=resolve;})}:response(200,identity));
+ h.win.dispatchEvent({type:'focus'});await settle();fireDeadline(h,10000);
+ h.win.dispatchEvent({type:'focus'});await settle();
+ finishBody(status===503?{code:'OFFICE_FEATURE_DISABLED'}:{accountId:'different',user:{id:'different'}});await settle();
+ assert.equal(h.runtime.active,true);assert.equal(h.runtime.ready,true);assert.deepEqual(h.stopped,[]);assert.equal(h.timers.size,0);
+ h.runtime.endSession(401);
+});
+
+test('dedicated pagehide aborts only its request, clears monitoring, and stops borrowed captures without late transitions',async()=>{
+ let finish;const h=await dedicated(()=>new Promise(resolve=>{finish=resolve;}));
+ h.win.dispatchEvent({type:'focus'});const signal=h.calls.at(-1).options.signal;
+ h.win.dispatchEvent({type:'pagehide'});assert.equal(signal.aborted,true);assert.equal(h.timers.size,0);assert.equal(h.intervals.size,0);
+ assert.equal(h.runtime.active,false);assert.equal(h.runtime.ready,false);
+ assert.equal(h.listeners.get('focus').length,0);assert.equal(h.listeners.get('pagehide').length,0);assert.deepEqual(h.stopped,['mic','camera','screen']);
+ finish(response(401,{}));await settle();assert.equal(h.runtime.sessionStatus,null);
+ h.win.dispatchEvent({type:'pageshow',persisted:true});h.win.dispatchEvent({type:'focus'});
+ assert.equal(h.runtime.active,false);assert.equal(h.runtime.ready,false);assert.equal(h.calls.length,2);assert.equal(h.intervals.size,0);
+});
 test('context precedes modules; preferences and readonly full seed are isolated without actual browser storage',async()=>{
  const h=harness();
  await h.runtime.start(['/api/office/runtime/app.js']);

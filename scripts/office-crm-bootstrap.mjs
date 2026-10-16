@@ -16,6 +16,7 @@ export function createOfficeCrmRuntime(env,limits){
  const win=env.window,doc=env.document,fetch=env.fetch;
  const encode=new (env.TextEncoder||win.TextEncoder)(),local=new Map(),session=new Map(),pending=new Map();
  let identity=null,map=null,active=false,started=false,ready=false,timer=null,flushing=null,lastSaveError=null,endedStatus=null,scriptFailureCause='unknown';
+ let stopContextMonitor=()=>{};
  const jsonKeys=new Set(Object.keys(limits).filter(k=>!['aureon-window-frame-v1','aureon-camera-device','aureon-microphone-device'].includes(k)));
  const clone=value=>JSON.parse(JSON.stringify(value));
  const bytes=value=>encode.encode(value).length;
@@ -46,6 +47,7 @@ export function createOfficeCrmRuntime(env,limits){
  function endSession(status){
   if(status!==401&&status!==403||endedStatus!==null)return;
   endedStatus=status;active=false;ready=false;pending.clear();local.clear();session.clear();
+  stopContextMonitor();
   if(timer)win.clearTimeout(timer);
   stopMedia();
   try{win.dispatchEvent(new win.CustomEvent('aureon-office-session-ended',{detail:{status}}));}catch{}
@@ -53,8 +55,50 @@ export function createOfficeCrmRuntime(env,limits){
   post('aureon-office-session-ended',status);
  }
  function unavailable(){
-  active=false;ready=false;stopMedia();show('unavailable','O escritório está temporariamente indisponível. Tente novamente pelo CRM.');
+  active=false;ready=false;stopContextMonitor();stopMedia();show('unavailable','O escritório está temporariamente indisponível. Tente novamente pelo CRM.');
   post('aureon-office-unavailable');
+ }
+
+ // Embedded documents are monitored by OfficeFrame; standalone documents need
+ // the same fresh account/feature checks without relying on a parent window.
+ function monitorDedicatedContext(){
+  if(win.parent!==win)return;
+  const Controller=env.AbortController||win.AbortController;
+  if(typeof Controller!=='function')throw Error('Verificação de sessão indisponível.');
+  let watching=true,inFlight=null;
+  const owns=request=>watching&&active&&inFlight===request&&!request.controller.signal.aborted;
+  function release(request,abort=false){
+   if(request.deadline!==null){win.clearTimeout(request.deadline);request.deadline=null;}
+   if(inFlight===request)inFlight=null;
+   if(abort)request.controller.abort();
+  }
+  async function verify(){
+   if(!watching||!active||inFlight)return;
+   const request={controller:new Controller(),deadline:null};inFlight=request;
+   request.deadline=win.setTimeout(()=>release(request,true),10000);
+   try{
+    const response=await fetch('/api/office/context',{credentials:'same-origin',cache:'no-store',signal:request.controller.signal});
+    if(!owns(request))return;
+    if(response.status===401||response.status===403){endSession(response.status);return;}
+    if(response.status!==200&&response.status!==503)return;
+    const body=await response.json().catch(()=>null);
+    if(!owns(request))return;
+    if(response.status===503&&body?.code==='OFFICE_FEATURE_DISABLED'){unavailable();return;}
+    if(response.status===200&&typeof body?.accountId==='string'&&typeof body?.user?.id==='string'&&
+      (body.accountId!==identity.accountId||body.user.id!==identity.user.id))endSession(403);
+   }catch{
+    // Timeout/network failures do not assert revocation or feature rollback.
+   }finally{release(request);}
+  }
+  const interval=win.setInterval(verify,15000);
+  // Back/forward cache must not restore an active office without its monitor.
+  const pagehide=()=>unavailable();
+  win.addEventListener('focus',verify);win.addEventListener('pagehide',pagehide);
+  stopContextMonitor=()=>{
+   if(!watching)return;watching=false;
+   if(inFlight)release(inFlight,true);
+   win.clearInterval(interval);win.removeEventListener('focus',verify);win.removeEventListener('pagehide',pagehide);
+  };
  }
 
  function preferenceNotice(message){
@@ -189,6 +233,7 @@ export function createOfficeCrmRuntime(env,limits){
    if(win.aureonReplicaUI?.refresh)await win.aureonReplicaUI.refresh(true);
    if(!active)return false;
    env.presentation?.start?.();
+   monitorDedicatedContext();
    ready=true;show('ready','');post('aureon-office-ready');return true;
   }catch(error){reportStartupFailure(stage,error);if(endedStatus===null)unavailable();return false;}
  }
