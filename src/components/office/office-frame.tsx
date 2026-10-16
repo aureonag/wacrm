@@ -106,7 +106,11 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   const expired = phase === "expired" || identityChanged;
   if (expired || phase === "unavailable") {
     return (
-      <section className="mx-auto min-h-0 max-w-2xl space-y-6 overflow-y-auto py-8">
+      <section
+        data-office-frame-phase={expired ? "expired" : "unavailable"}
+        data-office-frame-attempt={attempt}
+        className="mx-auto min-h-0 max-w-2xl space-y-6 overflow-y-auto py-8"
+      >
         <Alert>
           <Building2 aria-hidden="true" />
           <AlertTitle>{expired ? "Sua sessão do escritório foi encerrada" : "O escritório está indisponível"}</AlertTitle>
@@ -135,7 +139,11 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-3">
+    <section
+      data-office-frame-phase={phase}
+      data-office-frame-attempt={attempt}
+      className="flex min-h-0 flex-1 flex-col gap-3"
+    >
       <header className="flex shrink-0 items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Escritório Aureon</h1>
         <div className="flex items-center gap-3">

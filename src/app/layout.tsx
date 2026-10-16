@@ -6,6 +6,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { OFFICE_STARTUP_TRACE_SCRIPT } from "@/lib/office/startup-trace";
 import {
   DEFAULT_MODE,
   DEFAULT_THEME,
@@ -98,6 +99,10 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <script
+          id="office-startup-trace"
+          dangerouslySetInnerHTML={{ __html: OFFICE_STARTUP_TRACE_SCRIPT }}
+        />
         <Script
           id="theme-boot"
           strategy="beforeInteractive"
