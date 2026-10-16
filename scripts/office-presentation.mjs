@@ -1,10 +1,15 @@
 // Serialized into the CRM runtime. Keep this factory independent of module scope.
-export function createOfficePresentation({window, document}) {
+export function createOfficePresentation({window, document, mediaSources}) {
   const records = new Map();
   let started = false, destroyed = false, queued = false, observer = null, inputPrepared = false;
   let style = null, dialog = null, surface = null, viewer = null, heading = null, status = null;
   let minimize = null, fullscreen = null, current = null, returnFocus = null;
   let version = 0, gesture = null, resizeObserver = null;
+  let callOpen = false, callSession = null, selectedScreen = null, callMode = 'gallery';
+  let snapshot = null, unsubscribeSources = null, callLauncher = null;
+  let modeBar = null, galleryButton = null, presenterButton = null, sourceSelect = null;
+  let body = null, focusPane = null, gallery = null, participantsRail = null;
+  const galleryCards = new Map(), railCards = new Map(), sourceWatches = new Map();
   const listeners = [];
   const watchedLayout = new Set();
   const layoutSelector = '.map-viewport, .office-map-nav, .call-dock, .dock-room, .sidebar, .rail';
@@ -242,9 +247,199 @@ export function createOfficePresentation({window, document}) {
   function play(video) {
     try { video.play()?.catch(() => {}); } catch {}
   }
+  function liveVideo(stream) {
+    try { return !!stream?.getVideoTracks().some(track => track.readyState === 'live' && !track.muted); }
+    catch { return false; }
+  }
+  function readSources() {
+    if (!mediaSources) return null;
+    try {
+      const value = mediaSources.getSnapshot();
+      if (!value || !Number.isSafeInteger(value.revision) || value.revision < 0 ||
+        !(value.sessionId === null || typeof value.sessionId === 'string' && value.sessionId) ||
+        !Array.isArray(value.participants) || !Array.isArray(value.sources)) return null;
+      const people = new Map();
+      for (const person of value.participants) {
+        if (!person || typeof person.id !== 'string' || !person.id || typeof person.name !== 'string' ||
+          typeof person.isSelf !== 'boolean' || people.has(person.id)) return null;
+        people.set(person.id, person);
+      }
+      const sources = [], ids = new Set();
+      for (const item of value.sources) {
+        const person = people.get(item?.participantId);
+        if (!person || !['screen', 'camera'].includes(item.kind) || typeof item.id !== 'string' ||
+          typeof item.label !== 'string' || item.isSelf !== person.isSelf || ids.has(item.id) ||
+          typeof item.stream?.getVideoTracks !== 'function') return null;
+        if (item.id !== value.sessionId + ':' + item.participantId + ':' + item.kind) return null;
+        ids.add(item.id);
+        sources.push(item);
+      }
+      // A null meeting never authorizes remote roster or media from old DOM.
+      if (value.sessionId === null) return {revision: value.revision, sessionId: null, participants: [], sources: []};
+      return {revision: value.revision, sessionId: value.sessionId, participants: [...people.values()], sources};
+    } catch { return null; }
+  }
+  function clearVideo(video) {
+    try { video.pause(); } catch {}
+    video.srcObject = null;
+    video.removeAttribute('src');
+  }
+  function clearCards(cards) {
+    for (const card of cards.values()) { clearVideo(card.video); card.node.remove(); }
+    cards.clear();
+  }
+  function watchSources(value) {
+    const streams = new Set(value?.sessionId ? value.sources.map(item => item.stream) : []);
+    for (const [stream, record] of sourceWatches) if (!streams.has(stream)) {
+      record.remove.forEach(remove => remove()); sourceWatches.delete(stream);
+    }
+    for (const stream of streams) {
+      let tracks;
+      try { tracks = stream.getVideoTracks(); } catch { continue; }
+      const previous = sourceWatches.get(stream);
+      if (previous && previous.tracks.length === tracks.length && previous.tracks.every((track, index) => track === tracks[index])) continue;
+      previous?.remove.forEach(remove => remove());
+      const remove = [];
+      for (const target of [stream, ...tracks]) if (target?.addEventListener) {
+        for (const type of target === stream ? ['addtrack', 'removetrack'] : ['ended', 'mute', 'unmute']) {
+          target.addEventListener(type, schedule);
+          remove.push(() => target.removeEventListener(type, schedule));
+        }
+      }
+      sourceWatches.set(stream, {tracks, remove});
+    }
+  }
+  function initials(name) {
+    return name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase() || '?';
+  }
+  function syncCards(container, cards, descriptions) {
+    const wanted = new Set(descriptions.map(item => item.id));
+    for (const [id, card] of cards) if (!wanted.has(id)) { clearVideo(card.video); card.node.remove(); cards.delete(id); }
+    descriptions.forEach((item, index) => {
+      let card = cards.get(item.id);
+      if (!card) {
+        const node = element(item.screenId ? 'button' : 'div', 'aureon-media-card' + (item.screenId ? ' aureon-media-screen' : ''));
+        if (item.screenId) {
+          node.type = 'button';
+          node.addEventListener('click', () => { selectedScreen = item.screenId; callMode = 'presenter'; renderCall(); });
+        }
+        const video = element('video'); video.autoplay = true; video.muted = true; video.playsInline = true;
+        const avatar = element('div', 'aureon-media-avatar'), image = element('img'), fallback = element('span');
+        image.alt = ''; image.referrerPolicy = 'no-referrer';
+        image.addEventListener('error', () => { card.failedAvatar = card.avatarUrl; setHidden(image, true); setHidden(fallback, false); });
+        avatar.append(image, fallback);
+        const caption = element('div', 'aureon-media-caption');
+        node.append(video, avatar, caption);
+        card = {node, video, avatar, image, fallback, caption, avatarUrl: null};
+        cards.set(item.id, card);
+      }
+      if (card.caption.textContent !== item.label) card.caption.textContent = item.label;
+      card.node.setAttribute('aria-label', item.screenId ? 'Apresentar ' + item.label : item.label);
+      card.video.setAttribute('aria-label', item.label);
+      const ready = liveVideo(item.stream);
+      setHidden(card.video, !ready); setHidden(card.avatar, ready);
+      if (ready && card.video.srcObject !== item.stream) { card.video.srcObject = item.stream; play(card.video); }
+      else if (!ready && card.video.srcObject) clearVideo(card.video);
+      const avatarUrl = typeof item.avatarUrl === 'string' && item.avatarUrl ? item.avatarUrl : null;
+      if (card.avatarUrl !== avatarUrl) {
+        card.avatarUrl = avatarUrl;
+        if (avatarUrl) card.image.setAttribute('src', avatarUrl); else card.image.removeAttribute('src');
+      }
+      const showImage = !!avatarUrl && card.failedAvatar !== avatarUrl;
+      setHidden(card.image, !showImage); setHidden(card.fallback, showImage);
+      const text = initials(item.name || item.label);
+      if (card.fallback.textContent !== text) card.fallback.textContent = text;
+      const at = container.children[index];
+      if (at !== card.node) { if (at) container.insertBefore(card.node, at); else container.append(card.node); }
+    });
+  }
+  function renderCall() {
+    if (!callOpen || !snapshot?.sessionId) return;
+    const screens = snapshot.sources.filter(item => item.kind === 'screen' && liveVideo(item.stream));
+    if (!screens.some(item => item.id === selectedScreen)) selectedScreen = screens[0]?.id || null;
+    if (!selectedScreen) callMode = 'gallery';
+    const selected = screens.find(item => item.id === selectedScreen);
+    const people = snapshot.participants.map(person => ({
+      id: 'person:' + person.id, name: person.name, label: person.name + (person.isSelf ? ' (você)' : ''), avatarUrl: person.avatarUrl,
+      stream: snapshot.sources.find(item => item.kind === 'camera' && item.participantId === person.id)?.stream || null,
+    }));
+    const nextOptions = screens.map(item => [item.id, item.label]);
+    const signature = JSON.stringify(nextOptions);
+    if (sourceSelect.dataset.signature !== signature) {
+      for (const option of [...sourceSelect.children]) option.remove();
+      for (const [id, text] of nextOptions) { const option = element('option', '', text); option.value = id; sourceSelect.append(option); }
+      sourceSelect.dataset.signature = signature;
+    }
+    sourceSelect.value = selectedScreen || '';
+    sourceSelect.disabled = screens.length < 2;
+    setHidden(sourceSelect.parentElement, screens.length === 0);
+    galleryButton.setAttribute('aria-pressed', String(callMode === 'gallery'));
+    presenterButton.setAttribute('aria-pressed', String(callMode === 'presenter'));
+    presenterButton.disabled = !selected;
+    setHidden(modeBar, false);
+    setHidden(focusPane, callMode !== 'presenter');
+    setHidden(participantsRail, callMode !== 'presenter');
+    setHidden(gallery, callMode !== 'gallery');
+    if (callMode === 'presenter' && selected) {
+      body.classList.add('aureon-presenter-layout');
+      clearCards(galleryCards);
+      showViewer({stream: selected.stream, url: ''}, selected.label);
+      syncCards(participantsRail, railCards, people);
+    } else {
+      body.classList.remove('aureon-presenter-layout');
+      clearViewer(); clearCards(railCards);
+      if (heading.textContent !== 'Galeria da chamada') heading.textContent = 'Galeria da chamada';
+      syncCards(gallery, galleryCards, [...people, ...screens.map(item => ({id: 'screen:' + item.id, screenId: item.id, label: item.label, stream: item.stream}))]);
+    }
+  }
+  function openCall(trigger, preferredSource) {
+    if (!started || destroyed) return false;
+    snapshot = readSources();
+    if (!snapshot?.sessionId || !snapshot.participants.length) { if (callOpen) close(); return false; }
+    watchSources(snapshot);
+    if (callSession !== snapshot.sessionId) { selectedScreen = null; callMode = snapshot.sources.some(item => item.kind === 'screen' && liveVideo(item.stream)) ? 'presenter' : 'gallery'; }
+    callSession = snapshot.sessionId;
+    if (preferredSource) { selectedScreen = preferredSource; callMode = 'presenter'; }
+    current = null; callOpen = true; version++;
+    returnFocus = trigger?.focus ? trigger : document.activeElement;
+    status.textContent = '';
+    renderCall();
+    if (!dialog.open) dialog.showModal();
+    minimize.focus();
+    return true;
+  }
+  function refreshSources() {
+    if (!mediaSources) return;
+    snapshot = readSources();
+    const authorized = !!snapshot?.sessionId && snapshot.participants.length > 0;
+    watchSources(authorized ? snapshot : null);
+    if (callSession && callSession !== snapshot?.sessionId) {
+      if (callOpen) close();
+      callSession = null; selectedScreen = null; callMode = 'gallery';
+    }
+    if (callOpen) { if (authorized) renderCall(); else close(); }
+    const host = authorized ? [...document.querySelectorAll('.r-call-tools'), ...document.querySelectorAll('.call-dock')].find(node => rectangle(node)) : null;
+    if (!host) { callLauncher?.remove(); return; }
+    if (!callLauncher) {
+      callLauncher = action('Visualizar chamada', () => openCall(callLauncher));
+      callLauncher.className = 'aureon-call-view-trigger';
+      callLauncher.setAttribute('aria-label', 'Visualizar chamada'); callLauncher.setAttribute('aria-haspopup', 'dialog');
+      callLauncher.title = 'Visualizar chamada';
+    }
+    const caption = host.matches('.call-dock') ? '▦' : 'Visualizar chamada';
+    if (callLauncher.textContent !== caption) callLauncher.textContent = caption;
+    if (callLauncher.parentElement !== host) host.append(callLauncher);
+  }
+  function clearCallView() {
+    callOpen = false;
+    clearCards(galleryCards); clearCards(railCards);
+    if (!body) return;
+    body.classList.remove('aureon-presenter-layout');
+    setHidden(modeBar, true); setHidden(gallery, true); setHidden(participantsRail, true); setHidden(focusPane, false);
+  }
   function clearViewer() {
-    try { viewer?.pause(); } catch {}
-    if (viewer) {
+    if (viewer && (viewer.srcObject || viewer.getAttribute('src'))) {
+      try { viewer.pause(); } catch {}
       viewer.srcObject = null;
       viewer.removeAttribute('src');
       try { viewer.load(); } catch {}
@@ -261,6 +456,7 @@ export function createOfficePresentation({window, document}) {
     const trigger = returnFocus;
     version++;
     current = null;
+    clearCallView();
     returnFocus = null;
     exitFullscreen();
     if (dialog.open) dialog.close();
@@ -269,7 +465,9 @@ export function createOfficePresentation({window, document}) {
     if (trigger?.isConnected && !trigger.closest('[hidden]')) trigger.focus();
   }
   function syncViewer(record, media) {
-    const nextLabel = label(record);
+    showViewer(media, label(record));
+  }
+  function showViewer(media, nextLabel) {
     if (heading.textContent !== nextLabel) heading.textContent = nextLabel;
     viewer.setAttribute('aria-label', nextLabel);
     if (media.stream) {
@@ -287,6 +485,13 @@ export function createOfficePresentation({window, document}) {
   function open(record) {
     const media = source(record);
     if (destroyed || concealed(record) || !media) return;
+    if (mediaSources) {
+      const value = readSources();
+      const item = value?.sessionId && value.sources.find(item => item.kind === 'screen' && item.stream === media.stream && liveVideo(item.stream));
+      if (item) { openCall(record.button, item.id); return; }
+      if (!record.local) return;
+    }
+    clearCallView();
     current = record;
     version++;
     returnFocus = record.button;
@@ -299,7 +504,7 @@ export function createOfficePresentation({window, document}) {
     fullscreen.textContent = document.fullscreenElement === surface ? 'Sair da tela cheia' : 'Tela cheia';
   }
   async function toggleFullscreen() {
-    if (!current) return;
+    if (!current && !callOpen) return;
     const requestedVersion = version;
     status.textContent = '';
     try {
@@ -308,7 +513,7 @@ export function createOfficePresentation({window, document}) {
       else throw new Error('Fullscreen unavailable');
       if (requestedVersion !== version) exitFullscreen();
     } catch {
-      if (current && requestedVersion === version) status.textContent = 'Não foi possível abrir em tela cheia. Você pode continuar na janela ampliada.';
+      if ((current || callOpen) && requestedVersion === version) status.textContent = 'Não foi possível abrir em tela cheia. Você pode continuar na janela ampliada.';
     }
     fullscreenLabel();
   }
@@ -330,13 +535,33 @@ export function createOfficePresentation({window, document}) {
     viewer.autoplay = true;
     viewer.muted = true;
     viewer.playsInline = true;
+    modeBar = element('div', 'aureon-presentation-modes');
+    modeBar.setAttribute('aria-label', 'Visualização da chamada');
+    galleryButton = action('Galeria', () => { callMode = 'gallery'; renderCall(); });
+    presenterButton = action('Apresentador', () => { callMode = 'presenter'; renderCall(); });
+    const choice = element('label', 'aureon-presentation-choice');
+    choice.append(element('span', '', 'Tela em destaque'));
+    sourceSelect = element('select');
+    sourceSelect.setAttribute('aria-label', 'Tela em destaque');
+    sourceSelect.addEventListener('change', () => { selectedScreen = sourceSelect.value; callMode = 'presenter'; renderCall(); });
+    choice.append(sourceSelect);
+    modeBar.append(galleryButton, presenterButton, choice);
+    body = element('div', 'aureon-presentation-body');
+    focusPane = element('div', 'aureon-presentation-focus');
+    focusPane.append(viewer);
+    gallery = element('div', 'aureon-presentation-gallery');
+    gallery.setAttribute('aria-label', 'Galeria da chamada');
+    participantsRail = element('div', 'aureon-presentation-participants');
+    participantsRail.setAttribute('aria-label', 'Participantes da chamada');
+    body.append(focusPane, gallery, participantsRail);
+    clearCallView();
     status = element('p', 'aureon-presentation-status');
     status.setAttribute('role', 'status');
-    surface.append(bar, viewer, status);
+    surface.append(bar, modeBar, body, status);
     dialog.append(surface);
     document.body.append(dialog);
     listen(dialog, 'cancel', event => { event.preventDefault(); close(); });
-    listen(dialog, 'close', () => { if (current) close(); });
+    listen(dialog, 'close', () => { if (current || callOpen) close(); });
     listen(document, 'fullscreenchange', fullscreenLabel);
   }
   function watchStream(record) {
@@ -405,11 +630,14 @@ export function createOfficePresentation({window, document}) {
     for (const video of document.querySelectorAll('.r-screen-tile video')) {
       attach(video, video.closest('.r-screen-tile'), false);
     }
+    refreshSources();
     watchLayout();
     for (const record of records.values()) {
       if (!record.video.isConnected || (!record.local && !record.tile.isConnected)) { detach(record); continue; }
       watchStream(record);
-      const media = source(record), unavailable = concealed(record) || !media;
+      const media = source(record);
+      const denied = mediaSources && !record.local && !(snapshot?.sessionId && snapshot.sources.some(item => item.kind === 'screen' && item.stream === media?.stream && liveVideo(item.stream)));
+      const unavailable = concealed(record) || !media || denied;
       const noRoom = record.local && !unavailable && !positionMini(record);
       setHidden(record.wrapper || record.bar, unavailable || noRoom);
       if ((unavailable || noRoom) && gesture?.record === record) finishGesture();
@@ -437,9 +665,9 @@ export function createOfficePresentation({window, document}) {
         return false;
       }
       for (const node of [...change.addedNodes, ...change.removedNodes]) {
-        if (node === dialog || node === style || node.classList?.contains('aureon-screen-actions')) continue;
+        if (node === dialog || node === style || node.classList?.contains('aureon-screen-actions') || node === callLauncher) continue;
         if (node.nodeType !== 1 || node.namespaceURI === 'http://www.w3.org/2000/svg') continue;
-        if (node.matches?.(layoutSelector) || node.querySelector?.(layoutSelector)) return true;
+        if (node.matches?.(layoutSelector + ', .r-call-tools') || node.querySelector?.(layoutSelector + ', .r-call-tools')) return true;
         if (node.id === 'screenPreview' || node.matches?.('.r-screen-tile, .r-screen-tile video') ||
           node.querySelector?.('#screenPreview, .r-screen-tile')) return true;
         for (const record of records.values()) if (node === record.video || node.contains?.(record.video)) return true;
@@ -469,9 +697,14 @@ dialog.aureon-presentation[open]{display:flex;flex-direction:column;gap:0}dialog
 .aureon-presentation-controls{display:flex;gap:8px;flex-shrink:0}.aureon-presentation-controls button{font:inherit;font-size:12px;line-height:1.3;padding:8px 12px;background:#342b49;border:1px solid #545064;border-radius:8px;color:#f0f1f6}
 .aureon-presentation-controls button:hover{background:#47316d}.aureon-presentation button:focus-visible,.aureon-screen-actions button:focus-visible{outline:2px solid #bfa5ff;outline-offset:2px}
 .aureon-presentation-video{display:block;flex:1;width:100%;min-height:0;object-fit:contain;background:#08090c;image-rendering:auto!important}
+.aureon-presentation-body{display:flex;flex:1;min-width:0;min-height:0;overflow:hidden}.aureon-presentation-focus{display:flex;flex:1;min-width:0;min-height:0;overflow:hidden}.aureon-presentation-focus>.aureon-presentation-video{height:100%;max-height:100%}
+.aureon-presentation-modes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;background:#202129;border-bottom:1px solid #3b3b47;flex-shrink:0}.aureon-presentation-modes button,.aureon-presentation-modes select{font:inherit;font-size:12px;color:#f0f1f6;background:#2c2b35;border:1px solid #545064;border-radius:7px;padding:7px 10px}.aureon-presentation-modes button[aria-pressed=true]{background:#47316d;border-color:#9c7bd8}.aureon-presentation-modes button:hover:not(:disabled){background:#47316d}.aureon-presentation-modes button:disabled{opacity:.5;cursor:default}.aureon-presentation-choice{display:flex;align-items:center;gap:8px;margin:0 0 0 auto;min-width:0;font-size:12px;color:#c5bfd5}.aureon-presentation-choice select{max-width:300px;min-width:0}.aureon-presentation-choice select:focus-visible{outline:2px solid #bfa5ff;outline-offset:2px}
+.aureon-presenter-layout{display:grid;grid-template-columns:minmax(0,1fr) 220px}.aureon-presentation-participants{min-height:0;min-width:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px;background:#202129}.aureon-presentation-gallery{flex:1;min-width:0;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));grid-auto-rows:minmax(240px,1fr);gap:14px;padding:16px}.aureon-presentation-gallery>.aureon-media-card{min-height:0}.aureon-presentation-gallery>.aureon-media-card video{flex:1;min-height:0;height:0;aspect-ratio:auto}.aureon-presentation-gallery>.aureon-media-card .aureon-media-avatar{flex:1;min-height:0;aspect-ratio:auto}.aureon-media-caption{flex-shrink:0}
+.aureon-media-card{position:relative;display:flex;flex-direction:column;flex-shrink:0;min-width:0;overflow:hidden;border:1px solid #45434f;border-radius:10px;background:#292a32;color:#f0f1f6;font:inherit;padding:0;text-align:left}.aureon-media-card video{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#08090c;image-rendering:auto!important}.aureon-media-avatar{display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;background:#26252e;color:#e4dbfa;overflow:hidden}.aureon-media-avatar img{display:block;max-width:85%;height:85%;object-fit:contain;image-rendering:auto}.aureon-media-avatar span{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;background:#4c3c68;font-size:22px;font-weight:600}.aureon-media-caption{padding:9px 11px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aureon-media-screen{cursor:pointer}.aureon-media-screen:hover{border-color:#bfa5ff}.aureon-presentation [hidden]{display:none!important}
+.aureon-call-view-trigger{font:inherit;font-size:12px;line-height:1.3;padding:7px 10px;color:#f0f1f6;background:#342b49;border:1px solid #545064;border-radius:8px;cursor:pointer}.aureon-call-view-trigger:hover{background:#47316d}.aureon-call-view-trigger:focus-visible{outline:2px solid #bfa5ff;outline-offset:2px}.call-dock>.aureon-call-view-trigger{width:28px;height:28px;min-width:28px;padding:0;font-size:20px;line-height:1}
 .aureon-presentation-status{flex-shrink:0;margin:0;padding:0 16px;color:#c5bfd5;font-size:12px;line-height:1.5}.aureon-presentation-status:not(:empty){padding:9px 16px}
 .aureon-presentation-content:fullscreen{width:100vw;height:100dvh;max-width:none;max-height:none;border:0;border-radius:0}
-@media(max-width:600px){.aureon-screen-preview .aureon-screen-actions{flex-wrap:wrap}.aureon-screen-actions{gap:5px}.aureon-screen-actions span{font-size:10px}.aureon-screen-actions button{font-size:10px}dialog.aureon-presentation{width:calc(100vw - 12px);height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);border-radius:10px}.aureon-presentation-bar{align-items:flex-start;gap:8px;padding:10px;flex-direction:column}.aureon-presentation-bar h2{max-width:100%;font-size:13px}.aureon-presentation-controls{width:100%;justify-content:flex-end}.aureon-presentation-controls button{padding:7px 10px}}
+@media(max-width:600px){.aureon-screen-preview .aureon-screen-actions{flex-wrap:wrap}.aureon-screen-actions{gap:5px}.aureon-screen-actions span{font-size:10px}.aureon-screen-actions button{font-size:10px}dialog.aureon-presentation{width:calc(100vw - 12px);height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);border-radius:10px}.aureon-presentation-bar{align-items:flex-start;gap:8px;padding:10px;flex-direction:column}.aureon-presentation-bar h2{max-width:100%;font-size:13px}.aureon-presentation-controls{width:100%;justify-content:flex-end}.aureon-presentation-controls button{padding:7px 10px}.aureon-presentation-modes{padding:8px 10px}.aureon-presentation-choice{width:100%;margin:0}.aureon-presentation-choice select{flex:1;max-width:100%}.aureon-presenter-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 132px}.aureon-presentation-participants{flex-direction:row;padding:8px;gap:8px}.aureon-presentation-participants .aureon-media-card{width:150px}.aureon-presentation-participants .aureon-media-caption{padding:5px 8px;font-size:11px}.aureon-presentation-gallery{grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(210px,1fr);gap:10px;padding:10px}}
 `;
     document.head.append(style);
     createDialog();
@@ -490,6 +723,9 @@ dialog.aureon-presentation[open]{display:flex;flex-direction:column;gap:0}dialog
     listen(window, 'aureon-interface-state', schedule);
     listen(window, 'aureon-office-session-ended', close);
     listen(window, 'pagehide', close);
+    if (typeof mediaSources?.subscribe === 'function') {
+      try { unsubscribeSources = mediaSources.subscribe(schedule); } catch { /* The snapshot still fails closed when the provider is unavailable. */ }
+    }
     refresh();
   }
   function destroy() {
@@ -499,11 +735,15 @@ dialog.aureon-presentation[open]{display:flex;flex-direction:column;gap:0}dialog
     observer?.disconnect();
     resizeObserver?.disconnect();
     watchedLayout.clear();
+    try { if (typeof unsubscribeSources === 'function') unsubscribeSources(); } catch {}
+    unsubscribeSources = null;
+    watchSources(null);
+    callLauncher?.remove();
     listeners.splice(0).forEach(remove => remove());
     for (const record of records.values()) detach(record);
     dialog?.remove();
     style?.remove();
     started = false;
   }
-  return {prepareInput, start, close, destroy};
+  return {prepareInput, start, close, destroy, openCall};
 }

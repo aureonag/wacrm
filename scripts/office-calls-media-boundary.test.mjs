@@ -28,9 +28,9 @@ function harness(source){
   querySelectorAll(){return [];}
   querySelector(){return null;}
  }
- const body=new Element('body');
+ const body=new Element('body'),tiles=[];
  function find(node,id){if(node.id===id)return node;for(const child of node.children){const found=find(child,id);if(found)return found;}return null;}
- const document={body,getElementById:id=>find(body,id),querySelector:()=>null};
+ const document={body,getElementById:id=>find(body,id),querySelector:()=>null,querySelectorAll:()=>tiles.filter(tile=>!tile.removed)};
  const state={view:'office',data:{user:{id:SELF,status:'online',preferences:{}}}};
  const api=async(endpoint,body,query)=>{
   apiCalls.push({endpoint,body,query});
@@ -57,6 +57,7 @@ function harness(source){
  new vm.Script(source,{filename:'reviewed-replica-calls.js'}).runInNewContext(sandbox,{timeout:1000,contextCodeGeneration:{strings:false,wasm:false}});
  assert.equal(intervals.length,1);assert.equal(intervals[0].ms,1000);
  return {window,tracks,apiCalls,levels,warnings,
+  addTile(id,kind='screen'){const video={srcObject:stream(tracks.screen),pauseCalls:0,pause(){this.pauseCalls++;}};const tile={dataset:{[kind==='screen'?'screen':'user']:id},removed:false,querySelectorAll:()=>[video],remove(){this.removed=true;}};tiles.push(tile);return {tile,video};},
   setMeeting(value){activeMeeting=value;},failApi(status){apiStatus=status;},
   async tick(){await intervals[0].callback();await new Promise(setImmediate);},
   async state(){for(const listener of events.get('aureon-interface-state')||[])listener({type:'aureon-interface-state'});await new Promise(setImmediate);},
@@ -96,6 +97,18 @@ test('joining and then leaving a meeting stops captures once; later outside tick
 });
 test('the exported forced disconnect still stops captures outside a meeting',()=>{
  const h=harness(current());expectLive(h);h.window.aureonReplicaCalls.disconnectSession();expectStoppedOnce(h);
+});
+
+test('state changes discard departed screen and camera cards without stopping admitted captures',async()=>{
+ const h=harness(current());h.setMeeting(selfMeeting());await h.tick();expectLive(h);
+ const screen=h.addTile('departed'),camera=h.addTile('departed','camera'),self=h.addTile(SELF);
+ await h.state();expectLive(h);
+ for(const item of [screen,camera]){assert.equal(item.tile.removed,true);assert.equal(item.video.srcObject,null);assert.equal(item.video.pauseCalls,1);}
+ assert.equal(self.tile.removed,false);assert.notEqual(self.video.srcObject,null);
+ const snapshot=h.window.aureonReplicaCalls.media.getSnapshot();assert.equal(snapshot.sessionId,'fixture-meeting');assert.equal(snapshot.sources.length,2);
+ h.setMeeting(null);await h.state();expectStoppedOnce(h);
+ assert.equal(self.tile.removed,true);assert.equal(self.video.srcObject,null);
+ assert.equal(h.window.aureonReplicaCalls.media.getSnapshot().sessionId,null);
 });
 test('an ended CRM session still stops all captures outside a meeting',async()=>{
  const h=harness(current());expectLive(h);await h.ended();expectStoppedOnce(h);

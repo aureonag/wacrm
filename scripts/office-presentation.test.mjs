@@ -5,7 +5,7 @@ import {createOfficePresentation} from './office-presentation.mjs';
 
 // The DOM/media fixture has no device, network or browser permission APIs.
 // Its tracks throw if a presentation-only control tries to stop capture.
-function fixture() {
+function fixture(mediaSources) {
   class Events {
     listeners = new Map();
     addEventListener(type, callback) { const set = this.listeners.get(type) || new Set(); set.add(callback); this.listeners.set(type, set); }
@@ -23,7 +23,7 @@ function fixture() {
     constructor(tag) {
       super(); this.tagName = tag.toUpperCase(); this.nodeType = 1; this.namespaceURI = 'http://www.w3.org/1999/xhtml';
       this.children = []; this.parentNode = null; this.attributes = new Map(); this.className = ''; this.id = ''; this.hidden = false;
-      this.style = {}; this._text = ''; this.srcObject = null; this.currentSrc = ''; this.ended = false; this.open = false;
+      this.style = {}; this.dataset = {}; this._text = ''; this.srcObject = null; this.currentSrc = ''; this.ended = false; this.open = false;
       this.playCount = 0; this.pauseCount = 0; this.loadCount = 0; this.showCount = 0; this.captures = new Set(); this.rect = null;
     }
     get parentElement() { return this.parentNode instanceof Element ? this.parentNode : null; }
@@ -108,8 +108,8 @@ function fixture() {
   function mutate(target, options = {}) { for (const observer of observers) if (observer.active) observer.callback([{target, type: options.type || 'childList', addedNodes: options.addedNodes || [], removedNodes: options.removedNodes || [], ...options}]); flush(); }
   function button(label, root = document.body) { const found = root.querySelectorAll('button').find(node => node.textContent === label); assert.ok(found, 'Missing button: ' + label); return found; }
   const serialized = new vm.Script('(' + createOfficePresentation.toString() + ')').runInNewContext({}, {timeout: 1000});
-  const presentation = serialized({window, document});
-  return {document, window, observers, sizeObservers, presentation, video, layout, mutate, flush, button, get captureCalls() { return captureCalls; }};
+  const presentation = serialized({window, document, mediaSources});
+  return {document, window, observers, sizeObservers, presentation, video, stream, layout, mutate, flush, button, get captureCalls() { return captureCalls; }};
 }
 
 test('factory is serializable and lazy; starting twice keeps the original preview/stream and one set of controls', () => {
@@ -333,4 +333,195 @@ test('early keyboard preparation prevents the legacy capture listener from movin
   await h.window.dispatch('keydown', {target: h.button('Ampliar compartilhamento'), key: 'ArrowRight'});
   assert.deepEqual(h.wrapper.getBoundingClientRect(), position); assert.equal(avatarMoves, 0);
   await h.window.dispatch('keydown', {target: h.document.body, key: 'ArrowRight'}); assert.equal(avatarMoves, 1);
+});
+
+function callFixture({screens = true, tools = true} = {}) {
+  let value, reads = 0, subscriptions = 0, unsubscriptions = 0;
+  const callbacks = new Set();
+  const provider = {
+    getSnapshot() { reads++; return value; },
+    subscribe(callback) { subscriptions++; callbacks.add(callback); return () => { unsubscriptions++; callbacks.delete(callback); }; },
+  };
+  const h = fixture(provider);
+  const people = [{id: 'allan', name: 'Allan Giro', isSelf: true}, {id: 'felipe', name: 'Felipe Queiroz', isSelf: false},
+    {id: 'ana', name: 'Ana Lima', isSelf: false, avatarUrl: '/avatar-ana.png'}];
+  const camera = h.stream(), first = h.stream(), second = h.stream();
+  value = {revision: 1, sessionId: 'meeting-a', participants: people, sources: [
+    {id: 'meeting-a:allan:camera', kind: 'camera', participantId: 'allan', label: 'Allan Giro', isSelf: true, stream: camera.media},
+    ...(screens ? [
+      {id: 'meeting-a:allan:screen', kind: 'screen', participantId: 'allan', label: 'Tela de Allan', isSelf: true, stream: first.media},
+      {id: 'meeting-a:felipe:screen', kind: 'screen', participantId: 'felipe', label: 'Tela de Felipe', isSelf: false, stream: second.media},
+    ] : []),
+  ]};
+  const host = tools ? h.layout('r-call-tools', 20, 40, 600, 40) : null;
+  const set = next => { value = typeof next === 'function' ? next(value) : next; for (const callback of callbacks) callback(); h.flush(); };
+  return Object.assign(h, {host, people, camera, first, second, provider, set, getSnapshot: () => value,
+    stats: () => ({reads, subscriptions, unsubscriptions, listeners: callbacks.size})});
+}
+
+function presentationParts(h) {
+  const dialog = h.document.body.querySelector('dialog');
+  return {dialog, viewer: dialog.querySelector('.aureon-presentation-video'), select: dialog.querySelector('select'),
+    grid: dialog.querySelector('.aureon-presentation-gallery'), rail: dialog.querySelector('.aureon-presentation-participants')};
+}
+
+function assertCaptureAlive(h) {
+  for (const media of [h.camera, h.first, h.second]) assert.equal(media.track.stopCalls, 0);
+  assert.equal(h.captureCalls, 0);
+  assert.equal(h.document.querySelectorAll('audio').length, 0, 'Presentation creates no audio element');
+  for (const video of h.document.querySelectorAll('dialog video')) assert.equal(video.muted, true, 'Every duplicate is muted');
+}
+
+test('optional media provider is lazy, idempotent and unsubscribed with every owned stream listener on destroy', async () => {
+  const h = callFixture(); assert.deepEqual(h.stats(), {reads: 0, subscriptions: 0, unsubscriptions: 0, listeners: 0});
+  assert.equal(h.presentation.openCall(), false); assert.equal(h.stats().reads, 0);
+  h.presentation.start(); h.presentation.start();
+  assert.equal(h.stats().subscriptions, 1); assert.equal(h.host.querySelectorAll('.aureon-call-view-trigger').length, 1);
+  await h.button('Visualizar chamada').dispatch('click');
+  const copies = h.document.querySelectorAll('dialog video');
+  assert.ok(copies.some(node => node.srcObject === h.first.media));
+  h.presentation.destroy(); h.presentation.destroy();
+  assert.equal(h.stats().unsubscriptions, 1); assert.equal(h.stats().listeners, 0);
+  assert.equal(h.host.querySelectorAll('.aureon-call-view-trigger').length, 0);
+  for (const media of [h.camera, h.first, h.second]) {
+    for (const listeners of [...media.track.listeners.values(), ...media.media.listeners.values()]) assert.equal(listeners.size, 0);
+  }
+  for (const copy of copies) assert.equal(copy.srcObject, null);
+  assertCaptureAlive(h);
+});
+
+test('presenter and gallery show authorized cameras, off-camera avatars and screens using the original streams', async () => {
+  const h = callFixture(); h.presentation.start(); const launcher = h.button('Visualizar chamada'); await launcher.dispatch('click');
+  const {dialog, viewer, select, grid, rail} = presentationParts(h);
+  assert.equal(dialog.open, true); assert.equal(viewer.srcObject, h.first.media); assert.equal(rail.hidden, false);
+  assert.equal(rail.querySelectorAll('.aureon-media-card').length, 3);
+  assert.equal(rail.querySelector('video').srcObject, h.camera.media);
+  assert.equal(rail.querySelectorAll('.aureon-media-avatar')[1].querySelector('span').textContent, 'FQ');
+  assert.equal(rail.querySelectorAll('img')[2].getAttribute('src'), '/avatar-ana.png');
+  assert.equal(select.getAttribute('aria-label'), 'Tela em destaque'); assert.equal(select.children.length, 2);
+  await h.button('Galeria').dispatch('click');
+  assert.equal(grid.hidden, false); assert.equal(rail.hidden, true); assert.equal(viewer.srcObject, null);
+  assert.equal(grid.querySelectorAll('.aureon-media-card').length, 5);
+  assert.equal(grid.querySelectorAll('.aureon-media-screen').length, 2);
+  assert.equal(grid.querySelectorAll('video').filter(node => node.srcObject).length, 3);
+  const screen = grid.querySelectorAll('.aureon-media-screen')[1];
+  assert.equal(screen.getAttribute('aria-label'), 'Apresentar Tela de Felipe'); await screen.dispatch('click');
+  assert.equal(viewer.srcObject, h.second.media); assert.equal(grid.hidden, true); assert.equal(select.value, 'meeting-a:felipe:screen');
+  await h.button('Tela cheia').dispatch('click'); assert.equal(h.document.fullscreenElement, dialog.querySelector('section'));
+  await h.button('Minimizar').dispatch('click');
+  assert.equal(dialog.open, false); assert.equal(h.document.fullscreenElement, null); assert.equal(h.document.activeElement, launcher);
+  assert.equal(viewer.srcObject, null); assert.equal(rail.children.length, 0); assert.equal(grid.children.length, 0);
+  assertCaptureAlive(h);
+});
+
+test('screen selection survives new shares and minimize; an ended selected source falls back without stealing selection', async () => {
+  const h = callFixture(); h.presentation.start(); await h.button('Visualizar chamada').dispatch('click');
+  const {viewer, select, grid} = presentationParts(h);
+  select.value = 'meeting-a:felipe:screen'; await select.dispatch('change'); assert.equal(viewer.srcObject, h.second.media);
+  const third = h.stream();
+  h.set(value => ({...value, revision: value.revision + 1, sources: [...value.sources,
+    {id: 'meeting-a:ana:screen', kind: 'screen', participantId: 'ana', label: 'Tela de Ana', isSelf: false, stream: third.media}]}));
+  assert.equal(viewer.srcObject, h.second.media); assert.equal(select.children.length, 3);
+  await h.button('Minimizar').dispatch('click'); await h.button('Visualizar chamada').dispatch('click');
+  assert.equal(viewer.srcObject, h.second.media);
+  h.second.track.readyState = 'ended'; await h.second.track.dispatch('ended'); h.flush();
+  assert.equal(viewer.srcObject, h.first.media); assert.equal(select.value, 'meeting-a:allan:screen');
+  h.first.track.readyState = 'ended'; third.track.readyState = 'ended'; await third.track.dispatch('ended'); h.flush();
+  assert.equal(viewer.srcObject, null); assert.equal(grid.hidden, false); assert.equal(h.button('Apresentador').disabled, true);
+  assert.equal(select.children.length, 0); assert.equal(select.parentElement.hidden, true);
+  assert.equal(third.track.stopCalls, 0); assertCaptureAlive(h);
+});
+
+test('camera mute/termination swaps to an avatar and replacement updates only the duplicate', async () => {
+  const h = callFixture({screens: false}); h.presentation.start(); await h.button('Visualizar chamada').dispatch('click');
+  const {grid, viewer} = presentationParts(h), firstCard = grid.querySelector('.aureon-media-card'), cameraCopy = firstCard.querySelector('video');
+  assert.equal(grid.hidden, false); assert.equal(cameraCopy.srcObject, h.camera.media); assert.equal(viewer.srcObject, null);
+  h.camera.track.muted = true; await h.camera.track.dispatch('mute'); h.flush();
+  assert.equal(cameraCopy.srcObject, null); assert.equal(firstCard.querySelector('.aureon-media-avatar').hidden, false);
+  h.camera.track.muted = false; await h.camera.track.dispatch('unmute'); h.flush(); assert.equal(cameraCopy.srcObject, h.camera.media);
+  const next = h.stream();
+  h.set(value => ({...value, revision: 2, sources: [{...value.sources[0], stream: next.media}]}));
+  assert.equal(cameraCopy.srcObject, next.media); assert.equal(h.camera.track.listeners.get('ended').size, 0);
+  next.track.readyState = 'ended'; await next.track.dispatch('ended'); h.flush(); assert.equal(cameraCopy.srcObject, null);
+  assert.equal(next.track.stopCalls, 0); assertCaptureAlive(h);
+});
+
+test('revocation, malformed catalogs and a changed meeting close all duplicates and cannot reopen stale remote DOM', async () => {
+  for (const cause of ['revoked', 'malformed', 'different-session', 'throwing-provider']) {
+    const h = callFixture();
+    const tile = h.document.createElement('div'); tile.className = 'r-screen-tile'; h.document.body.append(tile);
+    const remote = h.video('', tile); remote.node.srcObject = h.second.media;
+    h.presentation.start(); await h.button('Ampliar compartilhamento', tile).dispatch('click');
+    const {dialog} = presentationParts(h), copies = dialog.querySelectorAll('video'); assert.equal(dialog.open, true, cause);
+    if (cause === 'revoked') h.set({revision: 2, sessionId: null, participants: [], sources: []});
+    else if (cause === 'malformed') h.set(value => ({...value, revision: 2, sources: [{...value.sources[0], id: 'spoofed-id'}]}));
+    else if (cause === 'different-session') h.set({revision: 2, sessionId: 'meeting-b', participants: h.people, sources: []});
+    else { h.provider.getSnapshot = () => { throw Error('Disconnected'); }; h.set(value => value); }
+    assert.equal(dialog.open, false, cause); for (const video of copies) assert.equal(video.srcObject, null, cause);
+    assert.equal(tile.querySelector('.aureon-screen-actions').hidden, true, cause);
+    await h.button('Ampliar compartilhamento', tile).dispatch('click'); assert.equal(dialog.open, false, cause);
+    assert.equal(remote.node.srcObject, h.second.media); assertCaptureAlive(h);
+  }
+});
+
+test('a provider with no authorized meeting preserves only the local legacy preview', async () => {
+  const h = callFixture(); h.set({revision: 1, sessionId: null, participants: [], sources: []});
+  const local = h.video('screenPreview');
+  const tile = h.document.createElement('div'); tile.className = 'r-screen-tile'; h.document.body.append(tile); const remote = h.video('', tile);
+  h.presentation.start(); assert.equal(h.host.querySelectorAll('.aureon-call-view-trigger').length, 0);
+  await h.button('Ampliar compartilhamento', tile).dispatch('click'); assert.equal(presentationParts(h).dialog.open, false);
+  await h.button('Ampliar compartilhamento', local.node.parentElement).dispatch('click');
+  const {dialog, viewer, grid, rail} = presentationParts(h);
+  assert.equal(dialog.open, true); assert.equal(viewer.srcObject, local.media); assert.equal(grid.hidden, true); assert.equal(rail.hidden, true);
+  assert.equal(h.presentation.openCall(), false); h.presentation.close();
+  assert.equal(remote.node.srcObject, remote.media); assert.equal(local.node.srcObject, local.media);
+  assert.equal(local.track.stopCalls, 0); assertCaptureAlive(h);
+});
+
+test('camera-only calls gain one dynamic launcher, move it to call tools and restore focus after native cancel', async () => {
+  const h = callFixture({screens: false, tools: false}); h.presentation.start();
+  assert.equal(h.document.querySelectorAll('.aureon-call-view-trigger').length, 0);
+  const dock = h.layout('call-dock', 400, 700, 300, 50); h.mutate(h.document.body, {addedNodes: [dock]});
+  const launcher = dock.querySelector('.aureon-call-view-trigger'); assert.equal(launcher.getAttribute('aria-label'), 'Visualizar chamada');
+  assert.equal(launcher.textContent, '▦');
+  const tools = h.layout('r-call-tools', 20, 40, 600, 40); h.mutate(h.document.body, {addedNodes: [tools]});
+  assert.equal(tools.querySelector('.aureon-call-view-trigger'), launcher); assert.equal(launcher.textContent, 'Visualizar chamada');
+  for (let i = 0; i < 4; i++) h.set(value => ({...value, revision: value.revision + 1}));
+  assert.equal(h.document.querySelectorAll('.aureon-call-view-trigger').length, 1);
+  await launcher.dispatch('click'); const {dialog, grid} = presentationParts(h); assert.equal(grid.children.length, 3);
+  await dialog.dispatch('cancel'); assert.equal(dialog.open, false); assert.equal(h.document.activeElement, launcher);
+  assert.equal(grid.children.length, 0); assertCaptureAlive(h);
+});
+
+test('local screen maps to its authorized source once, and a removed participant leaves no old camera or avatar', async () => {
+  const h = callFixture(), local = h.video('screenPreview'); local.node.srcObject = h.first.media;
+  h.presentation.start(); await h.button('Ampliar compartilhamento', local.node.parentElement).dispatch('click');
+  await h.button('Galeria').dispatch('click'); const {dialog, grid} = presentationParts(h);
+  assert.equal(grid.querySelectorAll('.aureon-media-screen').length, 2);
+  const removedCard = grid.querySelectorAll('.aureon-media-card')[0], removedCamera = removedCard.querySelector('video');
+  h.set(value => ({...value, revision: 2, participants: value.participants.filter(person => person.id !== 'allan'),
+    sources: value.sources.filter(source => source.participantId !== 'allan')}));
+  assert.equal(removedCard.isConnected, false); assert.equal(removedCamera.srcObject, null); assert.equal(dialog.open, true);
+  assert.equal(grid.querySelectorAll('.aureon-media-card').length, 3);
+  assert.equal(local.node.srcObject, h.first.media); assertCaptureAlive(h);
+});
+
+test('a hidden call toolbar yields to the map dock, without creating an invisible or duplicate entry', () => {
+  const h = callFixture(), dock = h.layout('call-dock', 400, 700, 300, 50); h.host.style.display = 'none';
+  h.presentation.start();
+  const launcher = dock.querySelector('.aureon-call-view-trigger'); assert.ok(launcher);
+  assert.equal(h.host.querySelectorAll('.aureon-call-view-trigger').length, 0);
+  h.host.style.display = 'flex'; h.set(value => ({...value, revision: 2}));
+  assert.equal(h.host.querySelector('.aureon-call-view-trigger'), launcher);
+  assert.equal(h.document.querySelectorAll('.aureon-call-view-trigger').length, 1);
+});
+
+test('unchanged camera catalogs retain cards, playback and selector options; failed avatars retain a safe initials fallback', async () => {
+  const h = callFixture(); h.presentation.start(); await h.button('Visualizar chamada').dispatch('click');
+  const {select, rail} = presentationParts(h), camera = rail.querySelector('video'), cards = [...rail.children], options = [...select.children];
+  const image = rail.querySelectorAll('img')[2]; await image.dispatch('error');
+  h.set(value => ({...value, revision: 2}));
+  assert.deepEqual(rail.children, cards); assert.deepEqual(select.children, options); assert.equal(camera.playCount, 1);
+  assert.equal(image.hidden, true); assert.equal(image.parentElement.querySelector('span').hidden, false);
+  assertCaptureAlive(h);
 });

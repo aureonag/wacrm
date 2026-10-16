@@ -225,7 +225,13 @@ test('copied app restores exact objects, directions and constructions after migr
  assert.equal(context.soundDb().name,namespace+'personal-sounds-v1');
 });
 test('call disconnect stops captures even before wasJoined, and 401 is handled alongside 403',()=>{
- const source=String.raw`(()=>{let wasJoined=false,testAudio={getTracks:()=>[{stop:()=>globalThis.trackStopped++}]},testContext={close:()=>Promise.resolve()};function closeAll(){globalThis.closed++;}
+ const source=String.raw`(()=>{let wasJoined=false,generation=0,roomId=null,callId=null,signalCursor=0;const peers=new Map(),state={data:null},person=()=>({name:'Pessoa'});
+ const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;
+ testAudio={getTracks:()=>[{stop:()=>globalThis.trackStopped++}]};testContext={close:()=>Promise.resolve()};
+ function closePeer(id){const peer=peers.get(id);if(!peer)return;peer.pc.close();peers.delete(id);}
+ function closeAll(){generation++;roomId=null;callId=null;signalCursor=0;document.getElementById('replicaMedia')?.remove();globalThis.closed++;}
+ function renderMedia(){
+   const m=meeting();if(!m)return;}
 function disconnectSession(){if(wasJoined){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();}wasJoined=false;closeAll();}
 async function tick(){if(ticking||!state.data)return;try{const m=meeting();if(!m){disconnectSession();return;}}catch(error){if(error.status===403){disconnectSession();}}}
 window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});
@@ -233,10 +239,15 @@ function broadcastReaction(){}function toggleHand(){}
 window.aureonReplicaCalls={broadcastReaction,toggleHand};})();`;
  const stopped=[],window={aureonOfficeBootstrap:{active:true},aureonStopMicrophone:()=>stopped.push('mic'),aureonStopCamera:()=>stopped.push('camera'),aureonStopScreen:()=>stopped.push('screen'),addEventListener(){}};
  const output=adaptOfficeCrm('replica-calls.js',source).text;
- const context=vm.createContext({window,closed:0,trackStopped:0});new vm.Script(output).runInContext(context);
+ const document={querySelectorAll:()=>[],getElementById:()=>null};
+ const context=vm.createContext({window,document,closed:0,trackStopped:0});new vm.Script(output).runInContext(context);
  window.aureonReplicaCalls.disconnectSession();
  assert.deepEqual(stopped,['mic','camera','screen']);assert.equal(context.closed,1);assert.equal(context.trackStopped,1);
  assert.ok(output.includes('error.status===401||error.status===403'));
+ assert.equal(typeof window.aureonReplicaCalls.media.getSnapshot,'function');
+ assert.equal(typeof window.aureonReplicaCalls.media.subscribe,'function');
+ assert.ok(output.includes('clearDepartedMedia();mediaSources.publish();'));
+ assert.throws(()=>adaptOfficeCrm('replica-calls.js',source.replace('function renderMedia(){','function differentRender(){')),/expected 1 anchor/);
 });
 
 test('business 403 stays an operation error; only the explicit access-denied code ends the whole session',async()=>{

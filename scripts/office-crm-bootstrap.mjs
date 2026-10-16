@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {createOfficePresentation} from './office-presentation.mjs';
+import {createOfficeMediaSources} from './office-media-sources.mjs';
 import {OFFICE_DARK_THEME_CSS} from './office-dark-theme.mjs';
 
 export const CLIENT_STATE_LIMITS=Object.freeze({
@@ -224,7 +225,7 @@ export function bootstrapIndex(source){
  });
  if(redirects>1||!scripts.length)guard('index.html','missing/duplicate script list');
  if(!/<\/head>/i.test(html))guard('index.html','head missing');
- const code='\nconst aureonOfficePresentation=('+createOfficePresentation.toString()+')({window,document});\nconst aureonOfficeCrmRuntime=('+createOfficeCrmRuntime.toString()+')({window,document,fetch:window.fetch.bind(window),presentation:aureonOfficePresentation},'+JSON.stringify(CLIENT_STATE_LIMITS)+');\nconst localStorage=aureonOfficeCrmRuntime.localStorage;\nconst sessionStorage=aureonOfficeCrmRuntime.sessionStorage;\naureonOfficeCrmRuntime.start('+JSON.stringify(scripts)+');\n';
+ const code='\nconst aureonOfficePresentation=('+createOfficePresentation.toString()+')({window,document,mediaSources:{getSnapshot:()=>window.aureonReplicaCalls?.media?.getSnapshot?.()||{revision:0,sessionId:null,participants:[],sources:[]},subscribe:listener=>window.aureonReplicaCalls?.media?.subscribe?.(listener)||(()=>{})}});\nconst aureonOfficeCrmRuntime=('+createOfficeCrmRuntime.toString()+')({window,document,fetch:window.fetch.bind(window),presentation:aureonOfficePresentation},'+JSON.stringify(CLIENT_STATE_LIMITS)+');\nconst localStorage=aureonOfficeCrmRuntime.localStorage;\nconst sessionStorage=aureonOfficeCrmRuntime.sessionStorage;\naureonOfficeCrmRuntime.start('+JSON.stringify(scripts)+');\n';
  return {text:html.replace(/<\/head>/i,'<style id="officeCrmDarkTheme">'+OFFICE_DARK_THEME_CSS+'</style><script>'+code+'</script></head>'),changes:[{rule:'crm-bootstrap-before-modules',occurrences:scripts.length},{rule:'screen-presentation-mini-expanded-fullscreen',occurrences:1},{rule:'dark-theme-contrast-only',occurrences:1},{rule:'remove-localhost-redirect',occurrences:redirects}]};
 }
 export function adaptOfficeCrm(file,source){
@@ -276,13 +277,17 @@ export function adaptOfficeCrm(file,source){
   changes.push({rule:'readonly-map-restore-after-migrations',occurrences:1},{rule:'scoped-personal-sounds-db',occurrences:1});
  }
  if(file==='replica-calls.js'){
+  text=replace(file,text,"const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;","const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;\n const mediaSources=("+createOfficeMediaSources.toString()+")({window,getState:()=>state,getMeeting:meeting,getPeer:id=>peers.get(id),getRoomId:()=>roomId,getCallId:()=>callId,person});\n function clearDepartedMedia(){const m=meeting(),self=state.data?.user?.id;for(const tile of document.querySelectorAll('#replicaMedia .r-screen-tile,#replicaMedia .r-video-tile')){const id=tile.dataset.screen||tile.dataset.user;if(!window.aureonOfficeBootstrap.active||!m?.members.includes(id)||id!==self&&(roomId!==m.id||!callId||!peers.has(id))){for(const video of tile.querySelectorAll('video')){video.pause();video.srcObject=null;}tile.remove();}}}");
+  text=replace(file,text,'peer.pc.close();peers.delete(id);','peer.pc.close();peers.delete(id);clearDepartedMedia();mediaSources.publish();');
+  text=replace(file,text,'roomId=null;callId=null;signalCursor=0;document.getElementById','roomId=null;callId=null;signalCursor=0;mediaSources.clear();document.getElementById');
+  text=replace(file,text,'function renderMedia(){\n   const m=meeting();if(!m)return;','function renderMedia(){\n   clearDepartedMedia();mediaSources.publish();const m=meeting();if(!m)return;');
   text=replace(file,text,'if(ticking||!state.data)return;','if(ticking||!state.data||!window.aureonOfficeBootstrap.active)return;');
   text=replace(file,text,'if(error.status===403){disconnectSession();}','if(error.status===401||error.status===403){disconnectSession();}');
   text=replace(file,text,'function disconnectSession(){if(wasJoined){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();}wasJoined=false;closeAll();}','function disconnectSession(){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();testAudio?.getTracks().forEach(track=>track.stop());testAudio=null;testContext?.close().catch(()=>{});testContext=null;wasJoined=false;closeAll();}');
   text=replace(file,text,'const m=meeting();if(!m){disconnectSession();return;}','const m=meeting();if(!m){if(wasJoined)disconnectSession();return;}');
-  text=replace(file,text,"window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});","window.addEventListener('aureon-interface-state',()=>{if(!meeting()&&wasJoined)disconnectSession();tick()});");
-  text=replace(file,text,'window.aureonReplicaCalls={broadcastReaction,toggleHand};',"window.addEventListener('aureon-office-session-ended',disconnectSession);window.aureonReplicaCalls={broadcastReaction,toggleHand,disconnectSession};");
-  changes.push({rule:'disconnect-media-on-expired-crm-session',occurrences:1},{rule:'preserve-local-capture-outside-active-calls',occurrences:2});
+  text=replace(file,text,"window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});","window.addEventListener('aureon-interface-state',()=>{clearDepartedMedia();mediaSources.publish();if(!meeting()&&wasJoined)disconnectSession();tick()});");
+  text=replace(file,text,'window.aureonReplicaCalls={broadcastReaction,toggleHand};',"window.addEventListener('aureon-office-session-ended',disconnectSession);window.aureonReplicaCalls={broadcastReaction,toggleHand,disconnectSession,media:mediaSources};");
+  changes.push({rule:'disconnect-media-on-expired-crm-session',occurrences:1},{rule:'preserve-local-capture-outside-active-calls',occurrences:2},{rule:'authorized-readonly-call-media-sources',occurrences:1},{rule:'clear-departed-call-media-cards',occurrences:1});
  }
  if(file==='replica-spotify.js'){
   text=replace(file,text,'const U=window.aureonReplicaUI;if(!U)return;',"const U=window.aureonReplicaUI;if(!U)return;window.aureonSpotify={open:()=>U.toast('Spotify indisponível no piloto.'),render:()=>{}};return;");
