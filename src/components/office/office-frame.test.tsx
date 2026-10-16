@@ -84,23 +84,34 @@ class HookHarness {
   mounted = true;
   updatesAfterUnmount = 0;
   output: unknown;
-  frame: { key: string | null; node: { contentWindow: object; contentDocument: { contentType: string } }; ref: { current: unknown } } | null = null;
+  frame: { key: string | null; node: { contentWindow: object; contentDocument: { contentType: string }; src: string | null; getAttribute(name: string): string | null }; ref: { current: unknown } } | null = null;
+  navigations: string[] = [];
+  renderOnce() {
+    this.dirty = false;
+    this.cursor = 0;
+    mocks.current = this;
+    try { this.output = OfficeFrame({ userId: "user-a", accountId: "account-a" }); }
+    finally { mocks.current = null; }
+    const frame = this.find("iframe");
+    if (!frame || frame.key !== this.frame?.key) {
+      if (this.frame) this.frame.ref.current = null;
+      this.frame = frame ? { key: frame.key, node: { contentWindow: {}, contentDocument: { contentType: "text/html" }, src: null,
+        getAttribute(name: string) { return name === "src" ? this.src : null; } }, ref: frame.props.ref as { current: unknown } } : null;
+    }
+    if (this.frame && frame) {
+      const nextSource = typeof frame.props.src === "string" ? frame.props.src : null;
+      if (nextSource !== this.frame.node.src && nextSource !== null) this.navigations.push(nextSource);
+      this.frame.node.src = nextSource;
+      this.frame.ref.current = this.frame.node;
+    }
+  }
+  commitEffects() { for (const effect of this.effects.splice(0)) effect(); }
   flush() {
     let passes = 0;
     do {
       if (++passes > 10) throw new Error("Unexpected render loop");
-      this.dirty = false;
-      this.cursor = 0;
-      mocks.current = this;
-      try { this.output = OfficeFrame({ userId: "user-a", accountId: "account-a" }); }
-      finally { mocks.current = null; }
-      const frame = this.find("iframe");
-      if (!frame || frame.key !== this.frame?.key) {
-        if (this.frame) this.frame.ref.current = null;
-        this.frame = frame ? { key: frame.key, node: { contentWindow: {}, contentDocument: { contentType: "text/html" } }, ref: frame.props.ref as { current: unknown } } : null;
-      }
-      if (this.frame) this.frame.ref.current = this.frame.node;
-      for (const effect of this.effects.splice(0)) effect();
+      this.renderOnce();
+      this.commitEffects();
     } while (this.dirty);
   }
   find(type: string) { return elements(this.output).find(element => element.type === type); }
@@ -150,6 +161,95 @@ afterEach(() => {
 });
 
 describe("OfficeFrame opening deadline and session boundary", () => {
+  function inertFirstCommit() {
+    runner.unmount();
+    runner = new HookHarness();
+    runner.renderOnce();
+    const frame = runner.frame!.node;
+    const onLoad = runner.find("iframe")!.props.onLoad as () => void;
+    const onError = runner.find("iframe")!.props.onError as () => void;
+    runner.commitEffects();
+    // State updates have been queued by client effects, but the source-bearing
+    // render has not committed. The same iframe/window must survive this step.
+    return { frame, onLoad, onError };
+  }
+
+  it("does not navigate or start an opening deadline while its first frame is inert", async () => {
+    const { frame } = inertFirstCommit();
+    expect(runner.find("iframe")?.props.src).toBeUndefined();
+    expect(runner.navigations).toEqual([]);
+    expect(vi.getTimerCount()).toBe(1); // Context verification, no opening deadline.
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(runner.label()).toContain("Abrindo escritório");
+    expect(runner.find("iframe")?.props.src).toBeUndefined();
+    runner.flush();
+    expect(runner.frame!.node).toBe(frame);
+    expect(runner.navigations).toEqual(["/api/office/runtime/index.html"]);
+    await advance(89_999);
+    expect(runner.label()).toContain("Abrindo escritório");
+    await advance(1);
+    expect(runner.label()).toContain("O escritório está indisponível");
+  });
+
+  it("ignores readiness and load/error events from the inert document, then accepts readiness from the armed window", () => {
+    const { frame, onLoad, onError } = inertFirstCommit();
+    for (const type of ["aureon-office-ready", "aureon-office-unavailable", "aureon-office-session-ended"]) {
+      for (const listener of listeners.get("message") ?? []) listener({ origin: "https://crm.test", source: frame.contentWindow, data: { type } } as MessageEvent);
+    }
+    frame.contentDocument.contentType = "application/json";
+    onLoad(); onError();
+    runner.flush();
+    expect(runner.label()).toContain("Abrindo escritório");
+    expect(runner.find("iframe")?.props.src).toBe("/api/office/runtime/index.html");
+    frame.contentDocument.contentType = "text/html";
+    message("aureon-office-ready", frame.contentWindow);
+    expect(runner.label()).not.toContain("Abrindo escritório");
+  });
+
+  it("still revokes an inert frame when the CRM context check denies access", async () => {
+    inertFirstCommit();
+    fetchMock.mockResolvedValue({ status: 403 });
+    await vi.advanceTimersByTimeAsync(15_000);
+    runner.flush();
+    expect(runner.label()).toContain("Sua sessão do escritório foi encerrada");
+    expect(runner.find("iframe")).toBeUndefined();
+    expect(runner.navigations).toEqual([]);
+  });
+
+  it("arms a retry only after its new window listeners exist and starts a fresh deadline on source commit", async () => {
+    const oldWindow = runner.frame!.node.contentWindow;
+    await advance(90_000);
+    (runner.find("button")!.props.onClick as () => void)();
+    runner.renderOnce();
+    const nextWindow = runner.frame!.node.contentWindow;
+    expect(nextWindow).not.toBe(oldWindow);
+    expect(runner.find("iframe")?.props.src).toBeUndefined();
+    runner.commitEffects();
+    for (const listener of listeners.get("message") ?? []) listener({ origin: "https://crm.test", source: oldWindow, data: { type: "aureon-office-ready" } } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(runner.label()).toContain("Abrindo escritório");
+    expect(runner.find("iframe")?.props.src).toBeUndefined();
+    runner.flush();
+    expect(runner.frame!.node.contentWindow).toBe(nextWindow);
+    expect(runner.navigations).toEqual(["/api/office/runtime/index.html", "/api/office/runtime/index.html"]);
+    await advance(89_999);
+    expect(runner.label()).toContain("Abrindo escritório");
+    await advance(1);
+    expect(runner.label()).toContain("O escritório está indisponível");
+  });
+
+  it("ignores messages from its own frame until the canonical src is committed", () => {
+    runner.frame!.node.src = null;
+    message("aureon-office-ready");
+    expect(runner.label()).toContain("Abrindo escritório");
+    runner.frame!.node.src = "/unrelated";
+    message("aureon-office-unavailable");
+    expect(runner.label()).toContain("Abrindo escritório");
+    runner.frame!.node.src = "/api/office/runtime/index.html";
+    message("aureon-office-ready");
+    expect(runner.label()).not.toContain("Abrindo escritório");
+  });
+
   it("uses the canonical authenticated document and expires opening exactly at 90 seconds", async () => {
     const target = runner.frame!.node.contentWindow;
     expect(runner.find("iframe")?.props.src).toBe("/api/office/runtime/index.html");
