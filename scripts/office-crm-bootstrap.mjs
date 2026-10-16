@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {createOfficePresentation} from './office-presentation.mjs';
+import {OFFICE_DARK_THEME_CSS} from './office-dark-theme.mjs';
 
 export const CLIENT_STATE_LIMITS=Object.freeze({
  'aureon-avatar-v1':32768,'aureon-gather-avatar-plan-v1':16384,'aureon-gather-avatar-applied-v1':16384,
@@ -224,7 +225,7 @@ export function bootstrapIndex(source){
  if(redirects>1||!scripts.length)guard('index.html','missing/duplicate script list');
  if(!/<\/head>/i.test(html))guard('index.html','head missing');
  const code='\nconst aureonOfficePresentation=('+createOfficePresentation.toString()+')({window,document});\nconst aureonOfficeCrmRuntime=('+createOfficeCrmRuntime.toString()+')({window,document,fetch:window.fetch.bind(window),presentation:aureonOfficePresentation},'+JSON.stringify(CLIENT_STATE_LIMITS)+');\nconst localStorage=aureonOfficeCrmRuntime.localStorage;\nconst sessionStorage=aureonOfficeCrmRuntime.sessionStorage;\naureonOfficeCrmRuntime.start('+JSON.stringify(scripts)+');\n';
- return {text:html.replace(/<\/head>/i,'<script>'+code+'</script></head>'),changes:[{rule:'crm-bootstrap-before-modules',occurrences:scripts.length},{rule:'screen-presentation-mini-expanded-fullscreen',occurrences:1},{rule:'remove-localhost-redirect',occurrences:redirects}]};
+ return {text:html.replace(/<\/head>/i,'<style id="officeCrmDarkTheme">'+OFFICE_DARK_THEME_CSS+'</style><script>'+code+'</script></head>'),changes:[{rule:'crm-bootstrap-before-modules',occurrences:scripts.length},{rule:'screen-presentation-mini-expanded-fullscreen',occurrences:1},{rule:'dark-theme-contrast-only',occurrences:1},{rule:'remove-localhost-redirect',occurrences:redirects}]};
 }
 export function adaptOfficeCrm(file,source){
  let text=source;const changes=[];

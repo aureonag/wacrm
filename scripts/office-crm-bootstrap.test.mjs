@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
 import {createOfficeCrmRuntime,adaptOfficeCrm,bootstrapIndex,CLIENT_STATE_LIMITS,CLIENT_STATE_KEYS} from './office-crm-bootstrap.mjs';
+import {OFFICE_DARK_THEME_CSS} from './office-dark-theme.mjs';
 const ACCOUNT='11111111-2222-4333-8444-555555555555',USER='aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const identity={accountId:ACCOUNT,user:{id:USER,profileId:USER,name:'Membro teste'},capabilities:{canDecorate:false}};
 const approved={objects:[{id:71,type:'desk',x:224,y:368,direction:3}],floor:'#a27f6b',construction:[{id:'wall1',type:'wall',a:{x:1,y:2},b:{x:3,y:4},brandLogo:true}]};
@@ -177,6 +178,9 @@ test('index removes only the pinned localhost redirect and loads no original mod
  assert.ok(inline[0].includes('const localStorage=aureonOfficeCrmRuntime.localStorage'));
  assert.ok(inline[0].includes('["/api/office/runtime/app.js","/api/office/runtime/replica-ui.js"]'));
  assert.equal((result.text.match(/<script src=/g)||[]).length,0);
+ assert.equal((result.text.match(/id="officeCrmDarkTheme"/g)||[]).length,1);
+ assert.ok(result.text.includes('<style id="officeCrmDarkTheme">'+OFFICE_DARK_THEME_CSS+'</style>'));
+ assert.ok(result.text.indexOf('id="officeCrmDarkTheme"')<result.text.indexOf('<script>'));
  assert.throws(()=>bootstrapIndex(original.replace(OLD_REDIRECT,'alert("Unexpected");')),/unreviewed inline/);
  assert.throws(()=>adaptOfficeCrm('replica-ui.js',uiFixture().replace('Allan Giro','Changed Name')),/original init changed/);
 });
