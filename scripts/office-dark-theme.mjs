@@ -80,7 +80,7 @@ body.replica-ui[data-theme=dark] :is(.r-event-side,.r-activity-row){
 body.replica-ui[data-theme=dark] :is(.r-event-side,.r-activity-row):is(:hover,:focus-visible){
   background:var(--crm-muted-surface);
 }
-body.replica-ui[data-theme=dark] :is(.r-dialog .r-help,.r-empty,.r-loading,.r-event-side small,.r-activity-row small,.r-setting-row p,.r-settings-tabs small,.r-sidebar-section,.r-nav-row small,.r-call-status,.person-row small,.presence-group summary,.r-floor small,.r-shortcut,.r-settings-section){
+body.replica-ui[data-theme=dark] :is(.r-dialog .r-help,.r-empty,.r-loading,.r-event-side small,.r-activity-row small,.r-setting-row p,.r-settings-tabs small,.r-sidebar-section,.r-nav-row small,.r-call-status,.person-row small,.presence-group summary,.r-floor small,.r-shortcut,.r-settings-section,.r-calendar-empty,.r-conversation-intro>p,.r-calendar-hours span){
   color:var(--crm-muted);
 }
 body.replica-ui[data-theme=dark] .r-compose textarea{
