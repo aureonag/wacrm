@@ -1,21 +1,23 @@
 import { createHash } from "node:crypto";
 import type { OfficeContext } from "../access";
 import type { LoadedOfficeAsset } from "../runtime/assets";
+import { normalizeOfficeCallConflict, officeCallConflictMessage, type OfficeCallConflictCode } from "../runtime/call-conflicts.cjs";
 import {
   OFFICE_GATEWAY_LIMITS, OfficeGatewayContractError, parseRuntimeOperation, type RuntimeOperation,
 } from "./contracts";
 import { createOfficeGatewayProtocol, OfficeGatewayError, OFFICE_GATEWAY_PATHS } from "./protocol";
 
 export class OfficeGatewayClientError extends Error {
-  readonly code: "OFFICE_GATEWAY_INVALID_REQUEST" | "OFFICE_GATEWAY_OPERATION_FAILED" | "OFFICE_GATEWAY_UNAVAILABLE";
-  constructor(readonly status: number = 503) {
-    super(status === 503 ? "O escritório está temporariamente indisponível." :
+  readonly code: "OFFICE_GATEWAY_INVALID_REQUEST" | "OFFICE_GATEWAY_OPERATION_FAILED" | "OFFICE_GATEWAY_UNAVAILABLE" | OfficeCallConflictCode;
+  constructor(readonly status: number = 503, callCode?: unknown) {
+    const conflict = normalizeOfficeCallConflict(status, callCode);
+    super(officeCallConflictMessage(conflict) || (status === 503 ? "O escritório está temporariamente indisponível." :
       status === 409 ? "O escritório foi atualizado. Recarregue e tente novamente." :
       status === 403 ? "Esta operação do escritório não está disponível." :
-      status === 413 ? "O conteúdo excede o tamanho permitido." : "Não foi possível concluir esta operação do escritório.");
+      status === 413 ? "O conteúdo excede o tamanho permitido." : "Não foi possível concluir esta operação do escritório."));
     this.name = "OfficeGatewayClientError";
-    this.code = status === 503 ? "OFFICE_GATEWAY_UNAVAILABLE" : status === 400 || status === 413
-      ? "OFFICE_GATEWAY_INVALID_REQUEST" : "OFFICE_GATEWAY_OPERATION_FAILED";
+    this.code = conflict || (status === 503 ? "OFFICE_GATEWAY_UNAVAILABLE" : status === 400 || status === 413
+      ? "OFFICE_GATEWAY_INVALID_REQUEST" : "OFFICE_GATEWAY_OPERATION_FAILED");
   }
 }
 
@@ -130,8 +132,22 @@ export function createOfficeGatewayClient({
         await response.body?.cancel().catch(() => {}); throw new OfficeGatewayClientError();
       }
       if (!response.ok) {
-        await response.body?.cancel().catch(() => {});
-        throw new OfficeGatewayClientError(publicStatuses.has(response.status) ? response.status : 503);
+        let callCode: OfficeCallConflictCode | undefined;
+        // Only the two signaling operations can identify a replaced call. Never
+        // forward an upstream message, arbitrary code, or an unbounded error body.
+        const signaling = operation.operation === "interface" &&
+          (operation.method === "GET" && operation.endpoint === "signals" ||
+           operation.method === "POST" && operation.endpoint === "signal");
+        if (response.status === 409 && signaling && jsonMime(response.headers.get("content-type"))) {
+          try {
+            const bytes = await readOfficeGatewayBytes(response, 4096, controller.signal);
+            const result: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+            if (object(result) && Object.hasOwn(result, "code")) callCode = normalizeOfficeCallConflict(response.status, result.code);
+          } catch {
+            if (controller.signal.aborted) throw new OfficeGatewayClientError();
+          }
+        } else await response.body?.cancel().catch(() => {});
+        throw new OfficeGatewayClientError(publicStatuses.has(response.status) ? response.status : 503, callCode);
       }
       const limit = operation.operation === "asset" ? OFFICE_GATEWAY_LIMITS.assetResponseBytes :
         operation.operation === "avatar" ? OFFICE_GATEWAY_LIMITS.avatarResponseBytes : OFFICE_GATEWAY_LIMITS.runtimeJsonResponseBytes;

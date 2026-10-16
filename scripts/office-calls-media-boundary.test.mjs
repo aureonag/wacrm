@@ -15,29 +15,39 @@ const hash=text=>createHash('sha256').update(text).digest('hex');
 const SELF='fixture-user';
 const current=()=>adaptOfficeCrm('replica-calls.js',reviewedSource).text;
 
-function harness(source){
+function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  const events=new Map(),intervals=[],apiCalls=[],levels=[],warnings=[];
- let activeMeeting=null,apiStatus=null,serial=0;
+ let activeMeeting=null,apiStatus=null,apiCode=null,serial=0,responder=null,remoteCall='remote-call-1';
+ const connections=[],audioContexts=[],toneTimers=[];
  const track=kind=>({kind,readyState:'live',enabled:true,stopCalls:0,stop(){this.stopCalls++;this.readyState='ended';this.enabled=false;}});
  const tracks={mic:track('audio'),camera:track('video'),screen:track('video')};
  const stream=track=>({getTracks:()=>[track],getAudioTracks:()=>track.kind==='audio'?[track]:[],getVideoTracks:()=>track.kind==='video'?[track]:[]});
  class Element{
-  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.dataset={};this.style={};this.parent=null;}
+  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.dataset={};this.style={};this.parent=null;this.listeners=new Map();}
+  get isConnected(){return this.parent===true||!!this.parent?.isConnected;}
   append(...children){for(const child of children){child.parent=this;this.children.push(child);}}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(child=>child!==this);this.parent=null;}
   querySelectorAll(){return [];}
   querySelector(){return null;}
+  setAttribute(name,value){this[name]=value;}
+  addEventListener(type,listener){this.listeners.set(type,listener);}
+  focus(){document.activeElement=this;}
+  play(){return Promise.resolve();}
+  click(){this.listeners.get('click')?.();}
  }
- const body=new Element('body'),tiles=[];
+ const body=new Element('body'),head=new Element('head'),tiles=[];body.parent=true;head.parent=true;
  function find(node,id){if(node.id===id)return node;for(const child of node.children){const found=find(child,id);if(found)return found;}return null;}
- const document={body,getElementById:id=>find(body,id),querySelector:()=>null,querySelectorAll:()=>tiles.filter(tile=>!tile.removed)};
+ const document={body,head,createElement:tag=>new Element(tag),getElementById:id=>find(body,id),querySelector:()=>null,querySelectorAll:()=>tiles.filter(tile=>!tile.removed)};
  const state={view:'office',data:{user:{id:SELF,status:'online',preferences:{}}}};
+ const normal=(endpoint,body,query)=>{
+  if(endpoint==='call-session')return {callId:'fixture-call-'+(++serial)};
+  if(endpoint==='signals')return {members:[...activeMeeting.members],roster:{[SELF]:query.call,...(activeMeeting.members.includes('remote')?{remote:remoteCall}:{})},signals:[],cursor:0};
+  return {};
+ };
  const api=async(endpoint,body,query)=>{
   apiCalls.push({endpoint,body,query});
-  if(apiStatus!==null)throw Object.assign(Error('fixture request denied'),{status:apiStatus});
-  if(endpoint==='call-session')return {callId:'fixture-call-'+(++serial)};
-  if(endpoint==='signals')return {members:[...activeMeeting.members],roster:{[SELF]:query.call},signals:[],cursor:0};
-  return {};
+  if(apiStatus!==null)throw Object.assign(Error('fixture request denied'),{status:apiStatus,code:apiCode});
+  return responder?responder(endpoint,body,query,normal):normal(endpoint,body,query);
  };
  const window={
   aureonReplicaUI:{state,api,center:new Element(),el:tag=>new Element(tag),button:()=>new Element('button'),toast(){},person:id=>({id,name:'Fixture'}),refresh:async()=>{}},
@@ -46,22 +56,47 @@ function harness(source){
   aureonStopMicrophone:()=>tracks.mic.stop(),aureonStopCamera:()=>tracks.camera.stop(),aureonStopScreen:()=>tracks.screen.stop(),
   aureonUpdateMicLevel:level=>levels.push(level),
   addEventListener(type,listener){const list=events.get(type)||[];list.push(listener);events.set(type,list);},
+  removeEventListener(type,listener){events.set(type,(events.get(type)||[]).filter(item=>item!==listener));},
  };
+ class FakeStream{
+  constructor(items=[]){if(!allowPeers)throw Error('Real media construction is forbidden in this fixture');this.items=items;}
+  getTracks(){return this.items;}getVideoTracks(){return this.items.filter(item=>item.kind==='video');}getAudioTracks(){return this.items.filter(item=>item.kind==='audio');}addTrack(item){this.items.push(item);}
+ }
+ class FakePeer{
+  constructor(){if(!allowPeers)throw Error('Peer networking is forbidden in this fixture');this.slots=[];this.signalingState='stable';this.connectionState='connected';this.localDescription={sdp:'fake-sdp'};this.closeCalls=0;connections.push(this);}
+  addTransceiver(){const sender={track:null,setStreams(){},async replaceTrack(item){this.track=item;}};const slot={sender,direction:'sendrecv',mid:String(this.slots.length)};this.slots.push(slot);return slot;}
+  getTransceivers(){return this.slots;}createDataChannel(){return {readyState:'open',close(){},send(){}};}
+  async setLocalDescription(){}async setRemoteDescription(){}async addIceCandidate(){}async getStats(){return new Map();}
+  close(){this.closeCalls++;this.connectionState='closed';}
+ }
+ const tone=track('audio'),toneContext={closeCalls:0,close(){this.closeCalls++;return Promise.resolve();}};
+ class FakeAudioContext{
+  constructor(){if(!audioTests)throw Error('Audio generation forbidden');this.track=track('audio');this.closeCalls=0;this.state='running';audioContexts.push(this);}
+  createMediaStreamDestination(){return {stream:stream(this.track)};}
+  createOscillator(){return {frequency:{value:0},connect(){},start(){},stop(){}};}
+  createGain(){return {gain:{value:0},connect(){}};}resume(){return Promise.resolve();}close(){this.closeCalls++;this.state='closed';return Promise.resolve();}
+ }
+ window.AudioContext=FakeAudioContext;
  const sandbox={window,document,console:{warn:(...args)=>warnings.push(args)},
   setInterval(callback,ms){intervals.push({callback,ms});return intervals.length;},clearInterval(){},
-  setTimeout(){throw Error('Unexpected timer/device transmission in this fixture');},clearTimeout(){},
+  setTimeout(callback,ms){if(!audioTests||ms!==8000)throw Error('Unexpected timer/device transmission in this fixture');toneTimers.push(callback);return toneTimers.length;},clearTimeout(){},
   MutationObserver:class{observe(){}},
-  RTCPeerConnection:class{constructor(){throw Error('Peer networking is forbidden in this fixture');}},
-  MediaStream:class{constructor(){throw Error('Real media construction is forbidden in this fixture');}},
+  RTCPeerConnection:FakePeer,MediaStream:FakeStream,fakeTestAudio:stream(tone),fakeTestContext:toneContext,
  };
+ if(testTone)source=source.replace('let testAudio=null,testContext=null;','let testAudio=globalThis.fakeTestAudio,testContext=globalThis.fakeTestContext;');
+ if(audioTests)source=source.replace(' function closePeer(id){',' globalThis.fixtureTestTransmission=testTransmission;\n function closePeer(id){');
  new vm.Script(source,{filename:'reviewed-replica-calls.js'}).runInNewContext(sandbox,{timeout:1000,contextCodeGeneration:{strings:false,wasm:false}});
  assert.equal(intervals.length,1);assert.equal(intervals[0].ms,1000);
- return {window,tracks,apiCalls,levels,warnings,
+ return {window,tracks,apiCalls,levels,warnings,connections,tone,toneContext,audioContexts,transmit:()=>sandbox.fixtureTestTransmission(),fireTone:index=>toneTimers[index](),
   addTile(id,kind='screen'){const video={srcObject:stream(tracks.screen),pauseCalls:0,pause(){this.pauseCalls++;}};const tile={dataset:{[kind==='screen'?'screen':'user']:id},removed:false,querySelectorAll:()=>[video],remove(){this.removed=true;}};tiles.push(tile);return {tile,video};},
-  setMeeting(value){activeMeeting=value;},failApi(status){apiStatus=status;},
+  setMeeting(value){activeMeeting=value;},failApi(status,code=null){apiStatus=status;apiCode=code;},setApi(callback){responder=callback;},setRemoteCall(value){remoteCall=value;},
+  notice:()=>find(body,'aureonCallPaused'),
+  async resume(){find(body,'aureonCallPaused')?.children[2].click();await new Promise(setImmediate);},
+  tickPending(){return intervals[0].callback();},
   async tick(){await intervals[0].callback();await new Promise(setImmediate);},
   async state(){for(const listener of events.get('aureon-interface-state')||[])listener({type:'aureon-interface-state'});await new Promise(setImmediate);},
   async ended(){for(const listener of events.get('aureon-office-session-ended')||[])listener({type:'aureon-office-session-ended'});await new Promise(setImmediate);},
+  async pagehide(){for(const listener of events.get('pagehide')||[])listener({type:'pagehide'});await new Promise(setImmediate);},
   speak(level){window.aureonUpdateMicLevel(level);},
  };
 }
@@ -116,4 +151,99 @@ test('an ended CRM session still stops all captures outside a meeting',async()=>
 for(const status of [401,403])test('a call request '+status+' still forces capture shutdown',async()=>{
  const h=harness(current());h.setMeeting(selfMeeting());h.failApi(status);await h.tick();expectStoppedOnce(h);
  assert.equal(h.apiCalls[0].endpoint,'call-session');
+});
+
+const replacement=()=>Object.assign(Error('Controlled replacement'),{status:409,code:'OFFICE_CALL_SESSION_REPLACED'});
+const countSessions=h=>h.apiCalls.filter(call=>call.endpoint==='call-session').length;
+const settle=()=>new Promise(setImmediate);
+function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};}
+
+test('own replacement stops all captures and a test tone, revokes presentation, and stays paused through new rooms until explicit resume',async()=>{
+ const h=harness(current(),{testTone:true});h.setMeeting(selfMeeting());await h.tick();
+ assert.equal(countSessions(h),1);h.failApi(409,'OFFICE_CALL_SESSION_REPLACED');await h.tick();
+ expectStoppedOnce(h);assert.equal(h.tone.stopCalls,1);assert.equal(h.toneContext.closeCalls,1);
+ assert.equal(h.window.aureonReplicaCalls.media.getSnapshot().sessionId,null);
+ assert.equal(h.notice().children[0].textContent,'Chamada pausada nesta guia');
+ h.failApi(null);h.setMeeting({...selfMeeting(),id:'new-room'});const calls=h.apiCalls.length;
+ for(let i=0;i<12;i++){await h.tick();await h.state();}
+ expectStoppedOnce(h);assert.equal(h.apiCalls.length,calls);assert.equal(countSessions(h),1);assert.ok(h.notice());
+ await h.resume();assert.equal(countSessions(h),2);assert.equal(h.notice(),null);
+ expectStoppedOnce(h);assert.equal(h.tone.stopCalls,1);
+ assert.equal(h.window.aureonReplicaCalls.media.getSnapshot().sessionId,'new-room');
+});
+
+for(const code of [undefined,'OFFICE_CALL_SESSION_MISSING'])test('a '+(code||'generic')+' 409 preserves normal automatic reconnection without a pause or capture shutdown',async()=>{
+ const h=harness(current());h.setMeeting(selfMeeting());await h.tick();
+ h.failApi(409,code);await h.tick();expectLive(h);assert.equal(h.notice(),null);
+ h.failApi(null);await h.tick();expectLive(h);assert.equal(countSessions(h),2);
+});
+
+for(const entry of ['offer','candidate'])test('own replacement received while sending '+entry+' pauses and closes the adapted simulated peer path',async()=>{
+ const h=harness(current(),{allowPeers:true});h.setMeeting({...selfMeeting(),members:[SELF,'remote']});await h.tick();
+ const peer=h.connections[0];assert.ok(peer);expectLive(h);
+ h.setApi((endpoint,body,query,normal)=>{if(endpoint==='signal')throw replacement();return normal(endpoint,body,query);});
+ if(entry==='offer')await peer.onnegotiationneeded();else peer.onicecandidate({candidate:{toJSON:()=>({candidate:'fake'})}});
+ await settle();expectStoppedOnce(h);assert.equal(peer.closeCalls,1);assert.ok(h.notice());
+ assert.equal(h.window.aureonReplicaCalls.media.getSnapshot().sessionId,null);
+ const calls=h.apiCalls.length;await h.tick();await h.state();assert.equal(h.apiCalls.length,calls);assert.equal(countSessions(h),1);
+});
+
+test('a stale recipient closes only that peer and reconciles its new call without replacing the own session',async()=>{
+ const h=harness(current(),{allowPeers:true});h.setMeeting({...selfMeeting(),members:[SELF,'remote']});await h.tick();const peer=h.connections[0];
+ h.setApi((endpoint,body,query,normal)=>{if(endpoint==='signal')throw Object.assign(Error('Recipient stale'),{status:409,code:'OFFICE_SIGNAL_RECIPIENT_STALE'});return normal(endpoint,body,query);});
+ peer.onicecandidate({candidate:{toJSON:()=>({candidate:'fake'})}});await settle();
+ expectLive(h);assert.equal(peer.closeCalls,1);assert.equal(h.notice(),null);assert.equal(countSessions(h),1);
+ h.setApi(null);h.setRemoteCall('remote-call-2');await h.tick();
+ assert.equal(h.connections.length,2);assert.equal(countSessions(h),1);expectLive(h);
+});
+
+test('a rejected old candidate cannot pause a newer own session',async()=>{
+ const h=harness(current(),{allowPeers:true});h.setMeeting({...selfMeeting(),members:[SELF,'remote']});await h.tick();
+ const pending=deferred();h.setApi((endpoint,body,query,normal)=>endpoint==='signal'?pending.promise:normal(endpoint,body,query));
+ h.connections[0].onicecandidate({candidate:{toJSON:()=>({candidate:'fake'})}});await settle();
+ h.window.aureonReplicaCalls.disconnectSession();h.setApi(null);await h.tick();assert.equal(countSessions(h),2);
+ pending.reject(replacement());await settle();assert.equal(h.notice(),null);await h.tick();assert.equal(countSessions(h),2);
+});
+
+test('an old signals error and finally cannot pause or release a new pending tick after disconnect',async()=>{
+ const h=harness(current());h.setMeeting(selfMeeting());await h.tick();
+ const old=deferred(),fresh=deferred();h.setApi((endpoint,body,query,normal)=>endpoint==='signals'?(query.call==='fixture-call-1'?old.promise:fresh.promise):normal(endpoint,body,query));
+ const oldTick=h.tickPending();await settle();h.window.aureonReplicaCalls.disconnectSession();
+ const newTick=h.tickPending();await settle();assert.equal(countSessions(h),2);
+ const requests=h.apiCalls.length;old.reject(replacement());await oldTick;
+ await h.tickPending();assert.equal(h.apiCalls.length,requests);assert.equal(h.notice(),null);
+ fresh.resolve({members:[SELF],roster:{[SELF]:'fixture-call-2'},signals:[],cursor:0});await newTick;
+ h.setApi(null);await h.tick();assert.equal(countSessions(h),2);assert.equal(h.notice(),null);
+});
+
+test('a local-description failure from an obsolete offer cannot relabel the new call',async()=>{
+ const h=harness(current(),{allowPeers:true});h.setMeeting({...selfMeeting(),members:[SELF,'remote']});await h.tick();
+ const old=deferred();h.connections[0].setLocalDescription=()=>old.promise;const offer=h.connections[0].onnegotiationneeded();
+ h.window.aureonReplicaCalls.disconnectSession();await h.tick();assert.equal(countSessions(h),2);
+ old.reject(Error('Old peer failed'));await offer;assert.equal(h.warnings.length,0,JSON.stringify(h.warnings));assert.equal(h.notice(),null);
+});
+
+test('an old test-tone timer cannot stop or clear a new test after pause and explicit resume',async()=>{
+ const h=harness(current(),{audioTests:true});h.setMeeting(selfMeeting());await h.tick();await h.transmit();
+ assert.equal(h.audioContexts.length,1);const old=h.audioContexts[0];
+ h.failApi(409,'OFFICE_CALL_SESSION_REPLACED');await h.tick();assert.equal(old.track.readyState,'ended');
+ h.failApi(null);await h.resume();await h.transmit();assert.equal(h.audioContexts.length,2);const fresh=h.audioContexts[1];
+ h.fireTone(0);assert.equal(fresh.track.readyState,'live');assert.equal(fresh.closeCalls,0);
+ await h.transmit();assert.equal(h.audioContexts.length,2,'The fresh test is still the owned active test');
+ h.fireTone(1);assert.equal(fresh.track.readyState,'ended');assert.equal(fresh.closeCalls,1);
+ await h.transmit();assert.equal(h.audioContexts.length,3,'The completed owner releases its own test');
+});
+
+test('an already pending capture completing while paused is stopped without signaling',async()=>{
+ const h=harness(current());h.setMeeting(selfMeeting());await h.tick();h.failApi(409,'OFFICE_CALL_SESSION_REPLACED');await h.tick();
+ const calls=h.apiCalls.length;
+ h.tracks.camera.readyState='live';h.tracks.camera.enabled=true;await h.tick();
+ assert.equal(h.tracks.camera.readyState,'ended');assert.equal(h.apiCalls.length,calls);assert.equal(h.window.aureonReplicaCalls.media.getSnapshot().sources.length,0);
+});
+
+for(const end of ['ended','pagehide'])test(end+' makes saved resume controls and later ticks inert',async()=>{
+ const h=harness(current());h.setMeeting(selfMeeting());await h.tick();h.failApi(409,'OFFICE_CALL_SESSION_REPLACED');await h.tick();
+ const button=h.notice().children[2];h.failApi(null);await h[end]();const calls=h.apiCalls.length;
+ button.click();await settle();await h.tick();await h.state();assert.equal(h.apiCalls.length,calls);assert.equal(h.notice(),null);
+ assert.equal(h.window.aureonReplicaCalls.media.getSnapshot().sessionId,null);
 });

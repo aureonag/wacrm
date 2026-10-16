@@ -109,6 +109,64 @@ describe("CRM private office gateway client", () => {
     await expect(make(fetcher).interface(identity, "GET", "state")).rejects.toMatchObject({ status: 503 });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it.each(["OFFICE_CALL_SESSION_REPLACED", "OFFICE_CALL_SESSION_MISSING", "OFFICE_SIGNAL_RECIPIENT_STALE"])(
+    "keeps the allowlisted signaling conflict %s without remote text", async code => {
+      for (const [method, endpoint] of [["GET", "signals"], ["POST", "signal"]]) {
+        const client = make(fakeFetch(() => json({ code, error: "PRIVATE_UPSTREAM_DETAIL", extra: "SECRET" }, 409)));
+        try { await client.interface(identity, method, endpoint); }
+        catch (error) {
+          expect(error).toMatchObject({ status: 409, code });
+          expect(String(error)).not.toMatch(/PRIVATE|SECRET/); continue;
+        }
+        throw Error("Expected signaling conflict");
+      }
+    },
+  );
+  it("ignores call conflict codes outside signaling or status409", async () => {
+    const code = "OFFICE_CALL_SESSION_REPLACED";
+    for (const [method, endpoint] of [["GET", "state"], ["POST", "call-session"], ["POST", "signals"], ["GET", "signal"]]) {
+      await expect(make(fakeFetch(() => json({ code }, 409))).interface(identity, method, endpoint))
+        .rejects.toMatchObject({ status: 409, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+    }
+    await expect(make(fakeFetch(() => json({ code }, 403))).interface(identity, "GET", "signals"))
+      .rejects.toMatchObject({ status: 403, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+    await expect(make(fakeFetch(() => json({ code }, 409))).asset(identity, "app.js"))
+      .rejects.toMatchObject({ status: 409, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+  });
+  it("bounds conflict bodies and rejects unknown codes, invalid JSON, MIME and UTF8", async () => {
+    const bodies: [BodyInit, Record<string, string>][] = [
+      [JSON.stringify({ code: "OFFICE_SESSION_REQUIRED" }), { "Content-Type": "application/json" }],
+      [JSON.stringify({ code: "OFFICE_ACCESS_DENIED" }), { "Content-Type": "application/json" }],
+      [JSON.stringify({ code: ["OFFICE_CALL_SESSION_REPLACED"] }), { "Content-Type": "application/json" }],
+      [JSON.stringify({ code: "OFFICE_CALL_SESSION_REPLACED" }), { "Content-Type": "text/plain" }],
+      ["{", { "Content-Type": "application/json" }],
+      [new Uint8Array([0xff]), { "Content-Type": "application/json" }],
+      [JSON.stringify({ code: "OFFICE_CALL_SESSION_REPLACED", padding: "x".repeat(4096) }), { "Content-Type": "application/json" }],
+    ];
+    for (const [body, headers] of bodies) {
+      await expect(make(fakeFetch(() => new Response(body, { status: 409, headers }))).interface(identity, "GET", "signals"))
+        .rejects.toMatchObject({ status: 409, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+    }
+  });
+  it("cancels a stalled409 error body at the existing transport deadline", async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel }), { status: 409, headers: { "Content-Type": "application/json" } });
+    const failed = expect(make(fakeFetch(() => response)).interface(identity, "GET", "signals")).rejects.toMatchObject({ status: 503 });
+    await vi.advanceTimersByTimeAsync(OFFICE_GATEWAY_LIMITS.timeoutMs);
+    await failed; expect(cancel).toHaveBeenCalledTimes(1);
+  });
+  it("cancels rejected conflict bodies for MIME, announced size and actual overflow", async () => {
+    for (const mode of ["mime", "announced", "streamed"]) {
+      const cancel = vi.fn();
+      const headers = { "Content-Type": mode === "mime" ? "text/plain" : "application/json",
+        ...(mode === "announced" ? { "Content-Length": "5000" } : {}) };
+      const response = new Response(new ReadableStream<Uint8Array>({ start(c) { c.enqueue(new Uint8Array(5000)); }, cancel }), { status: 409, headers });
+      await expect(make(fakeFetch(() => response)).interface(identity, "GET", "signals"))
+        .rejects.toMatchObject({ status: 409, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+      expect(cancel).toHaveBeenCalledTimes(1);
+    }
+  });
   it("sanitizes network, malformed JSON and invalid UTF8 responses", async () => {
     const failing = make(fakeFetch(() => { throw new Error("PRIVATE_GATEWAY_KEY"); }));
     await expect(failing.bootstrap(identity)).rejects.toMatchObject({ status: 503, message: "O escritório está temporariamente indisponível." });

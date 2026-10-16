@@ -4,12 +4,15 @@
 const coreModule = require('./vendor/interface-api.cjs');
 const {isDeepStrictEqual} = require('node:util');
 const {isOfficeMap} = require('./map.cjs');
+const {normalizeOfficeCallConflict, officeCallConflictMessage} = require('./call-conflicts.cjs');
 
 class OfficeRuntimeError extends Error {
-  constructor(status, message) {
-    super(message);
+  constructor(status, message, code) {
+    const safeCode = normalizeOfficeCallConflict(status, code);
+    super(officeCallConflictMessage(safeCode) || message);
     this.name = 'OfficeRuntimeError';
     this.status = status;
+    if (safeCode) this.code = safeCode;
   }
 }
 
@@ -173,7 +176,7 @@ function createCrmInterfaceService({store, approvedMap, now = () => Date.now()} 
   function normalize(error) {
     if (error instanceof OfficeRuntimeError) return error;
     if ([400, 403, 404, 405, 409].includes(error?.status) && typeof error.message === 'string' && error.message.length <= 500) {
-      return new OfficeRuntimeError(error.status, error.message);
+      return new OfficeRuntimeError(error.status, error.message, error.code);
     }
     if (error?.status === 503) return unavailable();
     return new OfficeRuntimeError(500, 'Não foi possível concluir esta operação.');

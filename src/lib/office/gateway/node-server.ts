@@ -4,6 +4,7 @@ import { createOfficeGatewayProtocol, OfficeGatewayError, OFFICE_GATEWAY_PATHS }
 import { OFFICE_GATEWAY_LIMITS, OfficeGatewayContractError, parseRuntimeOperation } from "./contracts";
 import { createOfficeStoreCallback, OfficeStoreCallbackError } from "./store-callback";
 import { createCrmInterfaceService, OfficeRuntimeError } from "../runtime/service.cjs";
+import { normalizeOfficeCallConflict, officeCallConflictMessage } from "../runtime/call-conflicts.cjs";
 import { createOfficeAssetLoader, OfficeAssetError } from "../runtime/assets";
 import { createOfficeAvatarComposer, OfficeAvatarError } from "../runtime/avatar-composition";
 
@@ -26,13 +27,13 @@ function errorReply(error: unknown): Reply {
       error instanceof OfficeAssetError || error instanceof OfficeAvatarError) {
     status = error.status; code = error.code;
   } else if (error instanceof OfficeRuntimeError && [400, 403, 404, 405, 409, 413, 429, 503].includes(error.status)) {
-    status = error.status; code = "OFFICE_OPERATION_REJECTED";
+    status = error.status; code = normalizeOfficeCallConflict(status, error.code) || "OFFICE_OPERATION_REJECTED";
   }
   const messages: Record<number, string> = { 400: "Solicitação inválida.", 401: "Gateway não autorizado.",
     403: "Ação não permitida.", 404: "Recurso não encontrado.", 405: "Método não permitido.",
     409: "O escritório foi atualizado. Recarregue e tente novamente.", 413: "Conteúdo excede o limite.",
     429: "Escritório ocupado. Tente novamente.", 502: "Não foi possível carregar o recurso.", 503: "O escritório está indisponível." };
-  return json(status, { error: messages[status] || "Não foi possível executar a operação.", code });
+  return json(status, { error: officeCallConflictMessage(normalizeOfficeCallConflict(status, code)) || messages[status] || "Não foi possível executar a operação.", code });
 }
 async function readBody(request: IncomingMessage): Promise<Buffer> {
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers["content-type"] || "") || request.headers["content-encoding"]) throw new OfficeGatewayContractError();

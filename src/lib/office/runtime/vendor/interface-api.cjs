@@ -7,6 +7,7 @@ const {normalizeZone}=require('./profile-details-core.js');
 const {createSpatialPresence}=require('./spatial-presence-core.cjs');
 const {readClientState,patchClientState}=require('../client-state.cjs');
 const {isOfficeMap}=require('../map.cjs');
+const {normalizeOfficeCallConflict,officeCallConflictMessage}=require('../call-conflicts.cjs');
 
 function createInterfaceService({snapshot = null, ephemeral = null, revision = 0, approvedMap, now = () => Date.now()}) {
   const id = () => crypto.randomUUID();
@@ -20,7 +21,7 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
   if (!Object.hasOwn(state,'officeMap') && approvedMap !== undefined) {state.officeMap=structuredClone(approvedMap);dirty=true;}
   const callSessions = new Map(structuredClone(ephemeral?.callSessions || []));
   const spatialPresence = createSpatialPresence({now, initialState:structuredClone(ephemeral?.spatial || null)});
-  const fail = (status, message) => {const error = new Error(message); error.status = status; throw error;};
+  const fail = (status, message, code) => {const safeCode=normalizeOfficeCallConflict(status,code);const error = new Error(officeCallConflictMessage(safeCode)||message); error.status = status;if(safeCode)error.code=safeCode; throw error;};
   const text = (value, limit, required = true) => {
     if(typeof value !== 'string' || value.length > limit || (required && !value.trim())) fail(400,'Confira os campos informados.');
     return value.trim();
@@ -182,12 +183,12 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
     if(method==='GET' && pathname==='/signals') {
       if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');
       const m=state.meetings.find(m=>m.id===query.meeting&&!m.ended);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');
-      const call=callSessions.get(m.id+':'+u.id);if(!call||call.id!==query.call)fail(409,'A chamada foi reiniciada.');call.lastSeen=now();const roster=Object.fromEntries(m.members.map(uid=>[uid,callSessions.get(m.id+':'+uid)]).filter(([uid,c])=>c&&c.lastSeen>now()-45000&&state.users.some(p=>p.id===uid&&!p.archived&&p.status!=='offline')).map(([uid,c])=>[uid,c.id]));signals=signals.filter(s=>s.time>now()-90000);return {signals:signals.filter(s=>s.meeting===m.id&&s.to===u.id&&s.toCall===call.id&&s.sequence>(Number(query.after)||0)),cursor:signalSequence,members:m.members,roster};
+      const call=callSessions.get(m.id+':'+u.id);if(!call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(call.id!==query.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');call.lastSeen=now();const roster=Object.fromEntries(m.members.map(uid=>[uid,callSessions.get(m.id+':'+uid)]).filter(([uid,c])=>c&&c.lastSeen>now()-45000&&state.users.some(p=>p.id===uid&&!p.archived&&p.status!=='offline')).map(([uid,c])=>[uid,c.id]));signals=signals.filter(s=>s.time>now()-90000);return {signals:signals.filter(s=>s.meeting===m.id&&s.to===u.id&&s.toCall===call.id&&s.sequence>(Number(query.after)||0)),cursor:signalSequence,members:m.members,roster};
     }
     if(method==='POST' && pathname==='/signal') {
       if(u.status==='offline'||!state.users.some(p=>p.id===body.to&&!p.archived&&p.status!=='offline'))fail(403,'Sinalização exige participantes conectados ao escritório.');
       const m=state.meetings.find(m=>m.id===body.meeting&&!m.ended);if(!m||!m.members.includes(u.id)||!m.members.includes(body.to)||body.to===u.id)fail(403,'Sinalização permitida somente entre participantes.');
-      const caller=callSessions.get(m.id+':'+u.id),recipient=callSessions.get(m.id+':'+body.to);if(!caller||!recipient||caller.id!==body.call||recipient.id!==body.toCall)fail(409,'A chamada foi reiniciada.');
+      const caller=callSessions.get(m.id+':'+u.id),recipient=callSessions.get(m.id+':'+body.to);if(!caller)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(caller.id!==body.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');if(!recipient||recipient.id!==body.toCall)fail(409,'A chamada foi reiniciada.','OFFICE_SIGNAL_RECIPIENT_STALE');
       const signal=body.signal;if(!signal||!['offer','answer','candidate','renegotiate'].includes(signal.type))fail(400,'Sinal inválido.');
       let safe;
       if(signal.type==='renegotiate')safe={type:'renegotiate'};

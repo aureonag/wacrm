@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {createOfficePresentation} from './office-presentation.mjs';
 import {createOfficeMediaSources} from './office-media-sources.mjs';
+import {createOfficeCallSession} from './office-call-session.mjs';
 import {OFFICE_DARK_THEME_CSS} from './office-dark-theme.mjs';
 
 export const CLIENT_STATE_LIMITS=Object.freeze({
@@ -283,6 +284,7 @@ export function adaptOfficeCrm(file,source){
   text=replace(file,text,"  async function api(endpoint,body,query,signal) {","  async function api(endpoint,body,query,signal) {\n    if(!window.aureonOfficeBootstrap.active)throw Object.assign(Error('Escritório indisponível.'),{status:window.aureonOfficeBootstrap.sessionStatus||503});if(endpoint==='session')throw Object.assign(Error('Cadastro local indisponível.'),{status:403});");
   text=replace(file,text,"    let result;try{result=await response.json()}","    if(response.status===401||response.status===403&&(await response.clone().json().catch(()=>({}))).code==='OFFICE_ACCESS_DENIED'){state.data=null;window.aureonOfficeBootstrap.endSession(response.status);throw Object.assign(Error('Sessão do escritório encerrada.'),{status:response.status});}\n    let result;try{result=await response.json()}");
   text=replace(file,text,"throw error;}return result;","throw error;}if(endpoint==='state'&&result?.user?.id!==window.aureonOfficeBootstrap.identity.user.id){state.data=null;window.aureonOfficeBootstrap.endSession(403);throw Object.assign(Error('O usuário do escritório mudou.'),{status:403});}return result;");
+  text=replace(file,text,'error.status=response.status;throw error;',"error.status=response.status;if(response.status===409&&(endpoint==='signals'&&body===undefined||endpoint==='signal'&&body!==undefined)&&['OFFICE_CALL_SESSION_REPLACED','OFFICE_CALL_SESSION_MISSING','OFFICE_SIGNAL_RECIPIENT_STALE'].includes(result.code))error.code=result.code;throw error;");
   const start=text.indexOf('  async function init(){'),end=text.indexOf('\n  init();',start),old=text.slice(start,end);
   if(start<0||end<0||hash(old)!=='be5bd550ea4643147f8682e448268055ccd0455e73bb6f28ea82d7564f8afd51')guard(file,'original init changed');
   const init="  async function init(){try{if(!window.aureonOfficeBootstrap.active)throw Object.assign(Error('Escritório indisponível.'),{status:window.aureonOfficeBootstrap.sessionStatus||503});await refresh(true);loadDrafts();await followMessageLink();await presenceSync.heartbeat();}catch(error){if(error.status===401||error.code==='OFFICE_ACCESS_DENIED')window.aureonOfficeBootstrap.endSession(error.status);else toast(error.message);throw error;}setInterval(async()=>{if(window.aureonOfficeBootstrap.active&&state.data){try{await presenceSync.heartbeat();await refresh();}catch{}}},5000);}";
@@ -322,17 +324,65 @@ export function adaptOfficeCrm(file,source){
   changes.push({rule:'readonly-map-restore-after-migrations',occurrences:1},{rule:'scoped-personal-sounds-db',occurrences:1});
  }
  if(file==='replica-calls.js'){
-  text=replace(file,text,"const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;","const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;\n const mediaSources=("+createOfficeMediaSources.toString()+")({window,getState:()=>state,getMeeting:meeting,getPeer:id=>peers.get(id),getRoomId:()=>roomId,getCallId:()=>callId,person});\n function clearDepartedMedia(){const m=meeting(),self=state.data?.user?.id;for(const tile of document.querySelectorAll('#replicaMedia .r-screen-tile,#replicaMedia .r-video-tile')){const id=tile.dataset.screen||tile.dataset.user;if(!window.aureonOfficeBootstrap.active||!m?.members.includes(id)||id!==self&&(roomId!==m.id||!callId||!peers.has(id))){for(const video of tile.querySelectorAll('video')){video.pause();video.srcObject=null;}tile.remove();}}}");
+  text=replace(file,text,"const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;","const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;\n const callSession=("+createOfficeCallSession.toString()+")({window,document,getContext:()=>({active:window.aureonOfficeBootstrap.active,selfId:state.data?.user?.id,status:state.data?.user?.status,meeting:meeting(),generation,roomId,callId}),disconnect:()=>disconnectSession(),reconnect:()=>tick()});\n const mediaSources=("+createOfficeMediaSources.toString()+")({window,getState:()=>state,getMeeting:()=>callSession.canRun()?meeting():null,getPeer:id=>peers.get(id),getRoomId:()=>roomId,getCallId:()=>callId,person});\n function clearDepartedMedia(){const m=callSession.canRun()?meeting():null,self=state.data?.user?.id;for(const tile of document.querySelectorAll('#replicaMedia .r-screen-tile,#replicaMedia .r-video-tile')){const id=tile.dataset.screen||tile.dataset.user;if(!window.aureonOfficeBootstrap.active||!m?.members.includes(id)||id!==self&&(roomId!==m.id||!callId||!peers.has(id))){for(const video of tile.querySelectorAll('video')){video.pause();video.srcObject=null;}tile.remove();}}}");
   text=replace(file,text,'peer.pc.close();peers.delete(id);','peer.pc.close();peers.delete(id);clearDepartedMedia();mediaSources.publish();');
   text=replace(file,text,'roomId=null;callId=null;signalCursor=0;document.getElementById','roomId=null;callId=null;signalCursor=0;mediaSources.clear();document.getElementById');
-  text=replace(file,text,'function renderMedia(){\n   const m=meeting();if(!m)return;','function renderMedia(){\n   clearDepartedMedia();mediaSources.publish();const m=meeting();if(!m)return;');
-  text=replace(file,text,'if(ticking||!state.data)return;','if(ticking||!state.data||!window.aureonOfficeBootstrap.active)return;');
-  text=replace(file,text,'if(error.status===403){disconnectSession();}','if(error.status===401||error.status===403){disconnectSession();}');
-  text=replace(file,text,'function disconnectSession(){if(wasJoined){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();}wasJoined=false;closeAll();}','function disconnectSession(){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();testAudio?.getTracks().forEach(track=>track.stop());testAudio=null;testContext?.close().catch(()=>{});testContext=null;wasJoined=false;closeAll();}');
-  text=replace(file,text,'const m=meeting();if(!m){disconnectSession();return;}','const m=meeting();if(!m){if(wasJoined)disconnectSession();return;}');
-  text=replace(file,text,"window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});","window.addEventListener('aureon-interface-state',()=>{clearDepartedMedia();mediaSources.publish();if(!meeting()&&wasJoined)disconnectSession();tick()});");
-  text=replace(file,text,'window.aureonReplicaCalls={broadcastReaction,toggleHand};',"window.addEventListener('aureon-office-session-ended',disconnectSession);window.aureonReplicaCalls={broadcastReaction,toggleHand,disconnectSession,media:mediaSources};");
-  changes.push({rule:'disconnect-media-on-expired-crm-session',occurrences:1},{rule:'preserve-local-capture-outside-active-calls',occurrences:2},{rule:'authorized-readonly-call-media-sources',occurrences:1},{rule:'clear-departed-call-media-cards',occurrences:1});
+  text=replace(file,text,'function renderMedia(){\n   const m=meeting();if(!m)return;','function renderMedia(){\n   clearDepartedMedia();mediaSources.publish();if(!callSession.canRun()){callSession.render();return;}const m=meeting();if(!m)return;');
+  text=replace(file,text,'function disconnectSession(){if(wasJoined){window.aureonStopMicrophone?.();window.aureonStopCamera?.();window.aureonStopScreen?.();}wasJoined=false;closeAll();}',"function disconnectSession(){ticking=false;for(const name of ['aureonStopMicrophone','aureonStopCamera','aureonStopScreen'])try{window[name]?.()?.catch?.(()=>{});}catch{}try{for(const track of testAudio?.getTracks()||[])try{track.stop();}catch{}}catch{}testAudio=null;try{testContext?.close()?.catch?.(()=>{});}catch{}testContext=null;wasJoined=false;closeAll();}");
+  text=replace(file,text,"async function send(to,signal){const peer=peers.get(to);if(roomId&&callId&&peer)await api('signal',{meeting:roomId,call:callId,to,toCall:peer.callId,signal});}","async function send(to,signal,expectedPeer=peers.get(to),token=callSession.capture()){const peer=peers.get(to);if(!peer||peer!==expectedPeer||!callSession.isCurrent(token))return;try{await api('signal',{meeting:token.roomId,call:token.callId,to,toCall:peer.callId,signal});}catch(error){if(!callSession.isCurrent(token)||peers.get(to)!==peer)return;if(callSession.handle(error,token))return;if(error.status===409&&error.code==='OFFICE_SIGNAL_RECIPIENT_STALE'){closePeer(to);return;}throw error;}}");
+  text=replace(file,text,'async function offer(peer){const pc=peer.pc;if(peer.makingOffer',"async function offer(peer){const token=callSession.capture(),pc=peer.pc;if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;if(peer.makingOffer");
+  text=replace(file,text,"await send(peer.id,{type:'offer',sdp:pc.localDescription.sdp})","await send(peer.id,{type:'offer',sdp:pc.localDescription.sdp},peer,token)");
+  text=replace(file,text,'catch(e){callError(e)}finally{peer.makingOffer=false}}','catch(e){if(callSession.isCurrent(token)&&peers.get(peer.id)===peer)callError(e)}finally{peer.makingOffer=false}}');
+  text=replace(file,text,"send(id,{type:'candidate',candidate:e.candidate.toJSON()})","send(id,{type:'candidate',candidate:e.candidate.toJSON()},peer)");
+  text=replace(file,text,"send(peer.id,{type:'renegotiate'})","send(peer.id,{type:'renegotiate'},peer)");
+  text=replace(file,text,'const tracks=streams();for(let i=0;i<tracks.length;i++){const sender=',"const tracks=streams();for(let i=0;i<tracks.length;i++){if(!callSession.canRun()||peers.get(peer.id)!==peer)return;const sender=");
+  text=replace(file,text,'async function receive(event){\n   if(!meeting()',"async function receive(event){\n   const token=callSession.capture();if(!callSession.isCurrent(token))return;\n   if(!meeting()");
+  text=replace(file,text,'await pc.setRemoteDescription({type:signal.type,sdp:signal.sdp});','await pc.setRemoteDescription({type:signal.type,sdp:signal.sdp});if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;');
+  text=replace(file,text,"await send(peer.id,{type:'answer',sdp:pc.localDescription.sdp});","await send(peer.id,{type:'answer',sdp:pc.localDescription.sdp},peer,token);");
+  text=replace(file,text,'async function testTransmission(){\n   if(testAudio)',"async function testTransmission(){\n   if(!callSession.canRun())return;\n   if(testAudio)");
+  text=replace(file,text,'testAudio=destination.stream;testContext.resume();oscillator.start();','testAudio=destination.stream;const transmissionAudio=testAudio,transmissionContext=testContext;testContext.resume();oscillator.start();');
+  text=replace(file,text,'setTimeout(()=>{oscillator.stop();testAudio?.getTracks().forEach(t=>t.stop());testAudio=null;testContext?.close();testContext=null;for(const peer of peers.values())updateTracks(peer);},8000);','setTimeout(()=>{const current=testAudio===transmissionAudio&&testContext===transmissionContext;try{oscillator.stop();}catch{}for(const track of transmissionAudio.getTracks())try{track.stop();}catch{}try{transmissionContext.close()?.catch?.(()=>{});}catch{}if(testAudio===transmissionAudio)testAudio=null;if(testContext===transmissionContext)testContext=null;if(current&&callSession.canRun())for(const peer of peers.values())updateTracks(peer);},8000);');
+  const oldTick=` async function tick(){
+   if(ticking||!state.data)return;ticking=true;
+   try{
+     const m=meeting();if(!m){disconnectSession();return;}
+     wasJoined=true;let epoch=generation;if(roomId!==m.id){closeAll();roomId=m.id;epoch=generation;const created=await api('call-session',{meeting:roomId});if(generation!==epoch)return;if(meeting()?.id!==m.id){disconnectSession();return;}callId=created.callId;}
+     const data=await api('signals',undefined,{meeting:roomId,call:callId,after:signalCursor});
+     if(generation!==epoch)return;if(meeting()?.id!==m.id){disconnectSession();return;}
+     m.members=data.members;const roster=data.roster||{};
+     for(const id of peers.keys())if(!m.members.includes(id)||peers.get(id).callId!==roster[id])closePeer(id);
+     for(const id of m.members)if(id!==state.data.user.id&&roster[id]&&!peers.has(id))createPeer(id,roster[id]);
+     for(const peer of peers.values())await updateTracks(peer);
+     if(generation!==epoch)return;
+     for(const event of data.signals)try{await receive(event);}catch(error){callError(error);}
+     signalCursor=data.cursor;await diagnostics();if(generation===epoch)renderMedia();
+   }catch(error){if(error.status===403){disconnectSession();}else if(error.status===409){closeAll();}else callError(error);}finally{ticking=false;}
+ }`;
+  const newTick=` async function tick(){
+   if(!callSession.canRun()){if(callSession.isPaused()&&streams().some(Boolean))disconnectSession();callSession.render();return;}
+   if(ticking||!state.data||!window.aureonOfficeBootstrap.active)return;
+   const run={};ticking=run;let epoch=generation,token=null;
+   try{
+     const m=meeting();if(!m){if(wasJoined)disconnectSession();return;}
+     wasJoined=true;if(roomId!==m.id){closeAll();roomId=m.id;epoch=generation;const created=await api('call-session',{meeting:roomId});if(generation!==epoch||!callSession.canRun())return;if(meeting()?.id!==m.id){disconnectSession();return;}callId=created.callId;}
+     token=callSession.capture();if(!callSession.isCurrent(token))return;
+     const data=await api('signals',undefined,{meeting:roomId,call:callId,after:signalCursor});
+     if(generation!==epoch||!callSession.isCurrent(token))return;
+     m.members=data.members;const roster=data.roster||{};
+     for(const id of peers.keys())if(!m.members.includes(id)||peers.get(id).callId!==roster[id])closePeer(id);
+     for(const id of m.members)if(id!==state.data.user.id&&roster[id]&&!peers.has(id))createPeer(id,roster[id]);
+     for(const peer of peers.values())await updateTracks(peer);
+     if(generation!==epoch||!callSession.isCurrent(token))return;
+     for(const event of data.signals)try{await receive(event);}catch(error){callError(error);}
+     if(generation!==epoch||!callSession.isCurrent(token))return;
+     signalCursor=data.cursor;await diagnostics();if(generation===epoch&&callSession.canRun())renderMedia();
+   }catch(error){if(generation!==epoch)return;if(callSession.handle(error,token))return;if(error.status===401||error.status===403){disconnectSession();}else if(error.status===409){closeAll();}else callError(error);}finally{if(ticking===run)ticking=false;}
+ }`;
+  text=replace(file,text,oldTick,newTick);
+  text=replace(file,text,"window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});","window.addEventListener('aureon-interface-state',()=>{clearDepartedMedia();mediaSources.publish();callSession.render();if(!meeting()&&wasJoined)disconnectSession();tick()});");
+  text=replace(file,text,"window.addEventListener('pagehide',closeAll);","window.addEventListener('pagehide',()=>{callSession.dispose();disconnectSession();});");
+  text=replace(file,text,'window.aureonReplicaCalls={broadcastReaction,toggleHand};',"window.addEventListener('aureon-office-session-ended',()=>{callSession.dispose();disconnectSession();});window.aureonReplicaCalls={broadcastReaction,toggleHand,disconnectSession,media:mediaSources};");
+  changes.push({rule:'disconnect-media-on-expired-crm-session',occurrences:1},{rule:'preserve-local-capture-outside-active-calls',occurrences:2},{rule:'authorized-readonly-call-media-sources',occurrences:1},{rule:'clear-departed-call-media-cards',occurrences:1},{rule:'pause-replaced-own-call-until-explicit-resume',occurrences:1});
  }
  if(file==='replica-spotify.js'){
   text=replace(file,text,'const U=window.aureonReplicaUI;if(!U)return;',"const U=window.aureonReplicaUI;if(!U)return;window.aureonSpotify={open:()=>U.toast('Spotify indisponível no piloto.'),render:()=>{}};return;");

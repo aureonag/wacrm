@@ -12,7 +12,7 @@ export const OFFICE_GATEWAY_BUILD_FILES = Object.freeze([
   "src/lib/office/gateway/contracts.ts", "src/lib/office/gateway/protocol.ts",
   "src/lib/office/gateway/store-callback.ts", "src/lib/office/gateway/node-server.ts",
   "src/lib/office/runtime/assets.ts", "src/lib/office/runtime/avatar-composition.ts",
-  "src/lib/office/runtime/service.cjs", "src/lib/office/runtime/map.cjs", "src/lib/office/runtime/client-state.cjs",
+  "src/lib/office/runtime/service.cjs", "src/lib/office/runtime/call-conflicts.cjs", "src/lib/office/runtime/map.cjs", "src/lib/office/runtime/client-state.cjs",
   "src/lib/office/runtime/vendor/interface-api.cjs", "src/lib/office/runtime/vendor/spotify-links.js",
   "src/lib/office/runtime/vendor/avatar-portrait.cjs", "src/lib/office/runtime/vendor/profile-details-core.js",
   "src/lib/office/runtime/vendor/spatial-presence-core.cjs", "src/lib/office/runtime/vendor/spatial-room-core.js",

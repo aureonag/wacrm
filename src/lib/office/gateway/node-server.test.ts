@@ -8,6 +8,8 @@ import type { OfficeContext } from "../access";
 import { createOfficeGatewayServer } from "./node-server";
 import { AUREON_OFFICE_ACCOUNT_ID as ACCOUNT, OFFICE_GATEWAY_LIMITS, parseRuntimeOperation, parseStoreOperation } from "./contracts";
 import { createOfficeGatewayProtocol } from "./protocol";
+import { createOfficeGatewayClient } from "./client";
+import { officeError } from "../http";
 
 const KEY = Buffer.alloc(32, 71); // Fictional test key, never configuration.
 const USER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", USER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -70,6 +72,38 @@ async function fixture(options: { enabled?: string; maxInFlight?: number; avatar
 }
 
 describe("dedicated office gateway: two fictional loopback HTTP servers", () => {
+  it("carries distinct call conflicts through signed HTTP and the CRM response", async () => {
+    const h = await fixture();
+    const client = createOfficeGatewayClient({ url: h.origin, key: KEY, allowInsecureLocalhostForTests: true });
+    await client.bootstrap(identity()); await client.bootstrap(identity(USER_B));
+    const created = await client.interface(identity(), "POST", "meetings", { name: "Two-tab conflict fixture" });
+    const meeting = (created.meeting as { id: string }).id;
+    await client.interface(identity(USER_B), "POST", "meeting-action", { id: meeting, action: "join" });
+    async function expectCode(operation: Promise<unknown>, code: string) {
+      try { await operation; } catch (error) {
+        const response = officeError(error); expect(response.status).toBe(409);
+        const body = await response.json(); expect(body.code).toBe(code);
+        expect(body.error).not.toMatch(/fixture|key|snapshot|SQL/); return;
+      }
+      throw Error("Expected a classified call conflict");
+    }
+    await expectCode(client.interface(identity(), "GET", "signals", undefined, { meeting, call: "missing" }), "OFFICE_CALL_SESSION_MISSING");
+    const old = await client.interface(identity(), "POST", "call-session", { meeting });
+    const current = await client.interface(identity(), "POST", "call-session", { meeting });
+    const remote = await client.interface(identity(USER_B), "POST", "call-session", { meeting });
+    await expectCode(client.interface(identity(), "GET", "signals", undefined, { meeting, call: old.callId }), "OFFICE_CALL_SESSION_REPLACED");
+    await expectCode(client.interface(identity(), "POST", "signal", { meeting, call: old.callId, to: USER_B, toCall: "old-recipient", signal: { type: "renegotiate" } }), "OFFICE_CALL_SESSION_REPLACED");
+    await expectCode(client.interface(identity(), "POST", "signal", { meeting, call: current.callId, to: USER_B, toCall: "old-recipient", signal: { type: "renegotiate" } }), "OFFICE_SIGNAL_RECIPIENT_STALE");
+    expect(await client.interface(identity(), "POST", "signal", { meeting, call: current.callId, to: USER_B, toCall: remote.callId, signal: { type: "renegotiate" } })).toEqual({ ok: true });
+    const denied = client.interface(identity(), "POST", "signal", { meeting, call: old.callId, to: USER_A, toCall: "invalid", signal: { type: "renegotiate" } });
+    await expect(denied).rejects.toMatchObject({ status: 403, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+    // A CRM profile update makes this signals read durable. A lost CAS must stay
+    // a generic conflict; the client must never label it as another active tab.
+    const renamed = { ...identity(), user: { ...identity().user, name: "Updated fixture profile" } };
+    h.conflict();
+    await expect(client.interface(renamed, "GET", "signals", undefined, { meeting, call: current.callId }))
+      .rejects.toMatchObject({ status: 409, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+  });
   it("bootstraps stable CRM actors and persists chat through the authenticated callback, never exposing a snapshot", async () => {
     const h = await fixture();
     const boot = await h.send({ operation: "bootstrap", identity: identity() }); expect(boot.status).toBe(200);

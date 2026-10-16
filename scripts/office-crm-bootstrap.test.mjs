@@ -308,7 +308,7 @@ test('copied app restores exact objects, directions and constructions after migr
  assert.equal(context.editor(true),false);
  assert.equal(context.soundDb().name,namespace+'personal-sounds-v1');
 });
-test('call disconnect stops captures even before wasJoined, and 401 is handled alongside 403',()=>{
+test('incomplete call sources fail closed instead of receiving partial session and media adapters',()=>{
  const source=String.raw`(()=>{let wasJoined=false,generation=0,roomId=null,callId=null,signalCursor=0;const peers=new Map(),state={data:null},person=()=>({name:'Pessoa'});
  const meeting=()=>state.data?.user.status==='offline'?null:window.aureonReplicaMeetings?.active();let testAudio=null,testContext=null;
  testAudio={getTracks:()=>[{stop:()=>globalThis.trackStopped++}]};testContext={close:()=>Promise.resolve()};
@@ -321,17 +321,24 @@ async function tick(){if(ticking||!state.data)return;try{const m=meeting();if(!m
 window.addEventListener('aureon-interface-state',()=>{if(!meeting())disconnectSession();tick()});
 function broadcastReaction(){}function toggleHand(){}
 window.aureonReplicaCalls={broadcastReaction,toggleHand};})();`;
- const stopped=[],window={aureonOfficeBootstrap:{active:true},aureonStopMicrophone:()=>stopped.push('mic'),aureonStopCamera:()=>stopped.push('camera'),aureonStopScreen:()=>stopped.push('screen'),addEventListener(){}};
- const output=adaptOfficeCrm('replica-calls.js',source).text;
- const document={querySelectorAll:()=>[],getElementById:()=>null};
- const context=vm.createContext({window,document,closed:0,trackStopped:0});new vm.Script(output).runInContext(context);
- window.aureonReplicaCalls.disconnectSession();
- assert.deepEqual(stopped,['mic','camera','screen']);assert.equal(context.closed,1);assert.equal(context.trackStopped,1);
- assert.ok(output.includes('error.status===401||error.status===403'));
- assert.equal(typeof window.aureonReplicaCalls.media.getSnapshot,'function');
- assert.equal(typeof window.aureonReplicaCalls.media.subscribe,'function');
- assert.ok(output.includes('clearDepartedMedia();mediaSources.publish();'));
+  assert.throws(()=>adaptOfficeCrm('replica-calls.js',source),/expected 1 anchor/);
  assert.throws(()=>adaptOfficeCrm('replica-calls.js',source.replace('function renderMedia(){','function differentRender(){')),/expected 1 anchor/);
+});
+
+test('copied UI preserves only the three 409 call codes on GET signals and POST signal',async()=>{
+  const codes=['OFFICE_CALL_SESSION_REPLACED','OFFICE_CALL_SESSION_MISSING','OFFICE_SIGNAL_RECIPIENT_STALE'];
+  const cases=codes.flatMap(code=>[{status:409,endpoint:'signals',code,keep:true},{status:409,endpoint:'signal',body:{},code,keep:true}]);
+  cases.push({status:409,endpoint:'messages',body:{},code:codes[0]}, {status:409,endpoint:'call-session',body:{},code:codes[0]},
+    {status:409,endpoint:'signals',body:{},code:codes[0]}, {status:409,endpoint:'signal',code:codes[0]},
+    {status:409,endpoint:'signals',code:'PRIVATE_ARBITRARY_CODE'}, {status:403,endpoint:'signals',code:codes[0]}, {status:401,endpoint:'signals',code:codes[0]});
+  for(const item of cases){
+    let next=response(200,{user:{id:USER}});const ended=[];
+    const boot={active:true,identity,headers:()=>({}),endSession:status=>{boot.active=false;ended.push(status);}},window={aureonOfficeBootstrap:boot};
+    new vm.Script(adaptOfficeCrm('replica-ui.js',uiFixture()).text).runInNewContext({window,fetch:async()=>next,URLSearchParams,setInterval:()=>0});
+    await window.aureonReplicaUI.ready;next=response(item.status,{code:item.code,error:'Controlled fixture error'});
+    await assert.rejects(window.aureonReplicaUI.api(item.endpoint,item.body),error=>error.status===item.status&&error.code===(item.keep?item.code:undefined));
+    assert.deepEqual(ended,item.status===401?[401]:[]);
+  }
 });
 
 test('business 403 stays an operation error; only the explicit access-denied code ends the whole session',async()=>{

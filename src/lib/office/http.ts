@@ -5,6 +5,7 @@ import type { OfficeContext } from "@/lib/office/access";
 import { OfficeConfigurationError } from "@/lib/office/access";
 import { OfficeGatewayClientError } from "@/lib/office/gateway/client";
 import { OfficeRuntimeError } from "@/lib/office/runtime/service.cjs";
+import { normalizeOfficeCallConflict, officeCallConflictMessage } from "@/lib/office/runtime/call-conflicts.cjs";
 
 export const OFFICE_PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -26,7 +27,9 @@ export function officeError(error: unknown) {
   if (error instanceof OfficeConfigurationError) return officeJson({ error: "O escritório está em preparação." }, 503);
   if (error instanceof OfficeGatewayClientError) return officeJson({ error: error.message, code: error.code }, error.status);
   if (error instanceof OfficeRuntimeError || error instanceof OfficeHttpError) {
-    return officeJson({ error: error.message, ...(error instanceof OfficeHttpError && error.code ? { code: error.code } : {}) }, error.status);
+    const callCode = error instanceof OfficeRuntimeError ? normalizeOfficeCallConflict(error.status, error.code) : undefined;
+    return officeJson({ error: officeCallConflictMessage(callCode) || error.message,
+      ...(callCode ? { code: callCode } : error instanceof OfficeHttpError && error.code ? { code: error.code } : {}) }, error.status);
   }
   // Do not log database responses, cookies, message contents or request bodies.
   return officeJson({ error: "Não foi possível carregar o escritório." }, 500);

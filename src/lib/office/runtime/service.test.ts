@@ -10,6 +10,7 @@ import {
   type OfficeRuntimeStore,
   type OfficeSnapshot,
 } from "./service.cjs";
+import {normalizeOfficeCallConflict, officeCallConflictMessage} from "./call-conflicts.cjs";
 
 const ACCOUNT_A = "11111111-1111-4111-8111-111111111111";
 const ACCOUNT_B = "22222222-2222-4222-8222-222222222222";
@@ -67,6 +68,27 @@ async function startMeeting(service: ReturnType<typeof createCrmInterfaceService
 }
 
 describe("CRM office runtime", () => {
+  it("keeps public call conflict codes allowlisted to 409 and replaces unsafe messages", () => {
+    const codes = ["OFFICE_CALL_SESSION_REPLACED", "OFFICE_CALL_SESSION_MISSING", "OFFICE_SIGNAL_RECIPIENT_STALE"];
+    for (const code of codes) {
+      expect(normalizeOfficeCallConflict(409, code)).toBe(code);
+      const error = new OfficeRuntimeError(409, "PRIVATE_TOKEN_OR_SQL", code);
+      expect(error.code).toBe(code);
+      expect(error.message).toBe(officeCallConflictMessage(code));
+      expect(error.message).not.toContain("PRIVATE_TOKEN_OR_SQL");
+      for (const status of [400, 401, 403, 404, 429, 500, 503, "409", undefined]) {
+        expect(normalizeOfficeCallConflict(status, code)).toBeUndefined();
+      }
+    }
+    const coercion = {toString() { throw Error("Never coerce untrusted metadata"); }};
+    for (const code of [undefined, null, "OFFICE_ACCESS_DENIED", "OFFICE_CALL_SESSION_REPLACED_PRIVATE", "__proto__", "toString", coercion]) {
+      expect(normalizeOfficeCallConflict(409, code)).toBeUndefined();
+      expect(officeCallConflictMessage(code)).toBeUndefined();
+      expect(new OfficeRuntimeError(409, "Generic conflict", code)).not.toHaveProperty("code");
+    }
+    expect(new OfficeRuntimeError(403, "Denied", codes[0])).not.toHaveProperty("code");
+  });
+
   it("requires a real persistence adapter and never falls back to local files or RAM", () => {
     expect(() => createCrmInterfaceService({ store: undefined as unknown as OfficeRuntimeStore }))
       .toThrow(OfficeRuntimeError);
@@ -222,6 +244,8 @@ describe("CRM office runtime", () => {
     expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
     const loser = results.findIndex(result => result.status === "rejected");
     expect(results[loser]).toMatchObject({ status: "rejected", reason: { status: 409 } });
+    const rejected = results[loser];
+    if (rejected.status === "rejected") expect(rejected.reason).not.toHaveProperty("code");
     expect(store.peek()?.snapshot?.messages).toHaveLength(1);
     store.load.mockImplementation(realLoad);
     await instances[loser].requestAsCrm(identity(), "POST", "/messages", {
@@ -247,7 +271,7 @@ describe("CRM office runtime", () => {
     // An uncertain CAS invalidates transport as well as the durable cache: the
     // adapter may have committed despite its error, so old calls cannot survive.
     await expect(service.requestAsCrm(identity(USER_A), "GET", "/signals", {}, { meeting, call: a.callId }))
-      .rejects.toMatchObject({ status: 409 });
+      .rejects.toMatchObject({ status: 409, code: "OFFICE_CALL_SESSION_MISSING" });
     expect((await service.requestAsCrm(identity(USER_A), "GET", "/spatial-state")).users).toEqual([]);
   });
 
@@ -268,7 +292,79 @@ describe("CRM office runtime", () => {
       .toEqual([expect.objectContaining({ text: "Persistida", author: USER_A })]);
     expect((await restarted.requestAsCrm(identity(USER_A), "GET", "/spatial-state")).users).toEqual([]);
     await expect(restarted.requestAsCrm(identity(USER_A), "GET", "/signals", {}, { meeting, call: call.callId }))
-      .rejects.toMatchObject({ status: 409 });
+      .rejects.toMatchObject({ status: 409, code: "OFFICE_CALL_SESSION_MISSING" });
+  });
+
+  it("classifies the replaced caller before a stale recipient without exposing either current call token", async () => {
+    const service = createCrmInterfaceService({store: memoryStore()});
+    const meeting = await startMeeting(service);
+    const old = await service.requestAsCrm(identity(USER_A), "POST", "/call-session", {meeting});
+    const peer = await service.requestAsCrm(identity(USER_B), "POST", "/call-session", {meeting});
+    const current = await service.requestAsCrm(identity(USER_A), "POST", "/call-session", {meeting});
+    expect(current.callId).not.toBe(old.callId);
+    for (const operation of [
+      service.requestAsCrm(identity(USER_A), "GET", "/signals", {}, {meeting, call: old.callId}),
+      service.requestAsCrm(identity(USER_A), "POST", "/signal", {
+        meeting, call: old.callId, to: USER_B, toCall: "stale-recipient", signal: {type: "renegotiate"},
+      }),
+    ]) {
+      const error = await operation.catch(error => error);
+      expect(error).toMatchObject({status: 409, code: "OFFICE_CALL_SESSION_REPLACED"});
+      expect(error.message).toBe(officeCallConflictMessage(error.code));
+      expect(JSON.stringify(error)).not.toContain(current.callId);
+      expect(JSON.stringify(error)).not.toContain(peer.callId);
+    }
+    const signals = await service.requestAsCrm(identity(USER_A), "GET", "/signals", {}, {meeting, call: current.callId});
+    expect(signals.roster).toMatchObject({[USER_A]: current.callId, [USER_B]: peer.callId});
+  });
+
+  it("distinguishes absent own sessions from absent or replaced peers and keeps the valid caller usable", async () => {
+    const service = createCrmInterfaceService({store: memoryStore()});
+    const meeting = await startMeeting(service);
+    await expect(service.requestAsCrm(identity(USER_A), "GET", "/signals", {}, {meeting, call: "missing-own"}))
+      .rejects.toMatchObject({status: 409, code: "OFFICE_CALL_SESSION_MISSING"});
+    await expect(service.requestAsCrm(identity(USER_A), "POST", "/signal", {
+      meeting, call: "missing-own", to: USER_B, toCall: "also-missing", signal: {type: "renegotiate"},
+    })).rejects.toMatchObject({status: 409, code: "OFFICE_CALL_SESSION_MISSING"});
+    const caller = await service.requestAsCrm(identity(USER_A), "POST", "/call-session", {meeting});
+    await expect(service.requestAsCrm(identity(USER_A), "POST", "/signal", {
+      meeting, call: caller.callId, to: USER_B, toCall: "missing-peer", signal: {type: "renegotiate"},
+    })).rejects.toMatchObject({status: 409, code: "OFFICE_SIGNAL_RECIPIENT_STALE"});
+    const oldPeer = await service.requestAsCrm(identity(USER_B), "POST", "/call-session", {meeting});
+    const peer = await service.requestAsCrm(identity(USER_B), "POST", "/call-session", {meeting});
+    await expect(service.requestAsCrm(identity(USER_A), "POST", "/signal", {
+      meeting, call: caller.callId, to: USER_B, toCall: oldPeer.callId, signal: {type: "renegotiate"},
+    })).rejects.toMatchObject({status: 409, code: "OFFICE_SIGNAL_RECIPIENT_STALE"});
+    await expect(service.requestAsCrm(identity(USER_A), "POST", "/signal", {
+      meeting, call: caller.callId, to: USER_B, toCall: peer.callId, signal: {type: "renegotiate"},
+    })).resolves.toMatchObject({ok: true});
+    const incoming = await service.requestAsCrm(identity(USER_B), "GET", "/signals", {}, {meeting, call: peer.callId});
+    expect(incoming.signals).toEqual([expect.objectContaining({from: USER_A, to: USER_B})]);
+  });
+
+  it("retains offline and meeting membership denial before call conflict classification", async () => {
+    const service = createCrmInterfaceService({store: memoryStore()});
+    const meeting = await startMeeting(service);
+    const call = await service.requestAsCrm(identity(USER_A), "POST", "/call-session", {meeting});
+    const third = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    const denied = [
+      service.requestAsCrm(identity(third), "GET", "/signals", {}, {meeting, call: "mismatch"}),
+      service.requestAsCrm(identity(third), "POST", "/signal", {
+        meeting, call: "mismatch", to: USER_B, toCall: "mismatch", signal: {type: "renegotiate"},
+      }),
+    ];
+    for (const operation of denied) {
+      const error = await operation.catch(error => error);
+      expect(error.status).toBe(403); expect(error).not.toHaveProperty("code");
+    }
+    await service.requestAsCrm(identity(USER_B), "POST", "/presence", {status: "offline"});
+    const offlinePeer = await service.requestAsCrm(identity(USER_A), "POST", "/signal", {
+      meeting, call: "stale-own", to: USER_B, toCall: "stale-peer", signal: {type: "renegotiate"},
+    }).catch(error => error);
+    expect(offlinePeer.status).toBe(403); expect(offlinePeer).not.toHaveProperty("code");
+    await service.requestAsCrm(identity(USER_A), "POST", "/presence", {status: "offline"});
+    const offlineSelf = await service.requestAsCrm(identity(USER_A), "GET", "/signals", {}, {meeting, call: call.callId}).catch(error => error);
+    expect(offlineSelf.status).toBe(403); expect(offlineSelf).not.toHaveProperty("code");
   });
 
   it("shares leased position and signaling between identities in the same instance with real TTLs", async () => {
@@ -281,9 +377,11 @@ describe("CRM office runtime", () => {
     await service.requestAsCrm(identity(USER_A), "POST", "/spatial-presence", {
       x: 224, y: 368, instanceId: "tab-first-123", expectedVersion: 0, takeControl: true,
     });
-    await expect(service.requestAsCrm(identity(USER_A), "POST", "/spatial-presence", {
+    const spatialConflict = service.requestAsCrm(identity(USER_A), "POST", "/spatial-presence", {
       x: 250, y: 380, instanceId: "tab-second-123", expectedVersion: 1,
-    })).rejects.toMatchObject({ status: 409 });
+    });
+    await expect(spatialConflict).rejects.toMatchObject({ status: 409 });
+    await expect(spatialConflict).rejects.not.toHaveProperty("code");
     await service.requestAsCrm(identity(USER_A), "POST", "/signal", {
       meeting, call: a.callId, to: USER_B, toCall: b.callId,
       signal: { type: "offer", sdp: "fake-sdp-for-state-test" },

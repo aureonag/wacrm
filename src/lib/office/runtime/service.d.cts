@@ -1,4 +1,5 @@
 import type { OfficeContext } from "../access";
+import type { OfficeCallConflictCode } from "./call-conflicts.cjs";
 
 export type OfficeSnapshot = Record<string, unknown>;
 
@@ -27,7 +28,8 @@ export interface CrmInterfaceService {
 
 export class OfficeRuntimeError extends Error {
   readonly status: number;
-  constructor(status: number, message: string);
+  readonly code?: OfficeCallConflictCode;
+  constructor(status: number, message: string, code?: unknown);
 }
 
 /**

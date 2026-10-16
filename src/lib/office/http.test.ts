@@ -30,6 +30,22 @@ describe("office HTTP boundary", () => {
   it("accepts only a same-origin JSON object", async () => {
     expect(await officeBody(post('{"text":"olá"}'))).toEqual({ text: "olá" });
   });
+  it.each(["OFFICE_CALL_SESSION_REPLACED", "OFFICE_CALL_SESSION_MISSING", "OFFICE_SIGNAL_RECIPIENT_STALE"])(
+    "passes safe call conflict %s through either runtime transport", async code => {
+      for (const error of [new OfficeRuntimeError(409, "PRIVATE_REMOTE_TEXT", code), new OfficeGatewayClientError(409, code)]) {
+        const response = officeError(error), body = await response.json();
+        expect(response.status).toBe(409); expect(body.code).toBe(code);
+        expect(body.error).not.toContain("PRIVATE_REMOTE_TEXT");
+        expect(response.headers.get("cache-control")).toBe("private, no-store, max-age=0");
+      }
+    },
+  );
+  it("does not turn a generic conflict or a forbidden operation into a replaced call", async () => {
+    for (const [status, code] of [[409, "UNKNOWN_CALL_CODE"], [403, "OFFICE_CALL_SESSION_REPLACED"]] as const) {
+      const response = officeError(new OfficeRuntimeError(status, "Existing public message", code));
+      expect((await response.json()).code).toBeUndefined();
+    }
+  });
   it.each(["https://outside.test", "null", ""])("rejects Origin %s", async origin => {
     await expect(officeBody(post("{}", { origin }))).rejects.toMatchObject({ status: 403 });
   });
