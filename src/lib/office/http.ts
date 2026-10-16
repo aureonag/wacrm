@@ -32,10 +32,32 @@ export function officeError(error: unknown) {
   return officeJson({ error: "Não foi possível carregar o escritório." }, 500);
 }
 
+function officePublicOrigin(request: Request): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured === undefined) {
+    // A direct development/test server keeps its existing same-origin contract.
+    if (process.env.NODE_ENV !== "production") return new URL(request.url).origin;
+    throw new OfficeConfigurationError();
+  }
+  const value = configured.trim();
+  try {
+    // Accept only an HTTPS origin and an optional trailing slash. Never derive
+    // authorization from client-controlled Host or forwarded proxy headers.
+    if (!/^https:\/\/[^/?#@\\\s]+\/?$/.test(value)) throw new Error();
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) throw new Error();
+    return url.origin;
+  } catch {
+    // A present but invalid setting never falls back, including in development.
+    throw new OfficeConfigurationError();
+  }
+}
+
 export function requireSameOrigin(request: Request) {
-  if (request.headers.get("origin") !== new URL(request.url).origin ||
+  const expectedOrigin = officePublicOrigin(request);
+  if (request.headers.get("origin") !== expectedOrigin ||
       request.headers.get("sec-fetch-site") === "cross-site") {
-    throw new OfficeHttpError(403, "Reabra o escritório pelo CRM.");
+    throw new OfficeHttpError(403, "Reabra o escritório pelo CRM.", "OFFICE_ORIGIN_REJECTED");
   }
 }
 

@@ -124,7 +124,7 @@ export function createOfficeCrmRuntime(env,limits){
   try{const value=Object.getOwnPropertyDescriptor(error,'status')?.value;if(Number.isInteger(value)&&[400,401,403,404,405,409,413,415,429,503].includes(value))status=value;}catch{}
   const safeStage=['bootstrap','scripts','interface'].includes(stage)?stage:'bootstrap';
   const cause=safeStage==='scripts'&&['timeout','load','execution'].includes(scriptFailureCause)?scriptFailureCause:'unknown';
-  try{win.console?.error?.('Aureon office startup failed',{stage:safeStage,cause,status});}catch{}
+  try{win.console?.error?.('Aureon office startup failed '+JSON.stringify({stage:safeStage,cause,status}));}catch{}
  }
  function loadScript(src){
   scriptFailureCause='unknown';

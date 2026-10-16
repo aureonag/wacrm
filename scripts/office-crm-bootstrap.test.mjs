@@ -492,10 +492,12 @@ test('fixture script rejection or synchronous failure clears its deadline withou
 });
 
 function assertSanitizedStartupLog(h,expected){
- assert.equal(h.logs.length,1);assert.equal(h.logs[0].length,2);
- assert.equal(h.logs[0][0],'Aureon office startup failed');
- assert.deepEqual(Object.keys(h.logs[0][1]).sort(),['cause','stage','status']);
- assert.deepEqual(h.logs[0][1],expected);
+ assert.equal(h.logs.length,1);assert.equal(h.logs[0].length,1);
+ const prefix='Aureon office startup failed ',message=h.logs[0][0];
+ assert.equal(typeof message,'string');assert.ok(message.startsWith(prefix));
+ const diagnostic=JSON.parse(message.slice(prefix.length));
+ assert.deepEqual(Object.keys(diagnostic).sort(),['cause','stage','status']);
+ assert.deepEqual(diagnostic,expected);
  assert.ok(!JSON.stringify(h.logs).includes('INJECTED_SECRET'));
  assert.ok(!JSON.stringify(h.logs).includes(ACCOUNT));assert.ok(!JSON.stringify(h.logs).includes(USER));
 }
