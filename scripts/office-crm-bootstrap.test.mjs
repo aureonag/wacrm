@@ -442,6 +442,39 @@ test('auth expiry during the final state rendezvous never emits ready',async()=>
  assert.equal(h.messages.some(message=>message[0].type==='aureon-office-ready'),false);
 });
 
+test('initial map measurements refresh once after reveal and before notifying the parent',async()=>{
+ const doc=tinyDocument(),h=harness(undefined,doc),order=[];
+ h.win.aureonReplicaUI={ready:Promise.resolve(),refresh:async()=>{
+  assert.equal(doc.documentElement.dataset.officeCrm,'loading');
+  order.push('hidden-interface');
+ }};
+ h.win.aureonMapNavigation={refreshViewport(){
+  assert.equal(doc.documentElement.dataset.officeCrm,'ready');
+  assert.equal(h.runtime.active,true);assert.equal(h.runtime.ready,true);
+  assert.equal(h.messages.some(message=>message[0].type==='aureon-office-ready'),false);
+  order.push('visible-map');return false;
+ }};
+ assert.equal(await h.runtime.start([]),true);
+ assert.deepEqual(order,['hidden-interface','visible-map']);
+ assert.equal(h.messages.at(-1)[0].type,'aureon-office-ready');
+ h.win.dispatchEvent({type:'focus'});
+ h.win.dispatchEvent({type:'aureon-interface-state',detail:{}});
+ assert.deepEqual(order,['hidden-interface','visible-map']);
+});
+
+test('failed or revoked startup never refreshes hidden map dimensions',async()=>{
+ for(const status of [401,403,503]){
+  const doc=tinyDocument(),h=harness(()=>response(status,{}),doc);let refreshes=0;
+  h.win.aureonMapNavigation={refreshViewport(){refreshes++;}};
+  assert.equal(await h.runtime.start([]),false);assert.equal(refreshes,0);
+ }
+ const h=harness(undefined,tinyDocument());let refreshes=0;
+ h.win.aureonMapNavigation={refreshViewport(){refreshes++;}};
+ h.win.aureonReplicaUI={refresh:async()=>{h.runtime.endSession(403);}};
+ assert.equal(await h.runtime.start([]),false);assert.equal(refreshes,0);
+ assert.equal(h.messages.some(message=>message[0].type==='aureon-office-ready'),false);
+});
+
 test('legacy localhost CRM identity autostart is removed exactly once and cannot override bootstrap identity',()=>{
  const output=adaptOfficeCrm('app.js',appFixture);
  assert.equal(output.changes.filter(x=>x.rule==='remove-legacy-localhost-crm-identity').length,1);

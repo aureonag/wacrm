@@ -235,7 +235,9 @@ export function createOfficeCrmRuntime(env,limits){
    if(!active)return false;
    env.presentation?.start?.();
    monitorDedicatedContext();
-   ready=true;show('ready','');post('aureon-office-ready');return true;
+   ready=true;show('ready','');
+   win.aureonMapNavigation?.refreshViewport?.();
+   post('aureon-office-ready');return true;
   }catch(error){reportStartupFailure(stage,error);if(endedStatus===null)unavailable();return false;}
  }
  const api=Object.freeze({start,localStorage,sessionStorage,headers,endSession,flush,
