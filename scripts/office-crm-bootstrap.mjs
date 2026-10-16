@@ -12,7 +12,7 @@ export const CRM_BOOTSTRAP_VERSION=1;
 export function createOfficeCrmRuntime(env,limits){
  const win=env.window,doc=env.document,fetch=env.fetch;
  const encode=new (env.TextEncoder||win.TextEncoder)(),local=new Map(),session=new Map(),pending=new Map();
- let identity=null,map=null,active=false,started=false,ready=false,timer=null,flushing=null,lastSaveError=null,endedStatus=null;
+ let identity=null,map=null,active=false,started=false,ready=false,timer=null,flushing=null,lastSaveError=null,endedStatus=null,scriptFailureCause='unknown';
  const jsonKeys=new Set(Object.keys(limits).filter(k=>!['aureon-window-frame-v1','aureon-camera-device','aureon-microphone-device'].includes(k)));
  const clone=value=>JSON.parse(JSON.stringify(value));
  const bytes=value=>encode.encode(value).length;
@@ -119,7 +119,15 @@ export function createOfficeCrmRuntime(env,limits){
   });
  }
  const localStorage=facade(local,true),sessionStorage=facade(session,false);
+ function reportStartupFailure(stage,error){
+  let status=0;
+  try{const value=Object.getOwnPropertyDescriptor(error,'status')?.value;if(Number.isInteger(value)&&[400,401,403,404,405,409,413,415,429,503].includes(value))status=value;}catch{}
+  const safeStage=['bootstrap','scripts','interface'].includes(stage)?stage:'bootstrap';
+  const cause=safeStage==='scripts'&&['timeout','load','execution'].includes(scriptFailureCause)?scriptFailureCause:'unknown';
+  try{win.console?.error?.('Aureon office startup failed',{stage:safeStage,cause,status});}catch{}
+ }
  function loadScript(src){
+  scriptFailureCause='unknown';
   return new Promise((resolve,reject)=>{
    let script=null,onError=null,deadline=null,settled=false;
    const cleanup=()=>{
@@ -131,23 +139,24 @@ export function createOfficeCrmRuntime(env,limits){
     if(settled)return;settled=true;cleanup();
     if(error){script?.remove();reject(error);}else resolve();
    };
-   const failed=()=>finish(Error('Não foi possível abrir o escritório. Tente novamente pelo CRM.'));
-   deadline=win.setTimeout(()=>finish(Error('O escritório demorou para carregar. Tente novamente pelo CRM.')),45000);
+   const failed=cause=>{if(settled)return;scriptFailureCause=cause;finish(Error('Não foi possível abrir o escritório. Tente novamente pelo CRM.'));};
+   deadline=win.setTimeout(()=>failed('timeout'),45000);
    if(env.loadScript){
-    try{Promise.resolve(env.loadScript(src)).then(()=>finish(),failed);}catch{failed();}
+    try{Promise.resolve(env.loadScript(src)).then(()=>finish(),()=>failed('load'));}catch{failed('execution');}
     return;
    }
    try{
     script=doc.createElement('script');script.src=src;script.async=false;
-    onError=event=>{if(event.filename===new win.URL(src,win.location.href).href)failed();};
+    onError=event=>{if(event.filename===new win.URL(src,win.location.href).href)failed('execution');};
     win.addEventListener('error',onError);
-    script.onload=()=>finish();script.onerror=failed;doc.body.append(script);
-   }catch{failed();}
+    script.onload=()=>finish();script.onerror=()=>failed('load');doc.body.append(script);
+   }catch{failed('load');}
   });
  }
  async function start(scripts){
   if(started)throw Error('Inicialização duplicada.');
   started=true;show('loading','Carregando seu escritório…');
+  let stage='bootstrap';
   try{
    const response=await checked(await fetchWithDeadline('/api/office/bootstrap',{credentials:'same-origin',cache:'no-store'}));
    if(!response.ok)throw Object.assign(Error('Escritório indisponível.'),{status:response.status});
@@ -163,17 +172,19 @@ export function createOfficeCrmRuntime(env,limits){
    for(const[key,value]of Object.entries(data.clientState||{}))if(valid(key,value))local.set(key,value);
    if(doc?.readyState==='loading')await new Promise(resolve=>doc.addEventListener('DOMContentLoaded',resolve,{once:true}));
    show('loading','Carregando seu escritório…');
+   stage='scripts';
    for(const src of scripts){
     if(!active)throw Object.assign(Error('Sessão encerrada.'),{status:401});
     if(!/^\/api\/office\/runtime\/[a-zA-Z0-9_-]+\.js$/.test(src))throw Error('Módulo inválido.');
     await loadScript(src);
    }
+   stage='interface';
    if(win.aureonReplicaUI?.ready)await win.aureonReplicaUI.ready;
    if(!active)return false;
    if(win.aureonReplicaUI?.refresh)await win.aureonReplicaUI.refresh(true);
    if(!active)return false;
    ready=true;show('ready','');post('aureon-office-ready');return true;
-  }catch(error){if(endedStatus===null)unavailable();return false;}
+  }catch(error){reportStartupFailure(stage,error);if(endedStatus===null)unavailable();return false;}
  }
  const api=Object.freeze({start,localStorage,sessionStorage,headers,endSession,flush,
   get active(){return active;},get sessionStatus(){return endedStatus;},get ready(){return ready;},get identity(){return identity;},

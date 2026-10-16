@@ -8,8 +8,8 @@ const approved={objects:[{id:71,type:'desk',x:224,y:368,direction:3}],floor:'#a2
 const clone=x=>structuredClone(x);
 const response=(status,body)=>({status,ok:status>=200&&status<300,json:async()=>body,clone:()=>response(status,body)});
 function harness(responder,document=null,loadScriptOverride){
- const calls=[],messages=[],loaded=[],stopped=[],listeners=new Map(),registrations=[],timers=new Map(),timerDurations=new Map();let serial=0;
- const win={location:{origin:'https://aureonag.com',href:'https://aureonag.com/api/office/runtime/'},parent:{postMessage:(...args)=>messages.push(args)},TextEncoder,AbortController,URL,
+ const calls=[],messages=[],loaded=[],stopped=[],logs=[],listeners=new Map(),registrations=[],timers=new Map(),timerDurations=new Map();let serial=0;
+ const win={console:{error:(...args)=>logs.push(args)},location:{origin:'https://aureonag.com',href:'https://aureonag.com/api/office/runtime/'},parent:{postMessage:(...args)=>messages.push(args)},TextEncoder,AbortController,URL,
   setTimeout:(fn,ms)=>{const id=++serial;timers.set(id,fn);timerDurations.set(id,ms);return id;},clearTimeout:id=>{timers.delete(id);timerDurations.delete(id);},
   CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}},
   addEventListener:(type,fn,options)=>{registrations.push({type,fn,options});const list=listeners.get(type)||[];list.push(fn);listeners.set(type,list);},
@@ -22,7 +22,7 @@ function harness(responder,document=null,loadScriptOverride){
  const fetch=async(url,options)=>{calls.push({url,options});return responder?responder(url,options):response(200,{identity:clone(identity),map:clone(approved),clientState:{}});};
  const loader=loadScriptOverride===null?{}:{loadScript:src=>{loaded.push(src);return loadScriptOverride?loadScriptOverride(src):Promise.resolve();}};
  const runtime=createOfficeCrmRuntime({window:win,document,fetch,TextEncoder,...loader},CLIENT_STATE_LIMITS);
- return {runtime,win,calls,messages,loaded,stopped,listeners,registrations,timers,timerDurations};
+ return {runtime,win,calls,messages,loaded,stopped,logs,listeners,registrations,timers,timerDurations};
 }
 test('context precedes modules; preferences and readonly full seed are isolated without actual browser storage',async()=>{
  const h=harness();
@@ -443,6 +443,7 @@ test('script fixture deadline stops the start after 45 seconds, never loads the 
  assert.deepEqual([...h.timerDurations.values()],[45000]);
  assert.equal(h.runtime.ready,false);
  fireDeadline(h,45000);assert.equal(await starting,false);assertScriptFailure(h,doc);
+ assertSanitizedStartupLog(h,{stage:'scripts',cause:'timeout',status:0});
  finishLate();await new Promise(setImmediate);
  assert.deepEqual(h.loaded,['/api/office/runtime/app.js']);assertScriptFailure(h,doc);
 });
@@ -478,6 +479,7 @@ test('script errors remove temporary native hooks, including matching runtime er
   assert.equal(h.runtime.active,true);assert.equal(h.timers.size,1);
   if(kind==='element')script.onerror();else h.win.dispatchEvent({type:'error',filename:'https://aureonag.com/api/office/runtime/app.js'});
   assert.equal(await starting,false);assertScriptFailure(h,doc);assert.equal(doc.body.children.includes(script),false);
+  assertSanitizedStartupLog(h,{stage:'scripts',cause:kind==='element'?'load':'execution',status:0});
  }
 });
 test('fixture script rejection or synchronous failure clears its deadline without retrying or exposing technical errors',async()=>{
@@ -486,5 +488,66 @@ test('fixture script rejection or synchronous failure clears its deadline withou
   assert.equal(await h.runtime.start(['/api/office/runtime/app.js','/api/office/runtime/next.js']),false);
   assert.deepEqual(h.loaded,['/api/office/runtime/app.js']);assertScriptFailure(h,doc);
   assert.ok(!doc.getElementById('officeCrmStatus').textContent.includes('private implementation detail'));
+ }
+});
+
+function assertSanitizedStartupLog(h,expected){
+ assert.equal(h.logs.length,1);assert.equal(h.logs[0].length,2);
+ assert.equal(h.logs[0][0],'Aureon office startup failed');
+ assert.deepEqual(Object.keys(h.logs[0][1]).sort(),['cause','stage','status']);
+ assert.deepEqual(h.logs[0][1],expected);
+ assert.ok(!JSON.stringify(h.logs).includes('INJECTED_SECRET'));
+ assert.ok(!JSON.stringify(h.logs).includes(ACCOUNT));assert.ok(!JSON.stringify(h.logs).includes(USER));
+}
+test('bootstrap diagnostics log only a fixed stage/cause and allowlisted integer HTTP status, never response content',async()=>{
+ for(const status of [400,401,403,404,405,409,413,415,429,503,418,500,599,'503',503.5,NaN]){
+  const body={error:'INJECTED_SECRET body',stack:'INJECTED_SECRET stack',headers:{Cookie:'INJECTED_SECRET cookie'},identity:{id:'INJECTED_SECRET identity'},...(status===403?{code:'OFFICE_ACCESS_DENIED'}:{})};
+  const h=harness(()=>response(status,body),tinyDocument());
+  assert.equal(await h.runtime.start(['/api/office/runtime/app.js']),false);
+  const allowed=Number.isInteger(status)&&[400,401,403,404,405,409,413,415,429,503].includes(status);
+  assertSanitizedStartupLog(h,{stage:'bootstrap',cause:'unknown',status:allowed?status:0});
+  assert.deepEqual(h.loaded,[]);
+ }
+});
+test('startup diagnostics do not invoke status/message/stack/body/header getters or inherited metadata',async()=>{
+ for(const mode of ['data','getter','inherited','proxy']){
+  let sensitiveReads=0;
+  const thrown=Object.create(mode==='inherited'?{status:503}:null);
+  Object.defineProperty(thrown,'name',{value:'Error'});
+  for(const key of ['message','stack','body','headers','cookies','identity','query','endpoint'])Object.defineProperty(thrown,key,{get(){sensitiveReads++;return 'INJECTED_SECRET '+key;}});
+  if(mode==='data')Object.defineProperty(thrown,'status',{value:503});
+  if(mode==='getter')Object.defineProperty(thrown,'status',{get(){sensitiveReads++;return 503;}});
+  const error=mode==='proxy'?new Proxy(thrown,{getOwnPropertyDescriptor(){throw Error('INJECTED_SECRET trap');}}):thrown;
+  const h=harness(()=>{throw error;},tinyDocument());
+  assert.equal(await h.runtime.start([]),false);
+  assertSanitizedStartupLog(h,{stage:'bootstrap',cause:'unknown',status:mode==='data'?503:0});
+  assert.equal(sensitiveReads,0);
+ }
+});
+test('interface ready and refresh rejection report interface stage without leaking the error object or a script cause',async()=>{
+ for(const kind of ['ready','refresh']){
+  const error=Object.assign(Error('INJECTED_SECRET message'),{status:503,body:'INJECTED_SECRET body',headers:{Cookie:'INJECTED_SECRET cookie'},identity});
+  const doc=tinyDocument(),h=harness(undefined,doc);
+  if(kind==='ready'){
+   let rejectReady;const ready=new Promise((_resolve,reject)=>{rejectReady=reject;});h.win.aureonReplicaUI={ready};
+   const starting=h.runtime.start(['/api/office/runtime/app.js']);await new Promise(setImmediate);rejectReady(error);
+   assert.equal(await starting,false);
+  }else{
+   h.win.aureonReplicaUI={ready:Promise.resolve(),refresh:async()=>{throw error;}};
+   assert.equal(await h.runtime.start(['/api/office/runtime/app.js']),false);
+  }
+  assertSanitizedStartupLog(h,{stage:'interface',cause:'unknown',status:503});
+  assertScriptFailure(h,doc);
+ }
+});
+test('a missing or throwing console cannot change the generic failure UI or media shutdown',async()=>{
+ for(const mode of ['missing','throws']){
+  const doc=tinyDocument(),h=harness(()=>response(503,{error:'INJECTED_SECRET'}),doc);
+  h.win.console=mode==='missing'?undefined:{error(){throw Error('INJECTED_SECRET logger');}};
+  assert.equal(await h.runtime.start(['/api/office/runtime/app.js']),false);
+  assert.equal(h.runtime.active,false);assert.equal(h.runtime.ready,false);
+  assert.deepEqual(h.stopped,['mic','camera','screen']);assert.deepEqual(h.messages.map(message=>message[0].type),['aureon-office-unavailable']);
+  assert.match(doc.getElementById('officeCrmStatus').textContent,/temporariamente indisponível/);
+  assert.ok(!doc.getElementById('officeCrmStatus').textContent.includes('INJECTED_SECRET'));
  }
 });
