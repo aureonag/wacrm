@@ -13,10 +13,6 @@ type OfficePhase = "opening" | "ready" | "expired" | "unavailable";
 
 export function OfficeFrame({ userId, accountId }: { userId: string; accountId: string }) {
   const iframe = useRef<HTMLIFrameElement>(null);
-  const [clientReady, setClientReady] = useState(false);
-  // Start navigation after hydration; streamed server markup can move an iframe
-  // before its first navigation starts and leave its document at about:blank.
-  useEffect(() => { setClientReady(true); }, []);
   const { user, loading, accountId: currentAccountId, profileLoading } = useAuth();
   const [phase, setPhase] = useState<OfficePhase>("opening");
   const [attempt, setAttempt] = useState(0);
@@ -178,7 +174,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
         key={attempt}
         ref={iframe}
         title="Escritório virtual Aureon"
-        src={clientReady ? "/api/office/runtime/index.html" : undefined}
+        src="/api/office/runtime/index.html"
         allow="camera 'self'; microphone 'self'; display-capture 'self'; autoplay 'self'; fullscreen 'self'"
         className="bg-background min-h-0 w-full flex-1 rounded-lg border"
         onLoad={() => {

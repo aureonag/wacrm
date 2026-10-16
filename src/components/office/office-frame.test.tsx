@@ -84,7 +84,6 @@ class HookHarness {
   mounted = true;
   updatesAfterUnmount = 0;
   output: unknown;
-  firstOutput: unknown;
   frame: { key: string | null; node: { contentWindow: object; contentDocument: { contentType: string } }; ref: { current: unknown } } | null = null;
   flush() {
     let passes = 0;
@@ -93,7 +92,7 @@ class HookHarness {
       this.dirty = false;
       this.cursor = 0;
       mocks.current = this;
-      try { this.output = OfficeFrame({ userId: "user-a", accountId: "account-a" }); this.firstOutput ??= this.output; }
+      try { this.output = OfficeFrame({ userId: "user-a", accountId: "account-a" }); }
       finally { mocks.current = null; }
       const frame = this.find("iframe");
       if (!frame || frame.key !== this.frame?.key) {
@@ -163,12 +162,6 @@ afterEach(() => {
 });
 
 describe("OfficeFrame opening deadline and session boundary", () => {
-  it("defers iframe navigation until the client commit, preserving one authenticated frame", () => {
-    const firstFrame = elements(runner.firstOutput).find(element => element.type === "iframe");
-    expect(firstFrame?.props.src).toBeUndefined();
-    expect(runner.find("iframe")?.props.src).toBe("/api/office/runtime/index.html");
-    expect(firstFrame?.props.ref).toBe(runner.find("iframe")?.props.ref);
-  });
   it("uses the canonical authenticated document and expires opening exactly at 90 seconds", async () => {
     const target = runner.frame!.node.contentWindow;
     expect(runner.find("iframe")?.props.src).toBe("/api/office/runtime/index.html");
