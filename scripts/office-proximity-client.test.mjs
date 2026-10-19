@@ -4,3 +4,32 @@ function setup(){const h=harness(source);h.window.aureonReplicaUI.state.view='ch
 test('leaving range and changing area reconnect without auto-muting existing microphone/camera/screen',async()=>{const {h,setRoom}=setup();await h.tick();expectLive(h);assert.equal(h.apiCalls.filter(r=>r.endpoint==='call-session').length,1);setRoom(null);await h.tick();expectLive(h);setRoom({id:'proximity:office-1:2',type:'proximity',phase:'proximity',members:['fixture-user']});await h.tick();expectLive(h);assert.equal(h.apiCalls.filter(r=>r.endpoint==='call-session').length,2);h.window.aureonReplicaUI.state.data.user.status='offline';await h.state();expectStoppedOnce(h);});
 test('a proximity membership rejection preserves capture, but expired authentication always stops it',async()=>{const {h}=setup();await h.tick();h.failApi(403);await h.tick();expectLive(h);h.failApi(401);await h.tick();expectStoppedOnce(h);});
 test('an own-session replacement during proximity stops captures and cannot auto-resume on a new area',async()=>{const {h,setRoom,failSignals}=setup();await h.tick();failSignals(Object.assign(Error('replaced'),{status:409,code:'OFFICE_CALL_SESSION_REPLACED'}));await h.tick();expectStoppedOnce(h);assert.ok(h.notice());h.failApi(null);setRoom({id:'proximity:office-1:2',type:'proximity',phase:'proximity',members:['fixture-user']});const n=h.apiCalls.length;await h.tick();assert.equal(h.apiCalls.length,n);assert.ok(h.notice());});
+test('a failed call creation retries in the same area and preserves enabled devices',async()=>{
+ const {h}=setup();let attempt=0;
+ h.setApi((endpoint,body,query,normal)=>{
+  if(endpoint==='proximity')return {room:{id:'proximity:office-1:1',type:'proximity',phase:'proximity',members:['fixture-user']}};
+  if(endpoint==='call-session'&&++attempt===1)throw Object.assign(Error('temporarily unavailable'),{status:503});
+  if(endpoint==='signals')return {members:['fixture-user'],roster:{'fixture-user':query.call},signals:[],cursor:0};
+  return normal(endpoint,body,query);
+ });
+ await h.tick();expectLive(h);assert.equal(h.apiCalls.filter(r=>r.endpoint==='signals').length,0);
+ await h.tick();expectLive(h);assert.equal(h.apiCalls.filter(r=>r.endpoint==='call-session').length,2);
+ assert.equal(h.apiCalls.filter(r=>r.endpoint==='signals').length,1);
+ await h.tick();assert.equal(h.apiCalls.filter(r=>r.endpoint==='call-session').length,2);
+});
+test('a retried creation completed after session termination cannot restart signaling or captures',async()=>{
+ const {h}=setup();let attempt=0,finish;
+ h.setApi((endpoint,body,query,normal)=>{
+  if(endpoint==='proximity')return {room:{id:'proximity:office-1:1',type:'proximity',phase:'proximity',members:['fixture-user']}};
+  if(endpoint==='call-session'){
+   if(++attempt===1)throw Object.assign(Error('temporary network failure'),{status:503});
+   return new Promise(resolve=>{finish=resolve;});
+  }
+  return normal(endpoint,body,query);
+ });
+ await h.tick();expectLive(h);const pending=h.tickPending();await new Promise(setImmediate);
+ assert.equal(attempt,2);await h.ended();expectStoppedOnce(h);
+ finish({callId:'late-call'});await pending;expectStoppedOnce(h);
+ await h.tick();assert.equal(h.apiCalls.filter(r=>r.endpoint==='signals').length,0);
+ assert.equal(h.apiCalls.filter(r=>r.endpoint==='call-session').length,2);
+});

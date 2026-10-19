@@ -297,7 +297,8 @@
    const run={};ticking=run;let epoch=generation,token=null;
    try{
      await refreshProximity();if(!window.aureonOfficeBootstrap.active)return;const m=meeting();if(!m){if(roomKind==='proximity'){wasJoined=false;closeAll();}else if(wasJoined)disconnectSession();renderProximity();return;}
-     wasJoined=true;if(roomId!==m.id){closeAll();roomId=m.id;roomKind=m.type;epoch=generation;const created=await api('call-session',{meeting:roomId});if(generation!==epoch||!callSession.canRun())return;if(meeting()?.id!==m.id){disconnectSession();return;}callId=created.callId;}
+     // A failed creation leaves no call token. Retry it without stopping enabled devices.
+     wasJoined=true;if(roomId!==m.id||!callId){closeAll();roomId=m.id;roomKind=m.type;epoch=generation;const created=await api('call-session',{meeting:roomId});if(generation!==epoch||!callSession.canRun())return;if(meeting()?.id!==m.id){disconnectSession();return;}callId=created.callId;}
      token=callSession.capture();if(!callSession.isCurrent(token))return;
      const data=await api('signals',undefined,{meeting:roomId,call:callId,after:signalCursor});
      if(generation!==epoch||!callSession.isCurrent(token))return;
