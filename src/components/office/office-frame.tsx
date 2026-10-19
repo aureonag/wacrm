@@ -16,6 +16,9 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
   const { user, loading, accountId: currentAccountId, profileLoading } = useAuth();
   const [phase, setPhase] = useState<OfficePhase>("opening");
   const [attempt, setAttempt] = useState(0);
+  const [recovery, setRecovery] = useState<"none" | "remount" | "direct">("none");
+  const openingDeadline = useRef<number | null>(null);
+  const recoveryAction = useRef<"none" | "remount" | "direct">("none");
 
   const lifecycle = useRef<{ active: boolean; attempt: number; phase: OfficePhase; target: Window | null }>({
     active: false, attempt: 0, phase: "opening", target: null,
@@ -68,11 +71,61 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
 
   useEffect(() => {
     if (phase !== "opening" || identityChanged) return;
+    // An automatic remount shares the original opening budget. Only an explicit
+    // retry below starts a new budget after the failed attempt is closed.
+    openingDeadline.current ??= Date.now() + 90_000;
     const deadline = window.setTimeout(() => {
       if (lifecycle.current.phase === "opening") transition("unavailable", attempt);
-    }, 90_000);
+    }, Math.max(0, openingDeadline.current - Date.now()));
     return () => window.clearTimeout(deadline);
   }, [attempt, phase, identityChanged, transition]);
+
+  useEffect(() => {
+    if (phase !== "opening" || identityChanged || recovery === "direct") return;
+    const frame = iframe.current;
+    const target = frame?.contentWindow;
+    const recoveryTimer = window.setTimeout(() => {
+      const current = lifecycle.current;
+      if (!frame || !target || !current.active || current.phase !== "opening" ||
+        current.attempt !== attempt || current.target !== target || iframe.current !== frame ||
+        recoveryAction.current !== recovery || openingDeadline.current === null ||
+        Date.now() >= openingDeadline.current) return;
+      try {
+        // A committed/runtime document must be allowed to finish its own startup.
+        // This is one bounded recovery of the initial blank document, not proof
+        // that its pending navigation or the network has failed.
+        const document = frame.contentDocument;
+        if (document?.URL !== "about:blank" || document.readyState !== "complete") return;
+      } catch { return; }
+      stopOfficeFrameMedia(target);
+      if (recovery === "none") {
+        recoveryAction.current = "remount";
+        current.attempt += 1;
+        setRecovery("remount");
+        setAttempt(current.attempt);
+      } else {
+        recoveryAction.current = "direct";
+        setRecovery("direct");
+      }
+    }, 10_000);
+    return () => window.clearTimeout(recoveryTimer);
+  }, [attempt, phase, identityChanged, recovery]);
+
+  useEffect(() => {
+    const current = lifecycle.current;
+    if (recovery !== "direct" || recoveryAction.current !== "direct" || phase !== "opening" ||
+      identityChanged || !current.active || current.phase !== "opening" ||
+      current.attempt !== attempt || current.target !== iframe.current?.contentWindow ||
+      openingDeadline.current === null || Date.now() >= openingDeadline.current) return;
+    try {
+      const document = iframe.current?.contentDocument;
+      if (document?.URL !== "about:blank" || document.readyState !== "complete") return;
+    } catch { return; }
+    // Reuse the existing authenticated, same-tab entry when embedding stayed
+    // blank twice. The destination repeats the CRM membership check.
+    try { window.location.assign("/api/office/runtime/index.html"); }
+    catch { transition("unavailable", attempt); }
+  }, [attempt, phase, identityChanged, recovery, transition]);
 
   useEffect(() => {
     type ContextRequest = { controller: AbortController; deadline: number | null };
@@ -147,6 +200,9 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
               if (!current.active || current.phase !== "unavailable") return;
               current.attempt += 1;
               current.phase = "opening";
+              openingDeadline.current = null;
+              recoveryAction.current = "none";
+              setRecovery("none");
               setAttempt(current.attempt);
               setPhase("opening");
             }}>Tentar novamente</button>
@@ -161,6 +217,7 @@ export function OfficeFrame({ userId, accountId }: { userId: string; accountId: 
     <section
       data-office-frame-phase={phase}
       data-office-frame-attempt={attempt}
+      data-office-frame-recovery={recovery}
       className="flex min-h-0 flex-1 flex-col gap-3"
     >
       <header className="flex shrink-0 items-center justify-between gap-3">

@@ -13,6 +13,11 @@ const regions=[
  {name:'Sala de reunião 2',x:80,y:1184,w:592,h:516}
 ];
 function validPoint(p){return p&&typeof p==='object'&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=-1400&&p.x<3800&&p.y>=-1400&&p.y<3200;}
+function publicPose(value){
+ if(value===undefined)return null;
+ if(!value||typeof value!=='object'||Array.isArray(value)||!['down','up','left','right'].includes(value.facing)||typeof value.seated!=='boolean'||value.layout!==undefined&&!['','cafe-sofa-v1','cafe-armchair-back-v1','cafe-dining-back-v1'].includes(value.layout)){const error=Error('Pose virtual inválida.');error.status=400;throw error;}
+ return {facing:value.facing,seated:value.seated,layout:value.seated?(value.layout||''):''};
+}
 function areaForPosition(point){if(!validPoint(point))return null;const id=resolve(regions,point);return id<0?null:{areaId:id,areaName:regions[id].name,floorId:'office-1'};}
 function createSpatialPresence({now=()=>Date.now(),ttlMs=20000,leaseMs=7000,initialState=null}={}){
  if(!Number.isFinite(ttlMs)||ttlMs<=0||!Number.isFinite(leaseMs)||leaseMs<=0||leaseMs>ttlMs)throw new Error('Prazo de presença espacial inválido.');
@@ -32,16 +37,16 @@ function createSpatialPresence({now=()=>Date.now(),ttlMs=20000,leaseMs=7000,init
  function publish(user,point,value){
   if(!active(user))fail(403,'Entre no escritório para compartilhar sua posição.');
   const area=areaForPosition(point);if(!area)fail(400,'Posição virtual inválida.');
-  const time=now(),choice=options(user.id,value),lease=liveLease(user.id,time);
+  const pose=publicPose(value?.pose),time=now(),choice=options(user.id,value),lease=liveLease(user.id,time);
   if(lease&&lease.instance!==choice.instance&&!choice.takeControl)fail(409,'Esta posição está sendo controlada por outra guia.');
   if(choice.instance){if(choice.takeControl||!lease||lease.instance!==choice.instance)versions.set(user.id,version(user.id)+1);leases.set(user.id,{instance:choice.instance,started:time,until:time+leaseMs});}
   else leases.delete(user.id);
-  const record={x:point.x,y:point.y,...area,updatedAt:time};records.set(user.id,record);return {...record};
+  const record={x:point.x,y:point.y,...area,updatedAt:time,...(pose?{pose}:{})};records.set(user.id,record);return structuredClone(record);
  }
  function snapshot(user){
   const record=records.get(user?.id),age=record?now()-record.updatedAt:0;
   if(!active(user)||!record||age<0||age>=ttlMs){if(user?.id)remove(user.id);return null;}
-  return {...record};
+  return structuredClone(record);
  }
  function control(user){snapshot(user);const lease=liveLease(user?.id,now());return {version:version(user?.id),active:!!lease,leaseExpiresAt:lease?.until||null};}
  function clear(user,value){const choice=options(user.id,value),lease=liveLease(user.id,now());if(lease&&lease.instance!==choice.instance)fail(409,'Outra guia controla a posição atual.');remove(user.id);}

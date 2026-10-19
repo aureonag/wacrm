@@ -84,7 +84,7 @@ class HookHarness {
   mounted = true;
   updatesAfterUnmount = 0;
   output: unknown;
-  frame: { key: string | null; node: { contentWindow: object; contentDocument: { contentType: string } }; ref: { current: unknown } } | null = null;
+  frame: { key: string | null; node: { contentWindow: object; contentDocument: { contentType: string; URL: string; readyState: string } }; ref: { current: unknown } } | null = null;
   flush() {
     let passes = 0;
     do {
@@ -97,7 +97,7 @@ class HookHarness {
       const frame = this.find("iframe");
       if (!frame || frame.key !== this.frame?.key) {
         if (this.frame) this.frame.ref.current = null;
-        this.frame = frame ? { key: frame.key, node: { contentWindow: {}, contentDocument: { contentType: "text/html" } }, ref: frame.props.ref as { current: unknown } } : null;
+        this.frame = frame ? { key: frame.key, node: { contentWindow: {}, contentDocument: { contentType: "text/html", URL: "https://crm.test/api/office/runtime/index.html", readyState: "complete" } }, ref: frame.props.ref as { current: unknown } } : null;
       }
       if (this.frame) this.frame.ref.current = this.frame.node;
       for (const effect of this.effects.splice(0)) effect();
@@ -142,7 +142,7 @@ beforeEach(() => {
   mocks.auth = { user: { id: "user-a" }, loading: false, accountId: "account-a", profileLoading: false };
   listeners = new Map();
   vi.stubGlobal("window", {
-    location: { origin: "https://crm.test" },
+    location: { origin: "https://crm.test", assign: vi.fn() },
     setTimeout, clearTimeout, setInterval, clearInterval,
     addEventListener: (type: string, listener: Listener) => {
       if (!listeners.has(type)) listeners.set(type, new Set());
@@ -300,6 +300,151 @@ describe("OfficeFrame existing other-tab links", () => {
       expect(runner.find("iframe")?.props.src).toBe("/api/office/runtime/index.html");
       expect(mocks.stop).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe("OfficeFrame one bounded blank document recovery", () => {
+  function blankDocument() {
+    runner.frame!.node.contentDocument.URL = "about:blank";
+    runner.frame!.node.contentDocument.readyState = "complete";
+  }
+
+  it("remounts a complete blank document at10s once and keeps the original90s deadline", async () => {
+    blankDocument();
+    const oldTarget = runner.frame!.node.contentWindow;
+    const staleError = runner.find("iframe")!.props.onError as () => void;
+    await advance(9_999);
+    expect(runner.frame!.node.contentWindow).toBe(oldTarget);
+    await advance(1);
+    const newTarget = runner.frame!.node.contentWindow;
+    expect(newTarget).not.toBe(oldTarget);
+    expect(runner.find("iframe")?.key).toBe("1");
+    expect(runner.find("iframe")?.props.src).toBe("/api/office/runtime/index.html");
+    expect(mocks.stop).toHaveBeenCalledWith(oldTarget);
+    expect(runner.find("section")?.props["data-office-frame-recovery"]).toBe("remount");
+    staleError();
+    message("aureon-office-ready", oldTarget);
+    message("aureon-office-unavailable", oldTarget);
+    message("aureon-office-session-ended", oldTarget);
+    expect(runner.label()).toContain("Abrindo escritório");
+    blankDocument();
+    await advance(79_999);
+    expect(runner.frame!.node.contentWindow).toBe(newTarget);
+    await advance(1);
+    expect(runner.find("iframe")).toBeUndefined();
+    expect(runner.label()).toContain("O escritório está indisponível");
+    expect(mocks.stop).toHaveBeenCalledWith(newTarget);
+  });
+
+  it("accepts readiness only from the replacement window at the current origin", async () => {
+    blankDocument(); await advance(10_000);
+    message("aureon-office-ready", {}, "https://crm.test");
+    message("aureon-office-ready", runner.frame!.node.contentWindow, "https://other.test");
+    expect(runner.label()).toContain("Abrindo escritório");
+    message("aureon-office-ready"); await advance(90_000);
+    expect(runner.find("iframe")).toBeDefined();
+    expect(runner.label()).not.toContain("Abrindo escritório");
+  });
+
+  it("uses the authenticated entry in the same tab once if the replacement stays blank too", async () => {
+    blankDocument(); await advance(10_000);
+    const replacement = runner.frame!.node.contentWindow;
+    blankDocument(); await advance(9_999);
+    expect(window.location.assign).not.toHaveBeenCalled();
+    await advance(1);
+    expect(window.location.assign).toHaveBeenCalledExactlyOnceWith("/api/office/runtime/index.html");
+    expect(runner.find("section")?.props["data-office-frame-recovery"]).toBe("direct");
+    expect(mocks.stop).toHaveBeenCalledWith(replacement);
+    await advance(69_999);
+    expect(window.location.assign).toHaveBeenCalledTimes(1);
+    expect(runner.find("iframe")).toBeDefined();
+    await advance(1);
+    expect(runner.label()).toContain("O escritório está indisponível");
+  });
+
+  it.each(["committed", "ready", "expired", "identity"])("does not navigate directly after replacement becomes %s", async state => {
+    blankDocument(); await advance(10_000); blankDocument();
+    if (state === "committed") runner.frame!.node.contentDocument.URL = "https://crm.test/api/office/runtime/index.html";
+    if (state === "ready") message("aureon-office-ready");
+    if (state === "expired") message("aureon-office-session-ended");
+    if (state === "identity") { mocks.auth.accountId = "account-b"; runner.flush(); }
+    await advance(10_000);
+    expect(window.location.assign).not.toHaveBeenCalled();
+  });
+
+  it("closes the failed attempt if the browser rejects same-tab navigation", async () => {
+    vi.mocked(window.location.assign).mockImplementation(() => { throw new Error("Navigation refused"); });
+    blankDocument(); await advance(10_000); blankDocument(); await advance(10_000);
+    expect(runner.label()).toContain("O escritório está indisponível");
+    expect(runner.find("iframe")).toBeUndefined();
+    await advance(90_000); expect(window.location.assign).toHaveBeenCalledTimes(1);
+  });
+
+  it("rechecks the document before navigating if the replacement commits during the recovery render", async () => {
+    blankDocument(); await advance(10_000);
+    let reads = 0;
+    Object.defineProperty(runner.frame!.node, "contentDocument", {
+      get() {
+        return {contentType: "text/html", readyState: "complete", URL: ++reads === 1 ? "about:blank" : "https://crm.test/api/office/runtime/index.html"};
+      },
+    });
+    await advance(10_000);
+    expect(reads).toBe(2);
+    expect(window.location.assign).not.toHaveBeenCalled();
+    message("aureon-office-ready");
+    expect(runner.label()).not.toContain("Abrindo escritório");
+  });
+
+  it.each(["committed", "loading", "inaccessible"])("does not remount a %s document", async state => {
+    const target = runner.frame!.node.contentWindow;
+    if (state === "loading") {
+      blankDocument(); runner.frame!.node.contentDocument.readyState = "loading";
+    }
+    if (state === "inaccessible") Object.defineProperty(runner.frame!.node, "contentDocument", {
+      get() { throw new Error("Cross-origin document"); },
+    });
+    await advance(10_000);
+    expect(runner.frame!.node.contentWindow).toBe(target);
+    expect(runner.find("iframe")?.key).toBe("0");
+    expect(mocks.stop).not.toHaveBeenCalled();
+  });
+
+  it.each(["ready", "expired", "unavailable", "identity"])("cannot recover after %s closes opening", async state => {
+    blankDocument();
+    if (state === "identity") {
+      mocks.auth.accountId = "account-b"; runner.flush();
+    } else message(state === "ready" ? "aureon-office-ready" : state === "expired" ? "aureon-office-session-ended" : "aureon-office-unavailable");
+    await advance(10_000);
+    if (state === "ready") expect(runner.find("iframe")?.key).toBe("0");
+    else expect(runner.find("iframe")).toBeUndefined();
+  });
+
+  it("gives an explicit retry its own90s budget and at most one further blank recovery", async () => {
+    blankDocument(); await advance(10_000); await advance(80_000);
+    (runner.find("button")!.props.onClick as () => void)(); runner.flush();
+    expect(runner.find("iframe")?.key).toBe("2");
+    blankDocument(); await advance(10_000);
+    expect(runner.find("iframe")?.key).toBe("3");
+    await advance(79_999); expect(runner.find("iframe")).toBeDefined();
+    await advance(1); expect(runner.find("iframe")).toBeUndefined();
+  });
+
+  it("keeps an authorized revocation terminal across automatic recovery", async () => {
+    blankDocument();
+    const pending = deferred<{status: number}>(); fetchMock.mockReturnValueOnce(pending.promise);
+    await advance(9_000); focus(); await advance(1_000);
+    expect(runner.find("iframe")?.key).toBe("1");
+    pending.resolve({status: 403}); await advance(0);
+    message("aureon-office-ready");
+    expect(runner.label()).toContain("Sua sessão do escritório foi encerrada");
+    expect(runner.find("iframe")).toBeUndefined();
+  });
+
+  it("cancels the recovery timer when the component unmounts", async () => {
+    blankDocument(); runner.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(90_000);
+    expect(runner.updatesAfterUnmount).toBe(0);
   });
 });
 

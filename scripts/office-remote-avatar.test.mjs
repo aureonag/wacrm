@@ -6,3 +6,23 @@ test('public recipe projects only appearance, never devices or arbitrary private
 test('malformed and oversized public recipes fail closed to bounded safe properties',()=>{assert.deepEqual(publicAvatarAppearance({'aureon-avatar-v1':'broken'}),{version:1,legacy:{}});const value=publicAvatarAppearance({'aureon-gather-avatar-applied-v1':JSON.stringify({pieces:{0:'<script>',1:'x'.repeat(1000),2:'valid'},omitted:[-1,0,1000,3]})});assert.deepEqual(value.native.pieces,{'2':'valid'});assert.deepEqual(value.native.omitted,[3]);});
 test('remote scene includes full recipe, retains facing at rest, filters self and expires stale presence',()=>{const scene=createScene({durationMs:500});const user={id:'remote',name:'Bruno',status:'away',avatarAppearance:{version:1,legacy:{shirt:'#112233'}},spatialPosition:{x:100,y:200,floorId:'office-1',updatedAt:1}};const state={capabilities:{spatialPresence:true},user:{id:'self'},users:[user,{...user,id:'self'}]};scene.observe(state,0);assert.equal(scene.frame(0).length,1);assert.equal(scene.frame(0)[0].appearance.legacy.shirt,'#112233');user.spatialPosition.x=140;scene.observe(state,500);assert.equal(scene.frame(750)[0].x,120);assert.equal(scene.frame(750)[0].facing,'right');scene.observe(state,1000);assert.equal(scene.frame(1100)[0].facing,'right');assert.deepEqual(scene.frame(21000),[]);});
 test('away is visible but offline, archived and expired users have no position',()=>{let time=10;const presence=createSpatialPresence({now:()=>time}),user={id:'self',status:'away'};presence.publish(user,{x:100,y:200});assert.equal(presence.snapshot(user).x,100);user.status='offline';assert.equal(presence.snapshot(user),null);user.status='online';presence.publish(user,{x:100,y:200});time+=20000;assert.equal(presence.snapshot(user),null);user.archived=true;assert.throws(()=>presence.publish(user,{x:100,y:200}),{status:403});});
+
+function remoteState(point){return {capabilities:{spatialPresence:true},user:{id:'self'},users:[{id:'remote',name:'Bruno',status:'online',spatialPosition:{floorId:'office-1',updatedAt:1,...point}}]};}
+test('remote walking starts only for real displacement, preserves its phase across updates, and stops at the destination',()=>{
+ const scene=createScene({durationMs:500});scene.observe(remoteState({x:100,y:200}),0);assert.equal(scene.frame(0)[0].moving,false);
+ scene.observe(remoteState({x:140,y:200,updatedAt:2}),100);assert.equal(scene.frame(200)[0].moving,true);assert.equal(scene.frame(200)[0].motionElapsed,100);
+ scene.observe(remoteState({x:180,y:200,updatedAt:3}),300);assert.equal(scene.frame(400)[0].motionElapsed,300);assert.equal(scene.frame(400)[0].facing,'right');
+ scene.observe(remoteState({x:180,y:200,updatedAt:4}),500);assert.equal(scene.frame(700)[0].moving,true);assert.equal(scene.frame(800)[0].moving,false);
+ scene.observe(remoteState({x:800,y:200,updatedAt:5}),900);assert.equal(scene.frame(900)[0].moving,false);assert.equal(scene.frame(900)[0].x,800);
+});
+test('remote movement remains continuous across adjacent named areas and ignores delayed older coordinates',()=>{
+ const scene=createScene({durationMs:500});scene.observe(remoteState({x:1740,y:1000,updatedAt:2,areaName:'Área pública'}),0);
+ scene.observe(remoteState({x:1750,y:1000,updatedAt:4,areaName:'Privativa'}),500);assert.equal(scene.frame(750)[0].x,1745);assert.equal(scene.frame(750)[0].moving,true);
+ scene.observe(remoteState({x:1700,y:1000,updatedAt:3}),800);assert.equal(scene.frame(1000)[0].x,1750);assert.equal(scene.frame(1000)[0].facing,'right');
+});
+test('only explicit valid seated state selects a seat pose; reduced motion snaps without walking',()=>{
+ const scene=createScene({durationMs:0});scene.observe(remoteState({x:100,y:200,pose:{facing:'up',seated:true,layout:'cafe-armchair-back-v1'}}),0);
+ assert.equal(scene.frame(0)[0].seated,true);assert.equal(scene.frame(0)[0].layout,'cafe-armchair-back-v1');assert.equal(scene.frame(0)[0].facing,'up');
+ scene.observe(remoteState({x:120,y:200,updatedAt:2,pose:{facing:'right',seated:false}}),100);assert.equal(scene.frame(100)[0].x,120);assert.equal(scene.frame(100)[0].moving,false);assert.equal(scene.frame(100)[0].seated,false);
+ scene.observe(remoteState({x:130,y:200,updatedAt:3,pose:{facing:'invalid',seated:true}}),200);assert.equal(scene.frame(200)[0].seated,false);
+});

@@ -1,5 +1,5 @@
 
-/* Local WebRTC calls: no external signaling or STUN service. */
+/* CRM-scoped WebRTC calls with STUN and bounded ICE-restart backoff. */
 (() => {
  'use strict';
  const U=window.aureonReplicaUI,{state,api,el,button,toast,person}=U;
@@ -231,15 +231,56 @@
   return Object.freeze({getSnapshot, subscribe, publish, clear});
 })({window,getState:()=>state,getMeeting:()=>callSession.canRun()?meeting():null,getPeer:id=>peers.get(id),getRoomId:()=>roomId,getCallId:()=>callId,person});
  function clearDepartedMedia(){const m=callSession.canRun()?meeting():null,self=state.data?.user?.id;for(const tile of document.querySelectorAll('#replicaMedia .r-screen-tile,#replicaMedia .r-video-tile')){const id=tile.dataset.screen||tile.dataset.user;if(!window.aureonOfficeBootstrap.active||!m?.members.includes(id)||id!==self&&(roomId!==m.id||!callId||!peers.has(id))){for(const video of tile.querySelectorAll('video')){video.pause();video.srcObject=null;}tile.remove();}}}
- async function offer(peer){const token=callSession.capture(),pc=peer.pc;if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;if(peer.makingOffer||pc.signalingState!=='stable'){peer.needsNegotiation=true;return}peer.makingOffer=true;peer.needsNegotiation=false;try{await pc.setLocalDescription();await send(peer.id,{type:'offer',sdp:pc.localDescription.sdp},peer,token)}catch(e){if(callSession.isCurrent(token)&&peers.get(peer.id)===peer)callError(e)}finally{peer.makingOffer=false}}
+ function detachPeerWork(peer,token,work){void work.catch(error=>{if(callSession.isCurrent(token)&&peers.get(peer.id)===peer)callError(error);});}
+ function retryableOffer(peer){const pending=peer.pendingOffer,pc=peer.pc;return pending?.retry&&callSession.isCurrent(pending.token)&&peers.get(peer.id)===peer&&pc.signalingState==='have-local-offer'&&pc.localDescription?.type==='offer'&&pc.localDescription.sdp===pending.sdp?pending:null;}
+ function retainOffer(peer,pending,retry){if(peer.pendingOffer!==pending)return;pending.retry=retry;if(!retryableOffer(peer))peer.pendingOffer=null;else peer.recoveryAfter=Math.max(peer.recoveryAfter,Date.now()+3000);}
+ async function offer(peer,retry=false){
+   const token=callSession.capture(),pc=peer.pc;if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;
+   if(peer.makingOffer){if(!retry)peer.needsNegotiation=true;return;}
+   let pending=retry?retryableOffer(peer):null;if(retry&&!pending)return;
+   if(!retry&&pc.signalingState!=='stable'){peer.needsNegotiation=true;return;}
+   peer.makingOffer=true;if(!retry)peer.needsNegotiation=false;
+   try{
+     if(!pending){await pc.setLocalDescription();if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;pending={token,sdp:pc.localDescription.sdp,retry:false};peer.pendingOffer=pending;}
+     // Keep the existing offer until its answer arrives, even after a successful
+     // POST: the answer itself can be lost. Never apply a second local offer in
+     // have-local-offer, where restarting ICE cannot negotiate yet either.
+     pending.retry=false;await send(peer.id,{type:'offer',sdp:pending.sdp},peer,pending.token);
+     retainOffer(peer,pending,true);
+   }catch(error){
+     if(callSession.isCurrent(token)&&peers.get(peer.id)===peer){
+       const transient=!Number.isFinite(error?.status)||error.status===0||error.status===408||error.status===429||error.status>=500&&error.status<600;
+       if(pending)retainOffer(peer,pending,transient);
+       callError(error);
+     }
+   }finally{peer.makingOffer=false;}
+ }
 
  function streams(){return [testAudio?.getAudioTracks()[0]||window.aureonAudioStream?.()?.getAudioTracks()[0]||null,window.aureonCameraStream?.()?.getVideoTracks()[0]||null,window.aureonScreenStream?.()?.getVideoTracks()[0]||null].map(t=>t?.readyState==='live'?t:null);}
  async function send(to,signal,expectedPeer=peers.get(to),token=callSession.capture()){const peer=peers.get(to);if(!peer||peer!==expectedPeer||!callSession.isCurrent(token))return;try{await api('signal',{meeting:token.roomId,call:token.callId,to,toCall:peer.callId,signal});}catch(error){if(!callSession.isCurrent(token)||peers.get(to)!==peer)return;if(callSession.handle(error,token))return;if(error.status===409&&error.code==='OFFICE_SIGNAL_RECIPIENT_STALE'){closePeer(to);return;}throw error;}}
+ async function recoverPeer(peer,requested=false){
+   const token=callSession.capture();if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer||!meeting()?.members.includes(peer.id))return;
+   const pc=peer.pc,now=Date.now(),pending=retryableOffer(peer),failed=pc.connectionState==='failed'||pc.iceConnectionState==='failed',disconnected=pc.connectionState==='disconnected'||pc.iceConnectionState==='disconnected';
+   if(pc.connectionState==='closed')return;
+   if(!requested&&!pending){
+     if(!failed&&!disconnected){
+       if(pc.connectionState==='connected'&&peer.recoveryState!=='connected'){peer.recoveryAttempts=0;peer.recoveryAfter=0;}
+       peer.recoveryState=pc.connectionState;peer.disconnectedAt=null;return;
+     }
+     peer.recoveryState=failed?'failed':'disconnected';
+     if(disconnected&&!failed){if(peer.disconnectedAt===null)peer.disconnectedAt=now;if(now-peer.disconnectedAt<8000)return;}
+   }
+   if(now<peer.recoveryAfter)return;
+   peer.recoveryAttempts++;peer.recoveryAfter=now+[3000,10000,30000][Math.min(peer.recoveryAttempts-1,2)];
+   // Only the deterministic offerer restarts ICE, so simultaneous failures cannot create offer glare.
+   if(peer.initiator){if(pending)await offer(peer,true);else pc.restartIce();}else await send(peer.id,{type:'renegotiate',iceRestart:true},peer,token);
+ }
  function createPeer(id,remoteCall){
-   const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]}),peer={id,callId:remoteCall,pc,pending:[],makingOffer:false,ignoreOffer:false,settingAnswer:false,polite:state.data.user.id>id,audio:new MediaStream(),camera:new MediaStream(),screen:new MediaStream(),channel:null};
+   const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]}),peer={id,callId:remoteCall,pc,pending:[],pendingOffer:null,makingOffer:false,ignoreOffer:false,settingAnswer:false,polite:state.data.user.id>id,audio:new MediaStream(),camera:new MediaStream(),screen:new MediaStream(),channel:null,recoveryAttempts:0,recoveryAfter:0,recoveryState:'new',disconnectedAt:null};
    peers.set(id,peer);peer.initiator=state.data.user.id<id;peer.slots=peer.initiator?['audio','video','video'].map(kind=>pc.addTransceiver(kind,{direction:'sendrecv'})):[];
    pc.onicecandidate=e=>{if(e.candidate)send(id,{type:'candidate',candidate:e.candidate.toJSON()},peer).catch(()=>{});};
-   pc.onconnectionstatechange=()=>renderMedia();
+   pc.onconnectionstatechange=()=>{recoverPeer(peer).catch(callError);renderMedia();};
+   pc.oniceconnectionstatechange=()=>{recoverPeer(peer).catch(callError);renderMedia();};
    pc.ontrack=e=>{
      const index=pc.getTransceivers().indexOf(e.transceiver),target=e.track.kind==='audio'?peer.audio:(e.transceiver.mid==='2'?peer.screen:peer.camera);if(!target.getTracks().includes(e.track))target.addTrack(e.track);
      e.track.onunmute=()=>renderMedia();e.track.onmute=()=>renderMedia();e.track.onended=()=>renderMedia();renderMedia();
@@ -250,7 +291,7 @@
    };}
    pc.ondatachannel=e=>channelEvents(e.channel);
    if(state.data.user.id<id)channelEvents(pc.createDataChannel('aureon-room'));
-   pc.onnegotiationneeded=async()=>{if(peer.initiator)await offer(peer);else await send(peer.id,{type:'renegotiate'},peer).catch(callError)};
+   pc.onnegotiationneeded=()=>{const token=callSession.capture();detachPeerWork(peer,token,peer.initiator?offer(peer):send(peer.id,{type:'renegotiate'},peer,token));};
    updateTracks(peer);return peer;
  }
  async function updateTracks(peer){
@@ -261,12 +302,15 @@
    if(!meeting()?.members.includes(event.from)||event.meeting!==roomId)return;
    const peer=peers.get(event.from);if(!peer||peer.callId!==event.fromCall)return;const pc=peer.pc,signal=event.signal;
    if(signal.type==='candidate'){if(peer.ignoreOffer)return;if(pc.remoteDescription){try{await pc.addIceCandidate(signal.candidate)}catch(error){if(!peer.ignoreOffer)callError(error)}}else peer.pending.push(signal.candidate);return;}
-   if(signal.type==='renegotiate'){if(peer.initiator)await offer(peer);return;}
+   if(signal.type==='renegotiate'){if(peer.initiator)detachPeerWork(peer,token,signal.iceRestart===true?recoverPeer(peer,true):offer(peer));return;}
+   if(signal.type==='offer'&&!peer.initiator&&pc.signalingState==='stable'&&pc.remoteDescription?.type==='offer'&&pc.remoteDescription.sdp===signal.sdp&&pc.localDescription?.type==='answer'){detachPeerWork(peer,token,send(peer.id,{type:'answer',sdp:pc.localDescription.sdp},peer,token));return;}
+   if(signal.type==='answer'&&pc.signalingState==='stable'&&pc.remoteDescription?.type==='answer'&&pc.remoteDescription.sdp===signal.sdp)return;
    await pc.setRemoteDescription({type:signal.type,sdp:signal.sdp});if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;
+   if(signal.type==='answer')peer.pendingOffer=null;
    if(!peer.initiator){peer.slots=pc.getTransceivers().slice(0,3);for(const slot of peer.slots)slot.direction='sendrecv';await updateTracks(peer);}
    for(const candidate of peer.pending.splice(0)){try{await pc.addIceCandidate(candidate)}catch{}}
-   if(signal.type==='offer'){await pc.setLocalDescription();await send(peer.id,{type:'answer',sdp:pc.localDescription.sdp},peer,token);}
-   if(peer.initiator&&peer.needsNegotiation&&pc.signalingState==='stable')await offer(peer);
+   if(signal.type==='offer'){await pc.setLocalDescription();detachPeerWork(peer,token,send(peer.id,{type:'answer',sdp:pc.localDescription.sdp},peer,token));}
+   if(peer.initiator&&peer.needsNegotiation&&pc.signalingState==='stable')detachPeerWork(peer,token,offer(peer));
 
  }
 
@@ -276,7 +320,7 @@
    for(const peer of peers.values()){
      const report=await peer.pc.getStats(),traffic=[];
      report.forEach(r=>{if(r.type==='outbound-rtp'||r.type==='inbound-rtp')traffic.push({direction:r.type,kind:r.kind,bytes:r.bytesSent??r.bytesReceived??0,packets:r.packetsSent??r.packetsReceived??0,frames:r.framesDecoded??r.framesEncoded??0});});
-     lastDiagnostics.push({person:person(peer.id).name,connection:peer.pc.connectionState,audioCapture:streams()[0]?.readyState||'off',audioSource:testAudio?'sinal de teste':'microfone',audioContext:testContext?.state||null,cameraCapture:streams()[1]?.readyState||'off',senders:peer.pc.getTransceivers().map(t=>({mid:t.mid,direction:t.currentDirection,track:t.sender.track?.kind||null,live:t.sender.track?.readyState||null})),incomingAudio:peer.audio.getAudioTracks().map(t=>({live:t.readyState,muted:t.muted})),incomingVideo:peer.camera.getVideoTracks().length,traffic});
+     lastDiagnostics.push({person:person(peer.id).name,connection:peer.pc.connectionState,ice:peer.pc.iceConnectionState,recoveryAttempts:peer.recoveryAttempts,audioCapture:streams()[0]?.readyState||'off',audioSource:testAudio?'sinal de teste':'microfone',audioContext:testContext?.state||null,cameraCapture:streams()[1]?.readyState||'off',senders:peer.pc.getTransceivers().map(t=>({mid:t.mid,direction:t.currentDirection,track:t.sender.track?.kind||null,live:t.sender.track?.readyState||null})),incomingAudio:peer.audio.getAudioTracks().map(t=>({live:t.readyState,muted:t.muted})),incomingVideo:peer.camera.getVideoTracks().length,traffic});
    }
  }
 
@@ -309,6 +353,9 @@
      if(generation!==epoch||!callSession.isCurrent(token))return;
      for(const event of data.signals)try{await receive(event);}catch(error){callError(error);}
      if(generation!==epoch||!callSession.isCurrent(token))return;
+     // Apply queued answers before retrying their offers. A slow signaling POST
+     // must not hold this poll open or prevent later answers from being read.
+     for(const peer of peers.values())detachPeerWork(peer,token,recoverPeer(peer));
      signalCursor=data.cursor;await diagnostics();if(generation===epoch&&callSession.canRun())renderMedia();
    }catch(error){if(generation!==epoch)return;if(callSession.handle(error,token))return;if(error.status===401||error.status===403&&roomKind!=='proximity'){disconnectSession();}else if(error.status===403){wasJoined=false;closeAll();}else if(error.status===409){closeAll();}else callError(error);}finally{if(ticking===run)ticking=false;}
  }

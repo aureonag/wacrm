@@ -3,7 +3,7 @@ import vm from 'node:vm';
 const SELF='fixture-user';
 function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  const events=new Map(),intervals=[],apiCalls=[],levels=[],warnings=[];
- let activeMeeting=null,apiStatus=null,apiCode=null,serial=0,responder=null,remoteCall='remote-call-1';
+ let activeMeeting=null,apiStatus=null,apiCode=null,serial=0,responder=null,remoteCall='remote-call-1',clock=1000;
  const connections=[],audioContexts=[],toneTimers=[];
  const track=kind=>({kind,readyState:'live',enabled:true,stopCalls:0,stop(){this.stopCalls++;this.readyState='ended';this.enabled=false;}});
  const tracks={mic:track('audio'),camera:track('video'),screen:track('video')};
@@ -49,11 +49,14 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
   getTracks(){return this.items;}getVideoTracks(){return this.items.filter(item=>item.kind==='video');}getAudioTracks(){return this.items.filter(item=>item.kind==='audio');}addTrack(item){this.items.push(item);}
  }
  class FakePeer{
-  constructor(){if(!allowPeers)throw Error('Peer networking is forbidden in this fixture');this.slots=[];this.signalingState='stable';this.connectionState='connected';this.localDescription={sdp:'fake-sdp'};this.closeCalls=0;connections.push(this);}
+  constructor(){if(!allowPeers)throw Error('Peer networking is forbidden in this fixture');this.slots=[];this.signalingState='stable';this.connectionState='connected';this.iceConnectionState='connected';this.localDescription={type:'offer',sdp:'fake-sdp'};this.remoteDescription={type:'answer',sdp:'fake-answer'};this.localDescriptionCalls=[];this.remoteDescriptionCalls=[];this.descriptionSerial=0;this.closeCalls=0;this.restartCalls=0;connections.push(this);}
   addTransceiver(){const sender={track:null,setStreams(){},async replaceTrack(item){this.track=item;}};const slot={sender,direction:'sendrecv',mid:String(this.slots.length)};this.slots.push(slot);return slot;}
   getTransceivers(){return this.slots;}createDataChannel(){return {readyState:'open',close(){},send(){}};}
-  async setLocalDescription(){}async setRemoteDescription(){}async addIceCandidate(){}async getStats(){return new Map();}
-  close(){this.closeCalls++;this.connectionState='closed';}
+  async setLocalDescription(){const type=this.signalingState==='have-remote-offer'?'answer':'offer';if(type==='offer'&&this.signalingState!=='stable')throw Error('Invalid local offer state: '+this.signalingState);this.localDescription={type,sdp:'fake-'+type+'-'+(++this.descriptionSerial)};this.localDescriptionCalls.push({...this.localDescription});this.signalingState=type==='offer'?'have-local-offer':'stable';}
+  async setRemoteDescription(value){if(value.type==='answer'&&this.signalingState!=='have-local-offer')throw Error('Invalid remote answer state: '+this.signalingState);if(value.type==='offer'&&!['stable','have-remote-offer'].includes(this.signalingState))throw Error('Invalid remote offer state: '+this.signalingState);this.remoteDescription={...value};this.remoteDescriptionCalls.push({...value});this.signalingState=value.type==='offer'?'have-remote-offer':'stable';}
+  async addIceCandidate(){}async getStats(){return new Map();}
+  restartIce(){this.restartCalls++;if(this.signalingState==='stable')Promise.resolve().then(()=>{if(this.signalingState==='stable')return this.onnegotiationneeded?.();});}
+  close(){this.closeCalls++;this.connectionState='closed';this.signalingState='closed';}
  }
  const tone=track('audio'),toneContext={closeCalls:0,close(){this.closeCalls++;return Promise.resolve();}};
  class FakeAudioContext{
@@ -66,7 +69,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  const sandbox={window,document,console:{warn:(...args)=>warnings.push(args)},
   setInterval(callback,ms){intervals.push({callback,ms});return intervals.length;},clearInterval(){},
   setTimeout(callback,ms){if(!audioTests||ms!==8000)throw Error('Unexpected timer/device transmission in this fixture');toneTimers.push(callback);return toneTimers.length;},clearTimeout(){},
-  MutationObserver:class{observe(){}},
+  Date:class extends Date{static now(){return clock;}},MutationObserver:class{observe(){}},
   RTCPeerConnection:FakePeer,MediaStream:FakeStream,fakeTestAudio:stream(tone),fakeTestContext:toneContext,
  };
  if(testTone)source=source.replace('let testAudio=null,testContext=null;','let testAudio=globalThis.fakeTestAudio,testContext=globalThis.fakeTestContext;');
@@ -76,6 +79,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  return {window,tracks,apiCalls,levels,warnings,connections,tone,toneContext,audioContexts,transmit:()=>sandbox.fixtureTestTransmission(),fireTone:index=>toneTimers[index](),
   addTile(id,kind='screen'){const video={srcObject:stream(tracks.screen),pauseCalls:0,pause(){this.pauseCalls++;}};const tile={dataset:{[kind==='screen'?'screen':'user']:id},removed:false,querySelectorAll:()=>[video],remove(){this.removed=true;}};tiles.push(tile);return {tile,video};},
   setMeeting(value){activeMeeting=value;},failApi(status,code=null){apiStatus=status;apiCode=code;},setApi(callback){responder=callback;},setRemoteCall(value){remoteCall=value;},
+  advance(ms){clock+=ms;},
   notice:()=>find(body,'aureonCallPaused'),
   async resume(){find(body,'aureonCallPaused')?.children[2].click();await new Promise(setImmediate);},
   tickPending(){return intervals[0].callback();},

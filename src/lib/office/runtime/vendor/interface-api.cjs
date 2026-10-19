@@ -197,7 +197,7 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
       const caller=callSessions.get(m.id+':'+u.id),recipient=callSessions.get(m.id+':'+body.to);if(!caller)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(caller.id!==body.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');if(!recipient||recipient.id!==body.toCall)fail(409,'A chamada foi reiniciada.','OFFICE_SIGNAL_RECIPIENT_STALE');
       const signal=body.signal;if(!signal||!['offer','answer','candidate','renegotiate'].includes(signal.type))fail(400,'Sinal inválido.');
       let safe;
-      if(signal.type==='renegotiate')safe={type:'renegotiate'};
+      if(signal.type==='renegotiate')safe={type:'renegotiate',...(signal.iceRestart===true?{iceRestart:true}:{})};
       else if(signal.type==='candidate'){const c=signal.candidate;if(!c||typeof c.candidate!=='string'||c.candidate.length>3000)fail(400,'Candidato inválido.');safe={type:'candidate',candidate:{candidate:c.candidate,sdpMid:typeof c.sdpMid==='string'?c.sdpMid:null,sdpMLineIndex:Number.isInteger(c.sdpMLineIndex)?c.sdpMLineIndex:null,usernameFragment:typeof c.usernameFragment==='string'?c.usernameFragment:null}};}
       else {if(typeof signal.sdp!=='string'||signal.sdp.length>32000)fail(400,'Descrição inválida.');safe={type:signal.type,sdp:signal.sdp};}
       signals=signals.filter(s=>s.time>now()-90000);signals.push({sequence:++signalSequence,meeting:m.id,to:body.to,toCall:recipient.id,from:u.id,fromCall:caller.id,time:now(),signal:safe});if(signals.length>2000)signals=signals.slice(-2000);return {ok:true};
