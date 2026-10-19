@@ -31,6 +31,7 @@ import {
   type ContractSectionTone,
 } from "@/lib/contracts/render-sections";
 import { AUREON_PARTY } from "@/lib/contracts/aureon-party";
+import { AUREON_LOGO_BLACK_DATA_URI } from "@/lib/contracts/logo-data";
 
 // The default hyphenation splits long words at syllable boundaries when a
 // line is tight ("otimiza-ção"), which reads as a layout bug in a formal
@@ -52,11 +53,11 @@ Font.registerHyphenationCallback((word) => [word]);
 // (Allan, 2026-09-30).
 const PARTY_HEADINGS = new Set(["contratante", "contratada"]);
 
-// Loaded from the production domain, same pattern as email-templates.ts's
-// LOGO_URL — @react-pdf/renderer fetches images over HTTP(S) at render
-// time, and a local filesystem path isn't reliably resolvable in every
-// runtime this generator runs in (Allan, 2026-09-30).
-const LOGO_URL = "https://aureonag.com/brand/aureon-logo-black.png";
+// Embedded (data URI), not fetched: it used to load from the production
+// domain, but the Hostinger server could not reliably reach its own domain at
+// render time, so every PDF generated there failed fast and signed contracts
+// stayed without a PDF/e-mail (Allan, 2026-10-19).
+const LOGO_URL = AUREON_LOGO_BLACK_DATA_URI;
 
 function isPartySection(heading: string): boolean {
   const normalized = heading.trim().toLowerCase();

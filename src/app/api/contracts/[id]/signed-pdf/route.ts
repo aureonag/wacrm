@@ -26,7 +26,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
-    const pdf = await ensureSignedContractPdf(supabase, id);
+    let pdf: Awaited<ReturnType<typeof ensureSignedContractPdf>>;
+    try {
+      pdf = await ensureSignedContractPdf(supabase, id);
+    } catch (err) {
+      // Say what failed (to the signed-in agent) instead of a bare "Internal
+      // server error" — the host keeps no logs of this.
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error("[contracts/signed-pdf] PDF generation/upload failed:", err);
+      return NextResponse.json({ error: "Failed to generate the signed PDF", detail }, { status: 500 });
+    }
     if (!pdf) {
       return NextResponse.json({ error: "This contract isn't signed yet" }, { status: 400 });
     }
