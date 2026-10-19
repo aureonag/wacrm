@@ -232,7 +232,13 @@
 })({window,getState:()=>state,getMeeting:()=>callSession.canRun()?meeting():null,getPeer:id=>peers.get(id),getRoomId:()=>roomId,getCallId:()=>callId,person});
  function clearDepartedMedia(){const m=callSession.canRun()?meeting():null,self=state.data?.user?.id;for(const tile of document.querySelectorAll('#replicaMedia .r-screen-tile,#replicaMedia .r-video-tile')){const id=tile.dataset.screen||tile.dataset.user;if(!window.aureonOfficeBootstrap.active||!m?.members.includes(id)||id!==self&&(roomId!==m.id||!callId||!peers.has(id))){for(const video of tile.querySelectorAll('video')){video.pause();video.srcObject=null;}tile.remove();}}}
  function detachPeerWork(peer,token,work){void work.catch(error=>{if(callSession.isCurrent(token)&&peers.get(peer.id)===peer)callError(error);});}
- function retryableOffer(peer){const pending=peer.pendingOffer,pc=peer.pc;return pending?.retry&&callSession.isCurrent(pending.token)&&peers.get(peer.id)===peer&&pc.signalingState==='have-local-offer'&&pc.localDescription?.type==='offer'&&pc.localDescription.sdp===pending.sdp?pending:null;}
+ const iceFragments=sdp=>[...new Set((sdp||'').match(/^a=ice-ufrag:[^\s]+/gm)?.map(line=>line.slice(12)).filter(fragment=>fragment.length<=256)||[])].slice(0,16);
+ function safeCandidate(value){if(!value||typeof value.candidate!=='string'||value.candidate.length>3000||value.sdpMid!=null&&(typeof value.sdpMid!=='string'||value.sdpMid.length>256)||value.usernameFragment!=null&&(typeof value.usernameFragment!=='string'||value.usernameFragment.length>256))return null;return {candidate:value.candidate,sdpMid:value.sdpMid??null,sdpMLineIndex:Number.isInteger(value.sdpMLineIndex)&&value.sdpMLineIndex>=0&&value.sdpMLineIndex<=65535?value.sdpMLineIndex:null,usernameFragment:value.usernameFragment??null};}
+ function localSdp(pc){const sdp=pc.localDescription?.sdp;if(typeof sdp!=='string'||sdp.length>32000)throw Object.assign(Error('Descrição de chamada inválida.'),{status:400});return sdp;}
+ const candidateFragment=candidate=>candidate.usernameFragment||candidate.candidate?.match(/(?:^|\s)ufrag\s+(\S+)/)?.[1]||null;
+ function queueCandidate(peer,candidate){if(peer.pending.length>=128)peer.pending.shift();peer.pending.push(candidate);}
+ function updateRemoteIce(peer){const next=iceFragments(peer.pc.remoteDescription?.sdp);peer.retiredRemoteIce=[...new Set([...peer.retiredRemoteIce,...peer.remoteIce.filter(fragment=>!next.includes(fragment))])].slice(-16);peer.remoteIce=next;}
+ function retryableOffer(peer){const pending=peer.pendingOffer,pc=peer.pc;return pending?.retry&&callSession.isCurrent(pending.token)&&peers.get(peer.id)===peer&&pending.descriptionGeneration===peer.localDescriptionGeneration&&pc.signalingState==='have-local-offer'&&pc.localDescription?.type==='offer'?pending:null;}
  function retainOffer(peer,pending,retry){if(peer.pendingOffer!==pending)return;pending.retry=retry;if(!retryableOffer(peer))peer.pendingOffer=null;else peer.recoveryAfter=Math.max(peer.recoveryAfter,Date.now()+3000);}
  async function offer(peer,retry=false){
    const token=callSession.capture(),pc=peer.pc;if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;
@@ -241,7 +247,7 @@
    if(!retry&&pc.signalingState!=='stable'){peer.needsNegotiation=true;return;}
    peer.makingOffer=true;if(!retry)peer.needsNegotiation=false;
    try{
-     if(!pending){await pc.setLocalDescription();if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;pending={token,sdp:pc.localDescription.sdp,retry:false};peer.pendingOffer=pending;}
+     if(!pending){const descriptionGeneration=++peer.localDescriptionGeneration;peer.cachedAnswer=null;await pc.setLocalDescription();if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer||peer.localDescriptionGeneration!==descriptionGeneration)return;pending={token,sdp:localSdp(pc),descriptionGeneration,retry:false};peer.pendingOffer=pending;}
      // Keep the existing offer until its answer arrives, even after a successful
      // POST: the answer itself can be lost. Never apply a second local offer in
      // have-local-offer, where restarting ICE cannot negotiate yet either.
@@ -257,7 +263,7 @@
  }
 
  function streams(){return [testAudio?.getAudioTracks()[0]||window.aureonAudioStream?.()?.getAudioTracks()[0]||null,window.aureonCameraStream?.()?.getVideoTracks()[0]||null,window.aureonScreenStream?.()?.getVideoTracks()[0]||null].map(t=>t?.readyState==='live'?t:null);}
- async function send(to,signal,expectedPeer=peers.get(to),token=callSession.capture()){const peer=peers.get(to);if(!peer||peer!==expectedPeer||!callSession.isCurrent(token))return;try{await api('signal',{meeting:token.roomId,call:token.callId,to,toCall:peer.callId,signal});}catch(error){if(!callSession.isCurrent(token)||peers.get(to)!==peer)return;if(callSession.handle(error,token))return;if(error.status===409&&error.code==='OFFICE_SIGNAL_RECIPIENT_STALE'){closePeer(to);return;}throw error;}}
+ async function send(to,signal,expectedPeer=peers.get(to),token=callSession.capture()){const peer=peers.get(to);if(!peer||peer!==expectedPeer||!callSession.isCurrent(token))return;const controller=new AbortController(),deadline=setTimeout(()=>controller.abort(),10000);try{await api('signal',{meeting:token.roomId,call:token.callId,to,toCall:peer.callId,signal},undefined,controller.signal);}catch(error){if(!callSession.isCurrent(token)||peers.get(to)!==peer)return;if(callSession.handle(error,token))return;if(error.status===409&&error.code==='OFFICE_SIGNAL_RECIPIENT_STALE'){closePeer(to);return;}if(controller.signal.aborted&&!error.status)throw Object.assign(Error('O envio da chamada demorou. Tentando novamente.'),{status:408});throw error;}finally{clearTimeout(deadline);}}
  async function recoverPeer(peer,requested=false){
    const token=callSession.capture();if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer||!meeting()?.members.includes(peer.id))return;
    const pc=peer.pc,now=Date.now(),pending=retryableOffer(peer),failed=pc.connectionState==='failed'||pc.iceConnectionState==='failed',disconnected=pc.connectionState==='disconnected'||pc.iceConnectionState==='disconnected';
@@ -276,7 +282,7 @@
    if(peer.initiator){if(pending)await offer(peer,true);else pc.restartIce();}else await send(peer.id,{type:'renegotiate',iceRestart:true},peer,token);
  }
  function createPeer(id,remoteCall){
-   const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]}),peer={id,callId:remoteCall,pc,pending:[],pendingOffer:null,makingOffer:false,ignoreOffer:false,settingAnswer:false,polite:state.data.user.id>id,audio:new MediaStream(),camera:new MediaStream(),screen:new MediaStream(),channel:null,recoveryAttempts:0,recoveryAfter:0,recoveryState:'new',disconnectedAt:null};
+   const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]}),peer={id,callId:remoteCall,pc,pending:[],remoteIce:[],retiredRemoteIce:[],pendingOffer:null,localDescriptionGeneration:0,remoteDescriptionGeneration:0,remoteOffer:null,remoteAnswer:null,cachedAnswer:null,makingOffer:false,ignoreOffer:false,settingAnswer:false,polite:state.data.user.id>id,audio:new MediaStream(),camera:new MediaStream(),screen:new MediaStream(),channel:null,recoveryAttempts:0,recoveryAfter:0,recoveryState:'new',disconnectedAt:null};
    peers.set(id,peer);peer.initiator=state.data.user.id<id;peer.slots=peer.initiator?['audio','video','video'].map(kind=>pc.addTransceiver(kind,{direction:'sendrecv'})):[];
    pc.onicecandidate=e=>{if(e.candidate)send(id,{type:'candidate',candidate:e.candidate.toJSON()},peer).catch(()=>{});};
    pc.onconnectionstatechange=()=>{recoverPeer(peer).catch(callError);renderMedia();};
@@ -301,15 +307,19 @@
    const token=callSession.capture();if(!callSession.isCurrent(token))return;
    if(!meeting()?.members.includes(event.from)||event.meeting!==roomId)return;
    const peer=peers.get(event.from);if(!peer||peer.callId!==event.fromCall)return;const pc=peer.pc,signal=event.signal;
-   if(signal.type==='candidate'){if(peer.ignoreOffer)return;if(pc.remoteDescription){try{await pc.addIceCandidate(signal.candidate)}catch(error){if(!peer.ignoreOffer)callError(error)}}else peer.pending.push(signal.candidate);return;}
+   if(signal.type==='candidate'){if(peer.ignoreOffer)return;const candidate=safeCandidate(signal.candidate);if(!candidate)return;const fragment=candidateFragment(candidate);if(fragment&&peer.retiredRemoteIce.includes(fragment)&&!peer.remoteIce.includes(fragment))return;if(!pc.remoteDescription||pc.signalingState==='have-local-offer'||fragment&&peer.remoteIce.length&&!peer.remoteIce.includes(fragment))queueCandidate(peer,candidate);else try{await pc.addIceCandidate(candidate)}catch(error){if(!peer.ignoreOffer)callError(error)}return;}
    if(signal.type==='renegotiate'){if(peer.initiator)detachPeerWork(peer,token,signal.iceRestart===true?recoverPeer(peer,true):offer(peer));return;}
-   if(signal.type==='offer'&&!peer.initiator&&pc.signalingState==='stable'&&pc.remoteDescription?.type==='offer'&&pc.remoteDescription.sdp===signal.sdp&&pc.localDescription?.type==='answer'){detachPeerWork(peer,token,send(peer.id,{type:'answer',sdp:pc.localDescription.sdp},peer,token));return;}
-   if(signal.type==='answer'&&pc.signalingState==='stable'&&pc.remoteDescription?.type==='answer'&&pc.remoteDescription.sdp===signal.sdp)return;
+   // ICE gathering and addIceCandidate mutate the browser's description SDP.
+   // Identify our negotiation by its generations and the original wire strings.
+   const cached=peer.cachedAnswer;
+   if(signal.type==='offer'&&!peer.initiator&&pc.signalingState==='stable'&&peer.remoteOffer===signal.sdp&&cached&&callSession.isCurrent(cached.token)&&cached.localGeneration===peer.localDescriptionGeneration&&cached.remoteGeneration===peer.remoteDescriptionGeneration&&pc.remoteDescription?.type==='offer'&&pc.localDescription?.type==='answer'){detachPeerWork(peer,token,send(peer.id,{type:'answer',sdp:cached.sdp},peer,token));return;}
+   if(signal.type==='answer'&&pc.signalingState==='stable'&&pc.remoteDescription?.type==='answer'&&peer.remoteAnswer===signal.sdp)return;
    await pc.setRemoteDescription({type:signal.type,sdp:signal.sdp});if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer)return;
-   if(signal.type==='answer')peer.pendingOffer=null;
+   const remoteGeneration=++peer.remoteDescriptionGeneration;peer.cachedAnswer=null;updateRemoteIce(peer);
+   if(signal.type==='answer'){peer.pendingOffer=null;peer.remoteAnswer=signal.sdp;peer.remoteOffer=null;}else{peer.remoteOffer=signal.sdp;peer.remoteAnswer=null;}
    if(!peer.initiator){peer.slots=pc.getTransceivers().slice(0,3);for(const slot of peer.slots)slot.direction='sendrecv';await updateTracks(peer);}
-   for(const candidate of peer.pending.splice(0)){try{await pc.addIceCandidate(candidate)}catch{}}
-   if(signal.type==='offer'){await pc.setLocalDescription();detachPeerWork(peer,token,send(peer.id,{type:'answer',sdp:pc.localDescription.sdp},peer,token));}
+   for(const candidate of peer.pending.splice(0)){const fragment=candidateFragment(candidate);if(fragment&&peer.remoteIce.length&&!peer.remoteIce.includes(fragment))continue;try{await pc.addIceCandidate(candidate)}catch{}}
+   if(signal.type==='offer'){const localGeneration=++peer.localDescriptionGeneration;await pc.setLocalDescription();if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer||peer.localDescriptionGeneration!==localGeneration||peer.remoteDescriptionGeneration!==remoteGeneration)return;const sdp=localSdp(pc);peer.cachedAnswer={token,sdp,localGeneration,remoteGeneration};detachPeerWork(peer,token,send(peer.id,{type:'answer',sdp},peer,token));}
    if(peer.initiator&&peer.needsNegotiation&&pc.signalingState==='stable')detachPeerWork(peer,token,offer(peer));
 
  }

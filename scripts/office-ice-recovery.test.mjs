@@ -14,6 +14,8 @@ function setup(remote='remote'){
 }
 const settle=()=>new Promise(setImmediate);
 function fail(pc){pc.connectionState='failed';pc.iceConnectionState='failed';pc.oniceconnectionstatechange();pc.onconnectionstatechange();}
+const iceSdp=fragment=>'v=0\r\no=- 2 1 IN IP4 0.0.0.0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=mid:0\r\na=ice-ufrag:'+fragment+'\r\n';
+const iceCandidate=(fragment,index=1)=>({candidate:'candidate:'+index+' 1 UDP 1 192.0.2.1 1234 typ host',usernameFragment:fragment,sdpMid:'0',sdpMLineIndex:0});
 
 test('failed offerer restarts ICE on the same peer and call while preserving enabled devices',async()=>{
  const {h}=setup();await h.tick();const pc=h.connections[0];fail(pc);await settle();
@@ -152,14 +154,47 @@ test('a session replacement discovered during an offer retry still stops capture
  await h.tick();const pc=h.connections[0];fail(pc);await settle();h.advance(3000);await h.tick();assert.equal(offers,2);assert.equal(pc.closeCalls,1);assert.ok(h.notice());expectStoppedOnce(h);
  const count=h.apiCalls.length;h.advance(30000);await h.tick();assert.equal(h.apiCalls.length,count);expectStoppedOnce(h);
 });
-test('a replaced local SDP or departed session can never replay an obsolete failed offer',async()=>{
- for(const invalidate of ['description','leave','ended']){
-  const {h,onSignal}=setup();let offers=0;onSignal(signal=>{if(signal.type==='offer'){offers++;throw Object.assign(Error('temporary outage'),{status:503});}return {};});
+test('a newer owned description generation or departed session can never replay an obsolete failed offer',async()=>{
+ for(const invalidate of ['generation','leave','ended']){
+  const {h,onSignal,deliver}=setup();let offers=0;onSignal(signal=>{if(signal.type==='offer'){offers++;throw Object.assign(Error('temporary outage'),{status:503});}return {};});
   await h.tick();const pc=h.connections[0];fail(pc);await settle();
-  if(invalidate==='description')pc.localDescription={type:'offer',sdp:'different-local-sdp'};
+  if(invalidate==='generation'){deliver({type:'answer',sdp:iceSdp('generation-one')});await h.tick();pc.onnegotiationneeded();await settle();}
   else if(invalidate==='leave'){h.setMeeting(null);await h.state();}else await h.ended();
-  h.advance(30000);await h.tick();assert.equal(offers,1);assert.equal(pc.localDescriptionCalls.length,1);if(invalidate==='description')expectLive(h);else expectStoppedOnce(h);
+  h.advance(30000);await h.tick();assert.equal(offers,invalidate==='generation'?3:1);assert.equal(pc.localDescriptionCalls.length,invalidate==='generation'?2:1);if(invalidate==='generation'){const sent=h.apiCalls.filter(call=>call.endpoint==='signal'&&call.body.signal.type==='offer');assert.notEqual(sent[0].body.signal.sdp,sent[1].body.signal.sdp);assert.equal(sent[1].body.signal.sdp,sent[2].body.signal.sdp);expectLive(h);}else expectStoppedOnce(h);
  }
+});
+test('local candidate gathering cannot invalidate a retained offer after a failed POST',async()=>{
+ const {h,onSignal,deliver}=setup();let offers=0;onSignal(signal=>{if(signal.type==='offer'&&++offers===1){h.connections[0].gatherCandidate();h.connections[0].gatherCandidate('');throw Object.assign(Error('503 after candidates gathered'),{status:503});}return {};});
+ await h.tick();const pc=h.connections[0];fail(pc);await settle();assert.notEqual(pc.localDescription.sdp,pc.localDescriptionCalls[0].sdp);h.advance(3000);await h.tick();assert.equal(offers,2);
+ const sent=h.apiCalls.filter(call=>call.endpoint==='signal'&&call.body.signal.type==='offer');assert.equal(sent[0].body.signal.sdp,sent[1].body.signal.sdp);assert.equal(pc.localDescriptionCalls.length,1);assert.equal(pc.restartCalls,1);deliver({type:'answer',sdp:iceSdp('recovered')});await h.tick();expectLive(h);
+});
+test('cached answers and duplicate answers survive local gathering and remote candidate SDP mutation',async()=>{
+ const answerer=setup('aaa');let answers=0;answerer.onSignal(signal=>{if(signal.type==='answer'&&++answers===1){answerer.h.connections[0].gatherCandidate();answerer.h.connections[0].gatherCandidate('');throw Object.assign(Error('answer503'),{status:503});}return {};});
+ await answerer.h.tick();const answerPc=answerer.h.connections[0],offer={type:'offer',sdp:iceSdp('offer-generation')};answerer.deliver(offer);await answerer.h.tick();answerer.deliver({type:'candidate',candidate:iceCandidate('offer-generation')});answerer.deliver({type:'candidate',candidate:{...iceCandidate('offer-generation'),candidate:''}});await answerer.h.tick();assert.notEqual(answerPc.remoteDescription.sdp,offer.sdp);answerer.deliver(offer);await answerer.h.tick();assert.equal(answers,2);assert.equal(answerPc.localDescriptionCalls.length,1);assert.equal(answerPc.remoteDescriptionCalls.length,1);
+ const sent=answerer.h.apiCalls.filter(call=>call.endpoint==='signal'&&call.body.signal.type==='answer');assert.equal(sent[0].body.signal.sdp,sent[1].body.signal.sdp);
+ const offerer=setup();await offerer.h.tick();const offerPc=offerer.h.connections[0];offerPc.onnegotiationneeded();await settle();const answer={type:'answer',sdp:iceSdp('answer-generation')};offerer.deliver(answer);await offerer.h.tick();offerer.deliver({type:'candidate',candidate:iceCandidate('answer-generation')});offerer.deliver({type:'candidate',candidate:{...iceCandidate('answer-generation'),candidate:''}});await offerer.h.tick();assert.notEqual(offerPc.remoteDescription.sdp,answer.sdp);offerer.deliver(answer);await offerer.h.tick();assert.equal(offerPc.remoteDescriptionCalls.length,1);assert.equal(offerer.h.warnings.length,0);expectLive(offerer.h);expectLive(answerer.h);
+});
+test('restart candidates arriving before the answer wait for its ICE generation and discard old generations',async()=>{
+ const {h,deliver}=setup();await h.tick();const pc=h.connections[0];pc.onnegotiationneeded();await settle();deliver({type:'answer',sdp:iceSdp('old-generation')});await h.tick();h.advance(3000);fail(pc);await settle();assert.equal(pc.signalingState,'have-local-offer');
+ deliver({type:'candidate',candidate:iceCandidate('old-generation')});deliver({type:'candidate',candidate:iceCandidate('new-generation')});deliver({type:'candidate',candidate:{...iceCandidate('new-generation'),candidate:''}});await h.tick();assert.equal(pc.iceCandidateCalls.length,0);
+ deliver({type:'answer',sdp:iceSdp('new-generation')});await h.tick();assert.equal(pc.iceCandidateCalls.length,2);assert.ok(pc.iceCandidateCalls.every(candidate=>candidate.usernameFragment==='new-generation'));deliver({type:'candidate',candidate:iceCandidate('old-generation')});await h.tick();assert.equal(pc.iceCandidateCalls.length,2);assert.equal(h.warnings.length,0);expectLive(h);
+});
+test('a future-generation candidate arriving before its offer is applied only after that offer',async()=>{
+ const {h,deliver}=setup('aaa');await h.tick();const pc=h.connections[0];deliver({type:'offer',sdp:iceSdp('old-offer')});await h.tick();deliver({type:'candidate',candidate:iceCandidate('future-offer')});await h.tick();assert.equal(pc.iceCandidateCalls.length,0);deliver({type:'offer',sdp:iceSdp('future-offer')});await h.tick();assert.equal(pc.iceCandidateCalls.length,1);assert.equal(pc.iceCandidateCalls[0].usernameFragment,'future-offer');assert.equal(h.warnings.length,0);expectLive(h);
+});
+test('quarantined candidates retain at most128 bounded public records and reject oversized metadata',async()=>{
+ const {h,deliver}=setup();await h.tick();const pc=h.connections[0];pc.onnegotiationneeded();await settle();
+ for(let index=0;index<130;index++)deliver({type:'candidate',candidate:{...iceCandidate('bounded',index),sdpMLineIndex:999999,privateData:'DO_NOT_RETAIN'}});
+ for(const invalid of [{usernameFragment:'x'.repeat(257)},{sdpMid:'x'.repeat(257)},{candidate:'x'.repeat(3001)}])deliver({type:'candidate',candidate:{...iceCandidate('bounded'),...invalid}});
+ await h.tick();assert.equal(pc.iceCandidateCalls.length,0);deliver({type:'answer',sdp:iceSdp('bounded')});await h.tick();assert.equal(pc.iceCandidateCalls.length,128);assert.ok(pc.iceCandidateCalls[0].candidate.startsWith('candidate:2 '));assert.ok(pc.iceCandidateCalls.every(candidate=>candidate.sdpMLineIndex===null&&Object.keys(candidate).sort().join(',')==='candidate,sdpMLineIndex,sdpMid,usernameFragment'));assert.ok(!JSON.stringify(pc.iceCandidateCalls).includes('DO_NOT_RETAIN'));expectLive(h);
+});
+test('a hung signaling POST aborts after10s and frees the offer for its bounded retry',async()=>{
+ const {h,onSignal,deliver}=setup();let offers=0,lateResolve;onSignal(signal=>{if(signal.type==='offer'&&++offers===1)return new Promise(resolve=>{lateResolve=resolve;});return {};});await h.tick();const pc=h.connections[0];pc.onnegotiationneeded();await settle();const first=h.apiCalls.find(call=>call.endpoint==='signal');assert.equal(h.pendingSignalDeadlines(),1);h.advance(9999);await settle();assert.equal(first.signal.aborted,false);h.advance(1);await settle();assert.equal(first.signal.aborted,true);assert.equal(h.pendingSignalDeadlines(),0);expectLive(h);
+ h.advance(3000);await h.tick();assert.equal(offers,2);assert.equal(pc.localDescriptionCalls.length,1);deliver({type:'answer',sdp:iceSdp('after-timeout')});await h.tick();const requests=h.apiCalls.length;lateResolve({});await settle();h.advance(30000);await h.tick();assert.equal(h.apiCalls.filter(call=>call.endpoint==='signal').length,2);assert.equal(h.pendingSignalDeadlines(),0);assert.equal(pc.closeCalls,0);assert.ok(h.apiCalls.length>=requests);expectLive(h);
+});
+test('completed signaling clears its deadline and an obsolete timed-out POST cannot pause a replacement call',async()=>{
+ const done=setup();await done.h.tick();done.h.connections[0].onnegotiationneeded();await settle();const sent=done.h.apiCalls.find(call=>call.endpoint==='signal');assert.equal(done.h.pendingSignalDeadlines(),0);done.h.advance(10000);assert.equal(sent.signal.aborted,false);expectLive(done.h);
+ const old=setup();old.onSignal(signal=>signal.type==='offer'?new Promise(()=>{}):{});await old.h.tick();const pc=old.h.connections[0];pc.onnegotiationneeded();await settle();old.h.failApi(409);await old.h.tick();old.h.failApi(null);await old.h.tick();assert.equal(old.h.connections.length,2);old.h.advance(10000);await settle();await old.h.tick();assert.equal(old.h.notice(),null);assert.equal(old.h.warnings.length,0);assert.equal(pc.closeCalls,1);assert.equal(old.h.pendingSignalDeadlines(),0);expectLive(old.h);
 });
 test('stale connection events after departure or session termination cannot reconnect or capture',async()=>{
  for(const terminate of ['leave','ended']){

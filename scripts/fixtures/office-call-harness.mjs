@@ -4,7 +4,7 @@ const SELF='fixture-user';
 function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  const events=new Map(),intervals=[],apiCalls=[],levels=[],warnings=[];
  let activeMeeting=null,apiStatus=null,apiCode=null,serial=0,responder=null,remoteCall='remote-call-1',clock=1000;
- const connections=[],audioContexts=[],toneTimers=[];
+ const connections=[],audioContexts=[],toneTimers=[],signalDeadlines=new Map();let timerSerial=0;
  const track=kind=>({kind,readyState:'live',enabled:true,stopCalls:0,stop(){this.stopCalls++;this.readyState='ended';this.enabled=false;}});
  const tracks={mic:track('audio'),camera:track('video'),screen:track('video')};
  const stream=track=>({getTracks:()=>[track],getAudioTracks:()=>track.kind==='audio'?[track]:[],getVideoTracks:()=>track.kind==='video'?[track]:[]});
@@ -30,10 +30,12 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
   if(endpoint==='signals')return {members:[...activeMeeting.members],roster:{[SELF]:query.call,...(activeMeeting.members.includes('remote')?{remote:remoteCall}:{})},signals:[],cursor:0};
   return {};
  };
- const api=async(endpoint,body,query)=>{
-  apiCalls.push({endpoint,body,query});
+ const api=async(endpoint,body,query,signal)=>{
+  apiCalls.push({endpoint,body,query,signal});
   if(apiStatus!==null)throw Object.assign(Error('fixture request denied'),{status:apiStatus,code:apiCode});
-  return responder?responder(endpoint,body,query,normal):normal(endpoint,body,query);
+  const result=responder?responder(endpoint,body,query,normal):normal(endpoint,body,query);
+  if(!signal)return result;
+  return new Promise((resolve,reject)=>{const abort=()=>{cleanup();reject(Object.assign(Error('The operation was aborted'),{name:'AbortError'}));},cleanup=()=>signal.removeEventListener('abort',abort);if(signal.aborted){abort();return;}signal.addEventListener('abort',abort,{once:true});Promise.resolve(result).then(value=>{cleanup();resolve(value);},error=>{cleanup();reject(error);});});
  };
  const window={
   aureonReplicaUI:{state,api,center:new Element(),el:tag=>new Element(tag),button:()=>new Element('button'),toast(){},person:id=>({id,name:'Fixture'}),refresh:async()=>{}},
@@ -49,12 +51,15 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
   getTracks(){return this.items;}getVideoTracks(){return this.items.filter(item=>item.kind==='video');}getAudioTracks(){return this.items.filter(item=>item.kind==='audio');}addTrack(item){this.items.push(item);}
  }
  class FakePeer{
-  constructor(){if(!allowPeers)throw Error('Peer networking is forbidden in this fixture');this.slots=[];this.signalingState='stable';this.connectionState='connected';this.iceConnectionState='connected';this.localDescription={type:'offer',sdp:'fake-sdp'};this.remoteDescription={type:'answer',sdp:'fake-answer'};this.localDescriptionCalls=[];this.remoteDescriptionCalls=[];this.descriptionSerial=0;this.closeCalls=0;this.restartCalls=0;connections.push(this);}
+  constructor(){if(!allowPeers)throw Error('Peer networking is forbidden in this fixture');this.slots=[];this.signalingState='stable';this.connectionState='connected';this.iceConnectionState='connected';this.localDescription={type:'offer',sdp:'v=0\r\na=ice-ufrag:initial-local\r\n'};this.remoteDescription={type:'answer',sdp:'v=0\r\na=ice-ufrag:initial-remote\r\n'};this.localDescriptionCalls=[];this.remoteDescriptionCalls=[];this.iceCandidateCalls=[];this.descriptionSerial=0;this.closeCalls=0;this.restartCalls=0;connections.push(this);}
   addTransceiver(){const sender={track:null,setStreams(){},async replaceTrack(item){this.track=item;}};const slot={sender,direction:'sendrecv',mid:String(this.slots.length)};this.slots.push(slot);return slot;}
   getTransceivers(){return this.slots;}createDataChannel(){return {readyState:'open',close(){},send(){}};}
-  async setLocalDescription(){const type=this.signalingState==='have-remote-offer'?'answer':'offer';if(type==='offer'&&this.signalingState!=='stable')throw Error('Invalid local offer state: '+this.signalingState);this.localDescription={type,sdp:'fake-'+type+'-'+(++this.descriptionSerial)};this.localDescriptionCalls.push({...this.localDescription});this.signalingState=type==='offer'?'have-local-offer':'stable';}
+  async setLocalDescription(){const type=this.signalingState==='have-remote-offer'?'answer':'offer';if(type==='offer'&&this.signalingState!=='stable')throw Error('Invalid local offer state: '+this.signalingState);this.localDescription={type,sdp:'v=0\r\no=- 1 '+(++this.descriptionSerial)+' IN IP4 0.0.0.0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=mid:0\r\na=ice-ufrag:fake-'+type+'-'+this.descriptionSerial+'\r\n'};this.localDescriptionCalls.push({...this.localDescription});this.signalingState=type==='offer'?'have-local-offer':'stable';}
   async setRemoteDescription(value){if(value.type==='answer'&&this.signalingState!=='have-local-offer')throw Error('Invalid remote answer state: '+this.signalingState);if(value.type==='offer'&&!['stable','have-remote-offer'].includes(this.signalingState))throw Error('Invalid remote offer state: '+this.signalingState);this.remoteDescription={...value};this.remoteDescriptionCalls.push({...value});this.signalingState=value.type==='offer'?'have-remote-offer':'stable';}
-  async addIceCandidate(){}async getStats(){return new Map();}
+  appendCandidate(description,candidate){if(description)description.sdp=description.sdp.replace(/\r?\n$/,'')+'\r\na='+(candidate||'end-of-candidates')+'\r\n';}
+  gatherCandidate(candidate='candidate:1 1 UDP 1 192.0.2.1 1234 typ host'){this.appendCandidate(this.localDescription,candidate);}
+  async addIceCandidate(candidate){this.iceCandidateCalls.push({...candidate});if(!this.remoteDescription)throw Object.assign(Error('No remote description'),{name:'InvalidStateError'});const fragments=this.remoteDescription.sdp.match(/^a=ice-ufrag:[^\s]+/gm)?.map(line=>line.slice(12))||[];if(candidate.usernameFragment&&!fragments.includes(candidate.usernameFragment))throw Object.assign(Error('ICE usernameFragment mismatch'),{name:'OperationError'});this.appendCandidate(this.remoteDescription,candidate.candidate);}
+  async getStats(){return new Map();}
   restartIce(){this.restartCalls++;if(this.signalingState==='stable')Promise.resolve().then(()=>{if(this.signalingState==='stable')return this.onnegotiationneeded?.();});}
   close(){this.closeCalls++;this.connectionState='closed';this.signalingState='closed';}
  }
@@ -68,7 +73,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  window.AudioContext=FakeAudioContext;
  const sandbox={window,document,console:{warn:(...args)=>warnings.push(args)},
   setInterval(callback,ms){intervals.push({callback,ms});return intervals.length;},clearInterval(){},
-  setTimeout(callback,ms){if(!audioTests||ms!==8000)throw Error('Unexpected timer/device transmission in this fixture');toneTimers.push(callback);return toneTimers.length;},clearTimeout(){},
+  setTimeout(callback,ms){const id=++timerSerial;if(ms===10000){signalDeadlines.set(id,{callback,due:clock+ms});return id;}if(!audioTests||ms!==8000)throw Error('Unexpected timer/device transmission in this fixture');toneTimers.push(callback);return id;},clearTimeout(id){signalDeadlines.delete(id);},AbortController,
   Date:class extends Date{static now(){return clock;}},MutationObserver:class{observe(){}},
   RTCPeerConnection:FakePeer,MediaStream:FakeStream,fakeTestAudio:stream(tone),fakeTestContext:toneContext,
  };
@@ -79,7 +84,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  return {window,tracks,apiCalls,levels,warnings,connections,tone,toneContext,audioContexts,transmit:()=>sandbox.fixtureTestTransmission(),fireTone:index=>toneTimers[index](),
   addTile(id,kind='screen'){const video={srcObject:stream(tracks.screen),pauseCalls:0,pause(){this.pauseCalls++;}};const tile={dataset:{[kind==='screen'?'screen':'user']:id},removed:false,querySelectorAll:()=>[video],remove(){this.removed=true;}};tiles.push(tile);return {tile,video};},
   setMeeting(value){activeMeeting=value;},failApi(status,code=null){apiStatus=status;apiCode=code;},setApi(callback){responder=callback;},setRemoteCall(value){remoteCall=value;},
-  advance(ms){clock+=ms;},
+  advance(ms){clock+=ms;for(const [id,timer]of [...signalDeadlines])if(timer.due<=clock){signalDeadlines.delete(id);timer.callback();}},pendingSignalDeadlines:()=>signalDeadlines.size,
   notice:()=>find(body,'aureonCallPaused'),
   async resume(){find(body,'aureonCallPaused')?.children[2].click();await new Promise(setImmediate);},
   tickPending(){return intervals[0].callback();},
