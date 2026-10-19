@@ -72,6 +72,19 @@ const nextConfig = {
   // Harmless outside Docker: `next start` keeps working as before.
   output: "standalone",
 
+  /**
+   * The signed-contract PDF (@react-pdf/renderer -> pdfkit) loads its built-in
+   * fonts through `require("#standard-fonts/Helvetica")`, a dynamic, package-
+   * `imports` lookup that file tracing cannot follow: the standalone bundle only
+   * kept the ESM (.mjs) copies, so on the host (which runs that bundle) every PDF
+   * failed with "Cannot find module .../pdfkit/js/standard-fonts/Helvetica.cjs"
+   * (2026-10-19). Force the whole pdfkit runtime folder into the routes that
+   * render PDFs.
+   */
+  outputFileTracingIncludes: {
+    "/api/contracts/**": ["./node_modules/pdfkit/js/**/*"],
+  },
+
   // The private office bundle is mounted read-only at runtime, separately from this image.
   outputFileTracingExcludes: {
     "**/*": ["**/.office-runtime/**", "**/.office-runtime-optimized/**", "**/.office-test/**"],
