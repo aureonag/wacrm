@@ -7,7 +7,7 @@
  function createScene({durationMs=200,staleMs=20000}={}){
   if(!Number.isFinite(durationMs)||durationMs<0||!Number.isFinite(staleMs)||staleMs<=0)throw Error('Intervalo espacial inválido.');
   let records=new Map(),lastObserved=-Infinity,selfId=null;
-  function point(record,time){const t=durationMs===0?1:Math.max(0,Math.min(1,(time-record.started)/durationMs));return {x:record.from.x+(record.to.x-record.from.x)*t,y:record.from.y+(record.to.y-record.from.y)*t};}
+  function point(record,time){const t=record.duration===0?1:Math.max(0,Math.min(1,(time-record.started)/record.duration));return {x:record.from.x+(record.to.x-record.from.x)*t,y:record.from.y+(record.to.y-record.from.y)*t};}
   function observe(state,time){
    if(!Number.isFinite(time))return;
    if(state?.capabilities?.spatialPresence!==true||typeof state.user?.id!=='string'||!state.user.id){records.clear();selfId=null;lastObserved=-Infinity;return;}
@@ -21,18 +21,24 @@
     if(old&&p.updatedAt<old.updatedAt){next.set(id,old);continue;}
     // A repeated roster refresh must not restart an interpolation already in progress.
     const unchanged=old&&old.to.x===p.x&&old.to.y===p.y;
-    const areaName=typeof p.areaName==='string'?p.areaName.slice(0,80):'',current=old?point(old,time):{x:p.x,y:p.y},snap=!old||Math.hypot(current.x-p.x,current.y-p.y)>120;
+    // The 500 ms receiver gate is checked by a 200 ms timer: ordinary arrivals
+    // are 600 ms apart. Follow that cadence without predicting beyond a sample.
+    const cadence=old?Math.max(0,time-old.observedAt):durationMs,interpolation=durationMs===0?0:Math.max(durationMs,Math.min(1000,cadence));
+    // Running uses 440 px/s. Judge a jump between published samples, rather
+    // than against the deliberately delayed drawing, and cap the time budget.
+    const sampleMs=old?Math.max(0,Math.min(1000,p.updatedAt-old.updatedAt)):0,jumpLimit=Math.max(120,440*sampleMs/1000+40);
+    const areaName=typeof p.areaName==='string'?p.areaName.slice(0,80):'',current=old?point(old,time):{x:p.x,y:p.y},snap=!old||Math.hypot(old.to.x-p.x,old.to.y-p.y)>jumpLimit;
     const explicit=pose(p.pose),dx=p.x-(old?.to.x??p.x),dy=p.y-(old?.to.y??p.y),facing=explicit?.facing||(Math.abs(dx)+Math.abs(dy)<.25?(old?.facing||'down'):Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up')),seated=explicit?.seated===true,layout=explicit?.layout||'';
-    const moving=durationMs>0&&!snap&&!seated&&Math.hypot(current.x-p.x,current.y-p.y)>=.25;
-    const motionStarted=unchanged?old.motionStarted:moving&&old?.moving&&time<old.started+durationMs?old.motionStarted:time;
+    const moving=interpolation>0&&!snap&&!seated&&Math.hypot(current.x-p.x,current.y-p.y)>=.25;
+    const motionStarted=unchanged?old.motionStarted:moving&&old?.moving&&time<=old.started+old.duration?old.motionStarted:time;
     const poseStarted=old&&old.facing===facing&&old.seated===seated&&old.layout===layout?old.poseStarted:time;
-    next.set(id,{appearance:user.avatarAppearance&&typeof user.avatarAppearance==='object'?user.avatarAppearance:null,facing,seated,layout,poseStarted,id,name,initials:initials(name),portrait:portrait(user.avatarUrl),status:user.status,areaName,updatedAt:p.updatedAt,from:unchanged?old.from:snap?{x:p.x,y:p.y}:current,to:{x:p.x,y:p.y},started:unchanged?old.started:time,moving:seated?false:unchanged?old.moving:moving,motionStarted});
+    next.set(id,{appearance:user.avatarAppearance&&typeof user.avatarAppearance==='object'?user.avatarAppearance:null,facing,seated,layout,poseStarted,id,name,initials:initials(name),portrait:portrait(user.avatarUrl),status:user.status,areaName,updatedAt:p.updatedAt,observedAt:time,duration:unchanged?old.duration:interpolation,from:unchanged?old.from:snap?{x:p.x,y:p.y}:current,to:{x:p.x,y:p.y},started:unchanged?old.started:time,moving:seated?false:unchanged?old.moving:moving,motionStarted});
    }
    records=next;
   }
   function frame(time){
    if(!Number.isFinite(time)||time<lastObserved||time-lastObserved>=staleMs){records.clear();return [];}
-   return Array.from(records.values(),record=>({id:record.id,name:record.name,initials:record.initials,portrait:record.portrait,status:record.status,areaName:record.areaName,appearance:record.appearance,facing:record.facing,seated:record.seated,layout:record.layout,moving:record.moving&&time<record.started+durationMs,motionElapsed:Math.max(0,time-record.motionStarted),poseElapsed:Math.max(0,time-record.poseStarted),...point(record,time)}));
+   return Array.from(records.values(),record=>({id:record.id,name:record.name,initials:record.initials,portrait:record.portrait,status:record.status,areaName:record.areaName,appearance:record.appearance,facing:record.facing,seated:record.seated,layout:record.layout,moving:record.moving&&time<record.started+record.duration,motionElapsed:Math.max(0,time-record.motionStarted),poseElapsed:Math.max(0,time-record.poseStarted),...point(record,time)}));
   }
   return {observe,frame};
  }

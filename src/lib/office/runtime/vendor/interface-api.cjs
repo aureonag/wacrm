@@ -22,6 +22,12 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
   let dirty = false, signals = structuredClone(ephemeral?.signals || []), signalSequence = ephemeral?.signalSequence || 0;
   if (!Object.hasOwn(state,'officeMap') && approvedMap !== undefined) {state.officeMap=structuredClone(approvedMap);dirty=true;}
   const callSessions = new Map(structuredClone(ephemeral?.callSessions || []));
+  // One short-lived grant binds a creation attempt to the current call version.
+  // Retried POSTs reuse their result; an obsolete grant cannot replace a newer tab.
+  const callGrants = new Map(structuredClone(ephemeral?.callGrants || []));
+  const CALL_GRANT_TTL_MS=60000,CALL_GRANT_LIMIT=1024;
+  const pruneCallGrants=()=>{for(const [key,grant]of callGrants)if(!grant||grant.expiresAt<=now())callGrants.delete(key);};
+  const invalidateCallGrants=(uid,room)=>{for(const grant of callGrants.values())if((!uid||grant.userId===uid)&&(!room||grant.roomId===room))grant.invalidated=true;};
   const spatialPresence = createSpatialPresence({now, initialState:structuredClone(ephemeral?.spatial || null)});
   const fail = (status, message, code) => {const safeCode=normalizeOfficeCallConflict(status,code);const error = new Error(officeCallConflictMessage(safeCode)||message); error.status = status;if(safeCode)error.code=safeCode; throw error;};
   const text = (value, limit, required = true) => {
@@ -42,7 +48,7 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
     u.role=identity.role;u.crmCapabilities={...identity.capabilities};delete u.archived;
     return u;
   };
-  const disconnectCalls = uid => {for(const key of callSessions.keys())if(key.endsWith(':'+uid))callSessions.delete(key);signals=signals.filter(s=>s.from!==uid&&s.to!==uid);};
+  const disconnectCalls = uid => {for(const key of callSessions.keys())if(key.endsWith(':'+uid))callSessions.delete(key);invalidateCallGrants(uid);signals=signals.filter(s=>s.from!==uid&&s.to!==uid);};
   const appearance = u => {try{return publicAvatarAppearance(readClientState(state,u.id));}catch{return publicAvatarAppearance();}};
   const publicUser = u => {const spatialPosition=spatialPresence.snapshot(u);return {id:u.id,name:u.name,bio:u.bio||'',status:u.status||'online',statusText:u.statusText||'',presenceVersion:u.presenceVersion||0,lastSeen:u.lastSeen,avatarUrl:u.avatarUrl||'',avatarAppearance:appearance(u),profilePhotoUrl:u.profilePhotoUrl||'',timeZone:u.timeZone||'',role:u.role,preferences:u.preferences||{},...(spatialPosition?{spatialPosition}:{})};};
   const canChannel = (u,c) => c && (!c.private || c.members.includes(u.id));
@@ -185,7 +191,27 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
       const m=state.meetings.find(m=>m.id===body.id&&!m.ended);if(!m||!m.members.includes(u.id))fail(403,'Entre na reunião para levantar a mão.');
       if(typeof body.raised!=='boolean')fail(400,'Estado de mão inválido.');m.hands={...(m.hands||{}),[u.id]:body.raised};await save();return {ok:true};
     }
-    if(method==='POST' && pathname==='/call-session') {if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');const m=callRoom(u,body.meeting);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');const call={id:id(),lastSeen:now()};callSessions.set(m.id+':'+u.id,call);return {callId:call.id};}
+    if((method==='GET'||method==='POST') && pathname==='/call-session') {
+      if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');
+      const m=callRoom(u,method==='GET'?query.meeting:body.meeting);
+      if(!m||!m.members.includes(u.id)||m.ended||m.type!=='proximity'&&meetingPhase(m).phase==='completed')fail(403,'Você não participa dessa chamada.');
+      pruneCallGrants();const key=m.id+':'+u.id,current=callSessions.get(key);
+      if(method==='GET'){
+        while(callGrants.size>=CALL_GRANT_LIMIT)callGrants.delete(callGrants.keys().next().value);
+        const requestId=id();callGrants.set(requestId,{userId:u.id,roomId:m.id,previousCallId:current?.id||null,expiresAt:now()+CALL_GRANT_TTL_MS,callId:null});
+        return {requestId};
+      }
+      let grant=null;
+      if(body.requestId!==undefined){
+        if(typeof body.requestId!=='string'||!/^[-a-zA-Z0-9_]{8,80}$/.test(body.requestId))fail(400,'Tentativa de chamada inválida.');
+        grant=callGrants.get(body.requestId);
+        if(!grant)fail(409,'A tentativa de chamada expirou.','OFFICE_CALL_SESSION_MISSING');
+        if(grant.userId!==u.id||grant.roomId!==m.id)fail(403,'Tentativa de chamada indisponível.');
+        if(grant.invalidated||grant.callId&&grant.callId!==current?.id||!grant.callId&&grant.previousCallId!==(current?.id||null))fail(409,'A chamada foi substituída.','OFFICE_CALL_SESSION_REPLACED');
+        if(grant.callId){current.lastSeen=now();return {callId:current.id};}
+      }
+      const call={id:id(),lastSeen:now()};callSessions.set(key,call);if(grant)grant.callId=call.id;return {callId:call.id};
+    }
     if(method==='GET' && pathname==='/signals') {
       if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');
       const m=callRoom(u,query.meeting);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');
@@ -207,7 +233,7 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
       const m=state.meetings.find(m=>m.id===body.id&&!m.ended);if(!m)fail(404,'Reunião encerrada.');
       if(body.action==='join') {if(hasActiveMeeting(u.id,m.id))fail(409,'Saia da sessão atual antes de entrar em outra.');if(m.private&&!m.members.includes(u.id)){if(!m.requests.some(r=>r.userId===u.id&&r.state==='pending'&&r.time>=now()-120000))m.requests.push({userId:u.id,state:'pending',time:now()});}else if(!m.members.includes(u.id))m.members.push(u.id);}
       else if(body.action==='cancel'){m.requests=m.requests.filter(r=>r.userId!==u.id);}
-      else if(body.action==='leave'){m.members=m.members.filter(i=>i!==u.id);if(m.hands)delete m.hands[u.id];if(m.owner===u.id){if(m.members.length)m.owner=m.members[0];else m.ended=now();}}
+      else if(body.action==='leave'){m.members=m.members.filter(i=>i!==u.id);callSessions.delete(m.id+':'+u.id);invalidateCallGrants(u.id,m.id);if(m.hands)delete m.hands[u.id];if(m.owner===u.id){if(m.members.length)m.owner=m.members[0];else m.ended=now();}}
       else if(['lock','unlock','approve','reject','end','pause','resume','next'].includes(body.action)){if(m.owner!==u.id)fail(403,'Somente quem conduz a reunião pode fazer isso.');if(body.action==='lock')m.private=true;if(body.action==='unlock')m.private=false;if(body.action==='end')m.ended=now();if(body.action==='pause'&&!m.paused)m.paused=now();if(body.action==='resume'&&m.paused){m.offset=(m.offset||0)+now()-m.paused;delete m.paused;}if(body.action==='next'){const phase=meetingPhase(m);if(phase.remaining===null||phase.phase==='completed')fail(400,'Não há outra etapa.');m.started-=phase.remaining;}if(['approve','reject'].includes(body.action)){const r=m.requests.find(r=>r.userId===body.userId&&r.state==='pending'&&r.time>=now()-120000);if(!r)fail(404,'Pedido não encontrado.');if(body.action==='approve'&&hasActiveMeeting(r.userId,m.id))fail(409,'Essa pessoa precisa sair da sessão atual antes de entrar aqui.');r.state=body.action==='approve'?'approved':'rejected';if(r.state==='approved'&&!m.members.includes(r.userId))m.members.push(r.userId);}}
       else fail(400,'Ação inválida.');await save();return {meeting:publicMeeting(u,m)};
     }
@@ -218,7 +244,7 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
     snapshot:()=>structuredClone(state),
     applyLastSeenOverlay:entries=>{for(const [uid,time] of entries){const user=state.users.find(item=>item.id===uid);if(user&&Number.isFinite(time))user.lastSeen=Math.max(Number.isFinite(user.lastSeen)?user.lastSeen:0,time);}},
     isDirty:()=>dirty,
-    ephemeral:()=>structuredClone({signals,signalSequence,callSessions:[...callSessions],spatial:spatialPresence.exportState()})
+    ephemeral:()=>structuredClone({signals,signalSequence,callSessions:[...callSessions],callGrants:[...callGrants],spatial:spatialPresence.exportState()})
   };
 }
 module.exports={createInterfaceService};

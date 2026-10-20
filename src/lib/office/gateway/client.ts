@@ -133,11 +133,11 @@ export function createOfficeGatewayClient({
       }
       if (!response.ok) {
         let callCode: OfficeCallConflictCode | undefined;
-        // Only the two signaling operations can identify a replaced call. Never
+        // Signaling and a version-bound creation can identify a replaced call. Never
         // forward an upstream message, arbitrary code, or an unbounded error body.
         const signaling = operation.operation === "interface" &&
           (operation.method === "GET" && operation.endpoint === "signals" ||
-           operation.method === "POST" && operation.endpoint === "signal");
+           operation.method === "POST" && (operation.endpoint === "signal" || operation.endpoint === "call-session"));
         if (response.status === 409 && signaling && jsonMime(response.headers.get("content-type"))) {
           try {
             const bytes = await readOfficeGatewayBytes(response, 4096, controller.signal);

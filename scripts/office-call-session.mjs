@@ -1,7 +1,7 @@
 // Serialized into the calls closure. This controller owns no device or stream.
 export function createOfficeCallSession(env) {
   const win = env.window, doc = env.document;
-  let paused = false, disposed = false, resuming = false, notice = null, style = null, resumeButton = null;
+  let paused = false, disposed = false, resuming = false, notice = null, style = null, resumeButton = null, pauseHelp = null, pauseReason = 'replaced';
   function context() { try { return env.getContext(); } catch { return null; } }
   function admitted(value) {
     return value?.active === true && value.selfId && value.status !== 'offline' && value.meeting?.phase !== 'completed'
@@ -12,9 +12,15 @@ export function createOfficeCallSession(env) {
     return !disposed && !paused && admitted(value) && value.roomId === value.meeting.id && value.callId
       ? {generation:value.generation, roomId:value.roomId, callId:value.callId} : null;
   }
+  function captureCreation() {
+    const value = context();
+    return !disposed && !paused && admitted(value) && value.roomId === value.meeting.id && !value.callId && value.creationId
+      ? {generation:value.generation, roomId:value.roomId, creationId:value.creationId} : null;
+  }
   function isCurrent(token) {
-    const value = capture();
-    return !!token && !!value && token.generation === value.generation && token.roomId === value.roomId && token.callId === value.callId;
+    const value = token?.creationId ? captureCreation() : capture();
+    return !!token && !!value && token.generation === value.generation && token.roomId === value.roomId
+      && (token.creationId ? token.creationId === value.creationId : token.callId === value.callId);
   }
   function render() {
     if (disposed || !paused) { notice?.remove(); return; }
@@ -25,18 +31,23 @@ export function createOfficeCallSession(env) {
       notice = doc.createElement('aside'); notice.className = 'aureon-call-paused'; notice.id = 'aureonCallPaused';
       notice.setAttribute('role', 'status');
       const title = doc.createElement('strong'); title.textContent = 'Chamada pausada nesta guia';
-      const help = doc.createElement('p'); help.textContent = 'A sessão desta chamada foi substituída. Retome aqui se quiser continuar nesta guia. Depois, ligue seus dispositivos quando quiser.';
+      pauseHelp = doc.createElement('p');
       resumeButton = doc.createElement('button'); resumeButton.type = 'button'; resumeButton.textContent = 'Retomar chamada aqui';
       resumeButton.addEventListener('click', () => { void resume(); });
-      notice.append(title, help, resumeButton);
+      notice.append(title, pauseHelp, resumeButton);
     }
+    pauseHelp.textContent = (pauseReason === 'unconfirmed' ? 'A resposta para entrar na chamada não chegou.'
+      : pauseReason === 'expired' ? 'O prazo para entrar na chamada expirou.' : 'A sessão desta chamada foi substituída.')
+      + ' Retome aqui se quiser continuar nesta guia. Depois, ligue seus dispositivos quando quiser.';
     resumeButton.disabled = resuming || !admitted(context());
     if (!notice.isConnected) doc.body.append(notice);
   }
   function handle(error, token) {
-    if (error?.status !== 409 || error.code !== 'OFFICE_CALL_SESSION_REPLACED') return false;
+    if (error?.status !== 409 || error.code !== 'OFFICE_CALL_SESSION_REPLACED'
+      && !(error.code === 'OFFICE_CALL_SESSION_MISSING' && token?.creationId)) return false;
     // Even an obsolete replacement error is consumed; it must not reset the new call.
     if (!isCurrent(token)) return true;
+    pauseReason = error.reason === 'grant-unconfirmed' ? 'unconfirmed' : error.code === 'OFFICE_CALL_SESSION_MISSING' ? 'expired' : 'replaced';
     paused = true;
     env.disconnect();
     render();
@@ -61,5 +72,5 @@ export function createOfficeCallSession(env) {
     win.removeEventListener?.('click', blockCapture, true); win.removeEventListener?.('change', blockCapture, true);
     notice?.remove(); style?.remove();
   }
-  return {capture, isCurrent, handle, render, resume, dispose, isPaused:()=>paused, canRun:()=>!disposed && !paused};
+  return {capture, captureCreation, isCurrent, handle, render, resume, dispose, isPaused:()=>paused, canRun:()=>!disposed && !paused};
 }

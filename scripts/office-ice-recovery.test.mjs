@@ -20,7 +20,7 @@ const iceCandidate=(fragment,index=1)=>({candidate:'candidate:'+index+' 1 UDP 1 
 test('failed offerer restarts ICE on the same peer and call while preserving enabled devices',async()=>{
  const {h}=setup();await h.tick();const pc=h.connections[0];fail(pc);await settle();
  assert.equal(pc.restartCalls,1);assert.equal(pc.closeCalls,0);assert.equal(h.connections.length,1);
- assert.equal(h.apiCalls.filter(call=>call.endpoint==='call-session').length,1);
+ assert.equal(h.apiCalls.filter(call=>call.endpoint==='call-session'&&call.body!==undefined).length,1);
  assert.ok(h.apiCalls.some(call=>call.endpoint==='signal'&&call.body.signal.type==='offer'));
  expectLive(h);
 });
@@ -59,7 +59,7 @@ test('a transient restart-offer delivery failure retries the identical pending S
  h.advance(2999);await h.tick();assert.equal(offers,1);h.advance(1);await h.tick();assert.equal(offers,2);
  const sent=h.apiCalls.filter(call=>call.endpoint==='signal'&&call.body.signal.type==='offer');assert.equal(sent[0].body.signal.sdp,sent[1].body.signal.sdp);assert.equal(pc.localDescriptionCalls.length,1);assert.equal(pc.restartCalls,1);assert.equal(pc.closeCalls,0);
  deliver({type:'answer',sdp:'recovered-answer'});await h.tick();assert.equal(pc.signalingState,'stable');pc.connectionState='connected';pc.iceConnectionState='connected';pc.onconnectionstatechange();h.advance(30000);await h.tick();assert.equal(offers,2);
- assert.equal(h.apiCalls.filter(call=>call.endpoint==='call-session').length,1);expectLive(h);
+ assert.equal(h.apiCalls.filter(call=>call.endpoint==='call-session'&&call.body!==undefined).length,1);expectLive(h);
 });
 test('pending offer retries keep exponential backoff and serialize concurrent recovery events',async()=>{
  const {h,onSignal}=setup();let offers=0,complete;onSignal(signal=>{if(signal.type!=='offer')return {};offers++;if(offers<3)throw Object.assign(Error('still unavailable'),{status:503});return new Promise(resolve=>{complete=resolve;});});
@@ -87,7 +87,7 @@ test('a pending offer replay cannot block later polls from receiving its answer 
  await h.tick();const pc=h.connections[0];fail(pc);await settle();h.advance(3000);await h.tick();assert.equal(offers,2);assert.equal(typeof complete,'function');assert.equal(pc.signalingState,'have-local-offer');
  const polls=h.apiCalls.filter(call=>call.endpoint==='signals').length;deliver({type:'answer',sdp:'answer-while-replay-pending'});pc.connectionState='connected';pc.iceConnectionState='connected';await h.tick();
  assert.equal(h.apiCalls.filter(call=>call.endpoint==='signals').length,polls+1);assert.equal(pc.signalingState,'stable');assert.equal(pc.remoteDescriptionCalls.length,1);assert.equal(pc.localDescriptionCalls.length,1);expectLive(h);
- complete({});await settle();h.advance(30000);await h.tick();assert.equal(offers,2);assert.equal(pc.closeCalls,0);assert.equal(h.apiCalls.filter(call=>call.endpoint==='call-session').length,1);expectLive(h);
+ complete({});await settle();h.advance(30000);await h.tick();assert.equal(offers,2);assert.equal(pc.closeCalls,0);assert.equal(h.apiCalls.filter(call=>call.endpoint==='call-session'&&call.body!==undefined).length,1);expectLive(h);
 });
 
 test('a restart request followed by an answer in the same poll cannot block behind the replay POST',async()=>{

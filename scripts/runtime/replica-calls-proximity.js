@@ -3,20 +3,27 @@
 (() => {
  'use strict';
  const U=window.aureonReplicaUI,{state,api,el,button,toast,person}=U;
- const peers=new Map();let roomId=null,callId=null,signalCursor=0,ticking=false,wasJoined=false,generation=0;
+ const peers=new Map(),pollRequests=new Set();let roomId=null,callId=null,signalCursor=0,ticking=false,wasJoined=false,generation=0,creation=null;
  let nearbyRoom=null,roomKind=null;
  const explicitMeeting=()=>window.aureonReplicaMeetings?.active();
  const meeting=()=>state.data?.user.status==='offline'?null:explicitMeeting()||nearbyRoom;
  async function refreshProximity(){
   if(explicitMeeting()||state.data?.capabilities?.proximityAudio!==true){nearbyRoom=null;return;}
   const office=document.getElementById('office');if(state.data?.capabilities?.spatialOwnership===true&&office?.getAttribute('data-spatial-ownership')!=='controlled'){nearbyRoom=null;return;}
-  const user=state.data?.user?.id,result=await api('proximity');if(state.data?.user?.id!==user||explicitMeeting()||!window.aureonOfficeBootstrap.active)return;nearbyRoom=result.room;
+  const user=state.data?.user?.id,epoch=generation,result=await pollApi('proximity');if(generation!==epoch||state.data?.user?.id!==user||explicitMeeting()||!window.aureonOfficeBootstrap.active||state.data?.capabilities?.spatialOwnership===true&&office?.getAttribute('data-spatial-ownership')!=='controlled')return;nearbyRoom=result.room;
+ }
+ async function pollApi(endpoint,body,query){
+  const controller=new AbortController();pollRequests.add(controller);let rejectAbort;
+  const aborted=new Promise((resolve,reject)=>{rejectAbort=()=>reject(Object.assign(Error('A conexão da chamada demorou. Tentando novamente.'),{status:408}));controller.signal.addEventListener('abort',rejectAbort,{once:true});});
+  const deadline=setTimeout(()=>controller.abort(),10000);
+  try{return await Promise.race([api(endpoint,body,query,controller.signal),aborted]);}
+  finally{clearTimeout(deadline);controller.signal.removeEventListener('abort',rejectAbort);pollRequests.delete(controller);}
  }
  function clearProximity(){nearbyRoom=null;document.getElementById('replicaProximity')?.remove();}
  let testAudio=null,testContext=null;
  const callSession=(function createOfficeCallSession(env) {
   const win = env.window, doc = env.document;
-  let paused = false, disposed = false, resuming = false, notice = null, style = null, resumeButton = null;
+  let paused = false, disposed = false, resuming = false, notice = null, style = null, resumeButton = null, pauseHelp = null, pauseReason = 'replaced';
   function context() { try { return env.getContext(); } catch { return null; } }
   function admitted(value) {
     return value?.active === true && value.selfId && value.status !== 'offline' && value.meeting?.phase !== 'completed'
@@ -27,9 +34,15 @@
     return !disposed && !paused && admitted(value) && value.roomId === value.meeting.id && value.callId
       ? {generation:value.generation, roomId:value.roomId, callId:value.callId} : null;
   }
+  function captureCreation() {
+    const value = context();
+    return !disposed && !paused && admitted(value) && value.roomId === value.meeting.id && !value.callId && value.creationId
+      ? {generation:value.generation, roomId:value.roomId, creationId:value.creationId} : null;
+  }
   function isCurrent(token) {
-    const value = capture();
-    return !!token && !!value && token.generation === value.generation && token.roomId === value.roomId && token.callId === value.callId;
+    const value = token?.creationId ? captureCreation() : capture();
+    return !!token && !!value && token.generation === value.generation && token.roomId === value.roomId
+      && (token.creationId ? token.creationId === value.creationId : token.callId === value.callId);
   }
   function render() {
     if (disposed || !paused) { notice?.remove(); return; }
@@ -40,18 +53,23 @@
       notice = doc.createElement('aside'); notice.className = 'aureon-call-paused'; notice.id = 'aureonCallPaused';
       notice.setAttribute('role', 'status');
       const title = doc.createElement('strong'); title.textContent = 'Chamada pausada nesta guia';
-      const help = doc.createElement('p'); help.textContent = 'A sessão desta chamada foi substituída. Retome aqui se quiser continuar nesta guia. Depois, ligue seus dispositivos quando quiser.';
+      pauseHelp = doc.createElement('p');
       resumeButton = doc.createElement('button'); resumeButton.type = 'button'; resumeButton.textContent = 'Retomar chamada aqui';
       resumeButton.addEventListener('click', () => { void resume(); });
-      notice.append(title, help, resumeButton);
+      notice.append(title, pauseHelp, resumeButton);
     }
+    pauseHelp.textContent = (pauseReason === 'unconfirmed' ? 'A resposta para entrar na chamada não chegou.'
+      : pauseReason === 'expired' ? 'O prazo para entrar na chamada expirou.' : 'A sessão desta chamada foi substituída.')
+      + ' Retome aqui se quiser continuar nesta guia. Depois, ligue seus dispositivos quando quiser.';
     resumeButton.disabled = resuming || !admitted(context());
     if (!notice.isConnected) doc.body.append(notice);
   }
   function handle(error, token) {
-    if (error?.status !== 409 || error.code !== 'OFFICE_CALL_SESSION_REPLACED') return false;
+    if (error?.status !== 409 || error.code !== 'OFFICE_CALL_SESSION_REPLACED'
+      && !(error.code === 'OFFICE_CALL_SESSION_MISSING' && token?.creationId)) return false;
     // Even an obsolete replacement error is consumed; it must not reset the new call.
     if (!isCurrent(token)) return true;
+    pauseReason = error.reason === 'grant-unconfirmed' ? 'unconfirmed' : error.code === 'OFFICE_CALL_SESSION_MISSING' ? 'expired' : 'replaced';
     paused = true;
     env.disconnect();
     render();
@@ -76,8 +94,8 @@
     win.removeEventListener?.('click', blockCapture, true); win.removeEventListener?.('change', blockCapture, true);
     notice?.remove(); style?.remove();
   }
-  return {capture, isCurrent, handle, render, resume, dispose, isPaused:()=>paused, canRun:()=>!disposed && !paused};
-})({window,document,getContext:()=>({active:window.aureonOfficeBootstrap.active,selfId:state.data?.user?.id,status:state.data?.user?.status,meeting:meeting(),generation,roomId,callId}),disconnect:()=>disconnectSession(),reconnect:()=>tick()});
+  return {capture, captureCreation, isCurrent, handle, render, resume, dispose, isPaused:()=>paused, canRun:()=>!disposed && !paused};
+})({window,document,getContext:()=>({active:window.aureonOfficeBootstrap.active,selfId:state.data?.user?.id,status:state.data?.user?.status,meeting:meeting(),generation,roomId,callId,creationId:creation}),disconnect:()=>disconnectSession(),reconnect:()=>tick()});
  const mediaSources=(function createOfficeMediaSources(env) {
   const listeners = new Set();
   let revision = 0;
@@ -343,18 +361,32 @@
    setTimeout(()=>{const current=testAudio===transmissionAudio&&testContext===transmissionContext;try{oscillator.stop();}catch{}for(const track of transmissionAudio.getTracks())try{track.stop();}catch{}try{transmissionContext.close()?.catch?.(()=>{});}catch{}if(testAudio===transmissionAudio)testAudio=null;if(testContext===transmissionContext)testContext=null;if(current&&callSession.canRun())for(const peer of peers.values())updateTracks(peer);},8000);
  }
  function closePeer(id){const peer=peers.get(id);if(!peer)return;peer.channel?.close();peer.pc.close();peers.delete(id);clearDepartedMedia();mediaSources.publish();}
- function closeAll(){generation++;for(const id of peers.keys())closePeer(id);roomId=null;callId=null;roomKind=null;signalCursor=0;mediaSources.clear();document.getElementById('replicaMedia')?.remove();document.getElementById('replicaCallAudio')?.remove();}
+ function closeAll(){generation++;for(const request of pollRequests)request.abort();creation=null;for(const id of peers.keys())closePeer(id);roomId=null;callId=null;roomKind=null;signalCursor=0;mediaSources.clear();document.getElementById('replicaMedia')?.remove();document.getElementById('replicaCallAudio')?.remove();}
  function disconnectSession(){ticking=false;for(const name of ['aureonStopMicrophone','aureonStopCamera','aureonStopScreen'])try{window[name]?.()?.catch?.(()=>{});}catch{}try{for(const track of testAudio?.getTracks()||[])try{track.stop();}catch{}}catch{}testAudio=null;try{testContext?.close()?.catch?.(()=>{});}catch{}testContext=null;wasJoined=false;closeAll();}
  async function tick(){
    if(!callSession.canRun()){if(callSession.isPaused()&&streams().some(Boolean))disconnectSession();callSession.render();return;}
    if(ticking||!state.data||!window.aureonOfficeBootstrap.active)return;
    const run={};ticking=run;let epoch=generation,token=null;
    try{
-     await refreshProximity();if(!window.aureonOfficeBootstrap.active)return;const m=meeting();if(!m){if(roomKind==='proximity'){wasJoined=false;closeAll();}else if(wasJoined)disconnectSession();renderProximity();return;}
-     // A failed creation leaves no call token. Retry it without stopping enabled devices.
-     wasJoined=true;if(roomId!==m.id||!callId){closeAll();roomId=m.id;roomKind=m.type;epoch=generation;const created=await api('call-session',{meeting:roomId});if(generation!==epoch||!callSession.canRun())return;if(meeting()?.id!==m.id){disconnectSession();return;}callId=created.callId;}
+     await refreshProximity();if(generation!==epoch||!window.aureonOfficeBootstrap.active||!callSession.canRun())return;const m=meeting();if(!m){if(roomKind==='proximity'){wasJoined=false;closeAll();}else if(wasJoined)disconnectSession();renderProximity();return;}
+     wasJoined=true;if(roomId!==m.id){closeAll();roomId=m.id;roomKind=m.type;epoch=generation;}
+     // Keep one creation grant across network retries. Only a current attempt may
+     // obtain a fresh version, so a lost response cannot replace its own call.
+     if(!callId){
+       const attempt=creation||(creation={requestId:null});token=callSession.captureCreation();
+       if(!attempt.requestId){
+         let grant;try{grant=await pollApi('call-session',undefined,{meeting:roomId});}
+         catch(error){
+           // A lost grant response has no safe version to replay. A fresh grant
+           // could steal a call from a newer tab, so require an explicit resume.
+           if(!Number.isFinite(error?.status)||error.status===0||error.status===408||error.status===429||error.status>=500){callSession.handle({status:409,code:'OFFICE_CALL_SESSION_MISSING',reason:'grant-unconfirmed'},token);return;}throw error;
+         }
+         if(generation!==epoch||creation!==attempt||!callSession.isCurrent(token))return;if(typeof grant?.requestId!=='string'||!/^[-a-zA-Z0-9_]{8,80}$/.test(grant.requestId)){callSession.handle({status:409,code:'OFFICE_CALL_SESSION_MISSING',reason:'grant-unconfirmed'},token);return;}attempt.requestId=grant.requestId;
+       }
+       const created=await pollApi('call-session',{meeting:roomId,requestId:attempt.requestId});if(generation!==epoch||creation!==attempt||!callSession.isCurrent(token))return;if(meeting()?.id!==m.id){disconnectSession();return;}if(typeof created?.callId!=='string'||!/^[-a-zA-Z0-9_]{8,80}$/.test(created.callId))throw Error('Resposta de chamada indisponível.');callId=created.callId;creation=null;
+     }
      token=callSession.capture();if(!callSession.isCurrent(token))return;
-     const data=await api('signals',undefined,{meeting:roomId,call:callId,after:signalCursor});
+     const data=await pollApi('signals',undefined,{meeting:roomId,call:callId,after:signalCursor});
      if(generation!==epoch||!callSession.isCurrent(token))return;
      m.members=data.members;const roster=data.roster||{};
      for(const id of peers.keys())if(!m.members.includes(id)||peers.get(id).callId!==roster[id])closePeer(id);
@@ -420,7 +452,7 @@
    label.setAttribute('aria-label',person(id).name+' reagiu '+emoji);clearTimeout(label.hideTimer);label.hideTimer=setTimeout(()=>label.remove(),5000);
  }
  function broadcastReaction(emoji){const m=meeting();if(!m)return;showReaction(state.data.user.id,emoji);for(const peer of peers.values())if(peer.channel?.readyState==='open')peer.channel.send(JSON.stringify({type:'reaction',emoji}));}
- window.addEventListener('aureon-interface-state',()=>{clearDepartedMedia();mediaSources.publish();callSession.render();if(state.data?.user?.status==='offline'||!window.aureonOfficeBootstrap.active){clearProximity();disconnectSession();}else if(!explicitMeeting()&&wasJoined&&roomKind!=='proximity')disconnectSession();tick()});
+ window.addEventListener('aureon-interface-state',()=>{clearDepartedMedia();mediaSources.publish();callSession.render();if(state.data?.user?.status==='offline'||!window.aureonOfficeBootstrap.active){clearProximity();disconnectSession();}else if(!explicitMeeting()&&wasJoined&&roomKind!=='proximity')disconnectSession();else if(explicitMeeting()&&roomId&&meeting()?.id!==roomId)closeAll();tick()});
  setInterval(tick,1000);
  const observer=new MutationObserver(()=>{if(state.view==='cowork'&&meeting()&&document.querySelector('.r-session-summary')&&!document.getElementById('replicaMedia'))renderMedia();});observer.observe(U.center,{childList:true,subtree:true});
  const originalLevel=window.aureonUpdateMicLevel;let lowering=false;

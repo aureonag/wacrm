@@ -26,7 +26,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  const document={body,head,createElement:tag=>new Element(tag),getElementById:id=>find(body,id),querySelector:()=>null,querySelectorAll:()=>tiles.filter(tile=>!tile.removed)};
  const state={view:'office',data:{user:{id:SELF,status:'online',preferences:{}}}};
  const normal=(endpoint,body,query)=>{
-  if(endpoint==='call-session')return {callId:'fixture-call-'+(++serial)};
+  if(endpoint==='call-session')return body===undefined?{requestId:'fixture-grant-'+(++serial)}:{callId:'fixture-call-'+(++serial)};
   if(endpoint==='signals')return {members:[...activeMeeting.members],roster:{[SELF]:query.call,...(activeMeeting.members.includes('remote')?{remote:remoteCall}:{})},signals:[],cursor:0};
   return {};
  };

@@ -325,10 +325,10 @@ window.aureonReplicaCalls={broadcastReaction,toggleHand};})();`;
  assert.throws(()=>adaptOfficeCrm('replica-calls.js',source.replace('function renderMedia(){','function differentRender(){')),/expected 1 anchor/);
 });
 
-test('copied UI preserves only the three 409 call codes on GET signals and POST signal',async()=>{
+test('copied UI preserves only the three 409 call codes on signaling and version-bound creation POSTs',async()=>{
   const codes=['OFFICE_CALL_SESSION_REPLACED','OFFICE_CALL_SESSION_MISSING','OFFICE_SIGNAL_RECIPIENT_STALE'];
-  const cases=codes.flatMap(code=>[{status:409,endpoint:'signals',code,keep:true},{status:409,endpoint:'signal',body:{},code,keep:true}]);
-  cases.push({status:409,endpoint:'messages',body:{},code:codes[0]}, {status:409,endpoint:'call-session',body:{},code:codes[0]},
+  const cases=codes.flatMap(code=>[{status:409,endpoint:'signals',code,keep:true},{status:409,endpoint:'signal',body:{},code,keep:true},{status:409,endpoint:'call-session',body:{},code,keep:true}]);
+  cases.push({status:409,endpoint:'messages',body:{},code:codes[0]}, {status:409,endpoint:'call-session',code:codes[0]},
     {status:409,endpoint:'signals',body:{},code:codes[0]}, {status:409,endpoint:'signal',code:codes[0]},
     {status:409,endpoint:'signals',code:'PRIVATE_ARBITRARY_CODE'}, {status:403,endpoint:'signals',code:codes[0]}, {status:401,endpoint:'signals',code:codes[0]});
   for(const item of cases){
