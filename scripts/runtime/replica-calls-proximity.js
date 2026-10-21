@@ -4,9 +4,14 @@
  'use strict';
  const U=window.aureonReplicaUI,{state,api,el,button,toast,person}=U;
  const peers=new Map(),pollRequests=new Set();let roomId=null,callId=null,signalCursor=0,ticking=false,wasJoined=false,generation=0,creation=null;
- let nearbyRoom=null,roomKind=null;
+ let nearbyRoom=null,roomKind=null,callLease=null;
  const explicitMeeting=()=>window.aureonReplicaMeetings?.active();
  const meeting=()=>state.data?.user.status==='offline'?null:explicitMeeting()||nearbyRoom;
+ function readSpatialLease(){try{const value=window.aureonReadSpatialLease?.();return value&&typeof value.instanceId==='string'&&/^[-A-Za-z0-9_]{8,80}$/.test(value.instanceId)&&Number.isSafeInteger(value.expectedVersion)&&value.expectedVersion>=0?{instanceId:value.instanceId,expectedVersion:value.expectedVersion}:null;}catch{return null;}}
+ const sameSpatialLease=(a,b)=>!!a&&!!b&&a.instanceId===b.instanceId&&a.expectedVersion===b.expectedVersion;
+ const spatialCallFields=()=>callLease?{spatialInstanceId:callLease.instanceId,spatialVersion:callLease.expectedVersion}:{};
+ // A same-tab lease refresh invalidates pending work, but must not mute devices.
+ function dropChangedLease(){if(roomKind==='proximity'&&!sameSpatialLease(callLease,readSpatialLease())){closeAll();return true;}return false;}
  async function refreshProximity(){
   if(explicitMeeting()||state.data?.capabilities?.proximityAudio!==true){nearbyRoom=null;return;}
   const office=document.getElementById('office');if(state.data?.capabilities?.spatialOwnership===true&&office?.getAttribute('data-spatial-ownership')!=='controlled'){nearbyRoom=null;return;}
@@ -281,7 +286,7 @@
  }
 
  function streams(){return [testAudio?.getAudioTracks()[0]||window.aureonAudioStream?.()?.getAudioTracks()[0]||null,window.aureonCameraStream?.()?.getVideoTracks()[0]||null,window.aureonScreenStream?.()?.getVideoTracks()[0]||null].map(t=>t?.readyState==='live'?t:null);}
- async function send(to,signal,expectedPeer=peers.get(to),token=callSession.capture()){const peer=peers.get(to);if(!peer||peer!==expectedPeer||!callSession.isCurrent(token))return;const controller=new AbortController(),deadline=setTimeout(()=>controller.abort(),10000);try{await api('signal',{meeting:token.roomId,call:token.callId,to,toCall:peer.callId,signal},undefined,controller.signal);}catch(error){if(!callSession.isCurrent(token)||peers.get(to)!==peer)return;if(callSession.handle(error,token))return;if(error.status===409&&error.code==='OFFICE_SIGNAL_RECIPIENT_STALE'){closePeer(to);return;}if(controller.signal.aborted&&!error.status)throw Object.assign(Error('O envio da chamada demorou. Tentando novamente.'),{status:408});throw error;}finally{clearTimeout(deadline);}}
+ async function send(to,signal,expectedPeer=peers.get(to),token=callSession.capture()){const peer=peers.get(to);if(!peer||peer!==expectedPeer||!callSession.isCurrent(token)||dropChangedLease())return;const controller=new AbortController(),deadline=setTimeout(()=>controller.abort(),10000);try{await api('signal',{meeting:token.roomId,call:token.callId,to,toCall:peer.callId,signal,...spatialCallFields()},undefined,controller.signal);}catch(error){if(!callSession.isCurrent(token)||peers.get(to)!==peer||dropChangedLease())return;if(callSession.handle(error,token))return;if(error.status===409&&error.code==='OFFICE_SIGNAL_RECIPIENT_STALE'){closePeer(to);return;}if(controller.signal.aborted&&!error.status)throw Object.assign(Error('O envio da chamada demorou. Tentando novamente.'),{status:408});throw error;}finally{clearTimeout(deadline);}}
  async function recoverPeer(peer,requested=false){
    const token=callSession.capture();if(!callSession.isCurrent(token)||peers.get(peer.id)!==peer||!meeting()?.members.includes(peer.id))return;
    const pc=peer.pc,now=Date.now(),pending=retryableOffer(peer),failed=pc.connectionState==='failed'||pc.iceConnectionState==='failed',disconnected=pc.connectionState==='disconnected'||pc.iceConnectionState==='disconnected';
@@ -361,7 +366,7 @@
    setTimeout(()=>{const current=testAudio===transmissionAudio&&testContext===transmissionContext;try{oscillator.stop();}catch{}for(const track of transmissionAudio.getTracks())try{track.stop();}catch{}try{transmissionContext.close()?.catch?.(()=>{});}catch{}if(testAudio===transmissionAudio)testAudio=null;if(testContext===transmissionContext)testContext=null;if(current&&callSession.canRun())for(const peer of peers.values())updateTracks(peer);},8000);
  }
  function closePeer(id){const peer=peers.get(id);if(!peer)return;peer.channel?.close();peer.pc.close();peers.delete(id);clearDepartedMedia();mediaSources.publish();}
- function closeAll(){generation++;for(const request of pollRequests)request.abort();creation=null;for(const id of peers.keys())closePeer(id);roomId=null;callId=null;roomKind=null;signalCursor=0;mediaSources.clear();document.getElementById('replicaMedia')?.remove();document.getElementById('replicaCallAudio')?.remove();}
+ function closeAll(){generation++;for(const request of pollRequests)request.abort();creation=null;for(const id of peers.keys())closePeer(id);roomId=null;callId=null;roomKind=null;callLease=null;signalCursor=0;mediaSources.clear();document.getElementById('replicaMedia')?.remove();document.getElementById('replicaCallAudio')?.remove();}
  function disconnectSession(){ticking=false;for(const name of ['aureonStopMicrophone','aureonStopCamera','aureonStopScreen'])try{window[name]?.()?.catch?.(()=>{});}catch{}try{for(const track of testAudio?.getTracks()||[])try{track.stop();}catch{}}catch{}testAudio=null;try{testContext?.close()?.catch?.(()=>{});}catch{}testContext=null;wasJoined=false;closeAll();}
  async function tick(){
    if(!callSession.canRun()){if(callSession.isPaused()&&streams().some(Boolean))disconnectSession();callSession.render();return;}
@@ -369,25 +374,28 @@
    const run={};ticking=run;let epoch=generation,token=null;
    try{
      await refreshProximity();if(generation!==epoch||!window.aureonOfficeBootstrap.active||!callSession.canRun())return;const m=meeting();if(!m){if(roomKind==='proximity'){wasJoined=false;closeAll();}else if(wasJoined)disconnectSession();renderProximity();return;}
-     wasJoined=true;if(roomId!==m.id){closeAll();roomId=m.id;roomKind=m.type;epoch=generation;}
+     const nextLease=m.type==='proximity'?readSpatialLease():null;
+     if(m.type==='proximity'&&!nextLease){wasJoined=false;closeAll();renderProximity();return;}
+     wasJoined=true;if(roomId!==m.id||m.type==='proximity'&&!sameSpatialLease(callLease,nextLease)){closeAll();roomId=m.id;roomKind=m.type;callLease=nextLease;epoch=generation;}
      // Keep one creation grant across network retries. Only a current attempt may
      // obtain a fresh version, so a lost response cannot replace its own call.
      if(!callId){
        const attempt=creation||(creation={requestId:null});token=callSession.captureCreation();
        if(!attempt.requestId){
-         let grant;try{grant=await pollApi('call-session',undefined,{meeting:roomId});}
+         let grant;try{grant=await pollApi('call-session',undefined,{meeting:roomId,...spatialCallFields()});}
          catch(error){
+           if(dropChangedLease())return;
            // A lost grant response has no safe version to replay. A fresh grant
            // could steal a call from a newer tab, so require an explicit resume.
            if(!Number.isFinite(error?.status)||error.status===0||error.status===408||error.status===429||error.status>=500){callSession.handle({status:409,code:'OFFICE_CALL_SESSION_MISSING',reason:'grant-unconfirmed'},token);return;}throw error;
          }
-         if(generation!==epoch||creation!==attempt||!callSession.isCurrent(token))return;if(typeof grant?.requestId!=='string'||!/^[-a-zA-Z0-9_]{8,80}$/.test(grant.requestId)){callSession.handle({status:409,code:'OFFICE_CALL_SESSION_MISSING',reason:'grant-unconfirmed'},token);return;}attempt.requestId=grant.requestId;
+         if(generation!==epoch||creation!==attempt||!callSession.isCurrent(token)||dropChangedLease())return;if(typeof grant?.requestId!=='string'||!/^[-a-zA-Z0-9_]{8,80}$/.test(grant.requestId)){callSession.handle({status:409,code:'OFFICE_CALL_SESSION_MISSING',reason:'grant-unconfirmed'},token);return;}attempt.requestId=grant.requestId;
        }
-       const created=await pollApi('call-session',{meeting:roomId,requestId:attempt.requestId});if(generation!==epoch||creation!==attempt||!callSession.isCurrent(token))return;if(meeting()?.id!==m.id){disconnectSession();return;}if(typeof created?.callId!=='string'||!/^[-a-zA-Z0-9_]{8,80}$/.test(created.callId))throw Error('Resposta de chamada indisponível.');callId=created.callId;creation=null;
+       const created=await pollApi('call-session',{meeting:roomId,requestId:attempt.requestId,...spatialCallFields()});if(generation!==epoch||creation!==attempt||!callSession.isCurrent(token)||dropChangedLease())return;if(meeting()?.id!==m.id){disconnectSession();return;}if(typeof created?.callId!=='string'||!/^[-a-zA-Z0-9_]{8,80}$/.test(created.callId))throw Error('Resposta de chamada indisponível.');callId=created.callId;creation=null;
      }
      token=callSession.capture();if(!callSession.isCurrent(token))return;
-     const data=await pollApi('signals',undefined,{meeting:roomId,call:callId,after:signalCursor});
-     if(generation!==epoch||!callSession.isCurrent(token))return;
+     const data=await pollApi('signals',undefined,{meeting:roomId,call:callId,after:signalCursor,...spatialCallFields()});
+     if(generation!==epoch||!callSession.isCurrent(token)||dropChangedLease())return;
      m.members=data.members;const roster=data.roster||{};
      for(const id of peers.keys())if(!m.members.includes(id)||peers.get(id).callId!==roster[id])closePeer(id);
      for(const id of m.members)if(id!==state.data.user.id&&roster[id]&&!peers.has(id))createPeer(id,roster[id]);
@@ -399,7 +407,7 @@
      // must not hold this poll open or prevent later answers from being read.
      for(const peer of peers.values())detachPeerWork(peer,token,recoverPeer(peer));
      signalCursor=data.cursor;await diagnostics();if(generation===epoch&&callSession.canRun())renderMedia();
-   }catch(error){if(generation!==epoch)return;if(callSession.handle(error,token))return;if(error.status===401||error.status===403&&roomKind!=='proximity'){disconnectSession();}else if(error.status===403){wasJoined=false;closeAll();}else if(error.status===409){closeAll();}else callError(error);}finally{if(ticking===run)ticking=false;}
+   }catch(error){if(generation!==epoch||dropChangedLease())return;if(callSession.handle(error,token))return;if(error.status===401||error.status===403&&roomKind!=='proximity'){disconnectSession();}else if(error.status===403){wasJoined=false;closeAll();}else if(error.status===409){closeAll();}else callError(error);}finally{if(ticking===run)ticking=false;}
  }
  function renderProximity(){
   let area=document.getElementById('replicaProximity');if(explicitMeeting()||state.view!=='office'||!nearbyRoom||!window.aureonOfficeBootstrap.active){area?.remove();return;}

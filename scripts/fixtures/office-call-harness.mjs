@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 const SELF='fixture-user';
-function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
+function harness(source,{allowPeers=false,testTone=false,audioTests=false,ownership=null}={}){
  const events=new Map(),intervals=[],apiCalls=[],levels=[],warnings=[];
- let activeMeeting=null,apiStatus=null,apiCode=null,serial=0,responder=null,remoteCall='remote-call-1',clock=1000;
+ let activeMeeting=null,apiStatus=null,apiCode=null,serial=0,responder=null,remoteCall='remote-call-1',clock=1000,spatialOwnership=ownership,spatialLease={instanceId:'fixture-tab-0001',expectedVersion:1};
  const connections=[],audioContexts=[],toneTimers=[],signalDeadlines=new Map();let timerSerial=0;
  const track=kind=>({kind,readyState:'live',enabled:true,stopCalls:0,stop(){this.stopCalls++;this.readyState='ended';this.enabled=false;}});
  const tracks={mic:track('audio'),camera:track('video'),screen:track('video')};
@@ -23,7 +23,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  }
  const body=new Element('body'),head=new Element('head'),tiles=[];body.parent=true;head.parent=true;
  function find(node,id){if(node.id===id)return node;for(const child of node.children){const found=find(child,id);if(found)return found;}return null;}
- const document={body,head,createElement:tag=>new Element(tag),getElementById:id=>find(body,id),querySelector:()=>null,querySelectorAll:()=>tiles.filter(tile=>!tile.removed)};
+ const document={body,head,createElement:tag=>new Element(tag),getElementById:id=>id==='office'&&spatialOwnership!==null?{getAttribute:()=>spatialOwnership}:find(body,id),querySelector:()=>null,querySelectorAll:()=>tiles.filter(tile=>!tile.removed)};
  const state={view:'office',data:{user:{id:SELF,status:'online',preferences:{}}}};
  const normal=(endpoint,body,query)=>{
   if(endpoint==='call-session')return body===undefined?{requestId:'fixture-grant-'+(++serial)}:{callId:'fixture-call-'+(++serial)};
@@ -40,6 +40,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  const window={
   aureonReplicaUI:{state,api,center:new Element(),el:tag=>new Element(tag),button:()=>new Element('button'),toast(){},person:id=>({id,name:'Fixture'}),refresh:async()=>{}},
   aureonReplicaMeetings:{active:()=>activeMeeting},aureonOfficeBootstrap:{active:true},
+  aureonReadSpatialLease:()=>spatialLease&&{...spatialLease},
   aureonAudioStream:()=>stream(tracks.mic),aureonCameraStream:()=>stream(tracks.camera),aureonScreenStream:()=>stream(tracks.screen),
   aureonStopMicrophone:()=>tracks.mic.stop(),aureonStopCamera:()=>tracks.camera.stop(),aureonStopScreen:()=>tracks.screen.stop(),
   aureonUpdateMicLevel:level=>levels.push(level),
@@ -83,7 +84,7 @@ function harness(source,{allowPeers=false,testTone=false,audioTests=false}={}){
  assert.equal(intervals.length,1);assert.equal(intervals[0].ms,1000);
  return {window,tracks,apiCalls,levels,warnings,connections,tone,toneContext,audioContexts,transmit:()=>sandbox.fixtureTestTransmission(),fireTone:index=>toneTimers[index](),
   addTile(id,kind='screen'){const video={srcObject:stream(tracks.screen),pauseCalls:0,pause(){this.pauseCalls++;}};const tile={dataset:{[kind==='screen'?'screen':'user']:id},removed:false,querySelectorAll:()=>[video],remove(){this.removed=true;}};tiles.push(tile);return {tile,video};},
-  setMeeting(value){activeMeeting=value;},failApi(status,code=null){apiStatus=status;apiCode=code;},setApi(callback){responder=callback;},setRemoteCall(value){remoteCall=value;},
+  setMeeting(value){activeMeeting=value;},setSpatialLease(value){spatialLease=value&&{...value};},setSpatialOwnership(value){spatialOwnership=value;},failApi(status,code=null){apiStatus=status;apiCode=code;},setApi(callback){responder=callback;},setRemoteCall(value){remoteCall=value;},
   advance(ms){clock+=ms;for(const [id,timer]of [...signalDeadlines])if(timer.due<=clock){signalDeadlines.delete(id);timer.callback();}},pendingSignalDeadlines:()=>signalDeadlines.size,
   notice:()=>find(body,'aureonCallPaused'),
   async resume(){find(body,'aureonCallPaused')?.children[2].click();await new Promise(setImmediate);},

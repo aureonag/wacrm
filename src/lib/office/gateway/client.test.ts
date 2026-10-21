@@ -111,7 +111,7 @@ describe("CRM private office gateway client", () => {
   });
   it.each(["OFFICE_CALL_SESSION_REPLACED", "OFFICE_CALL_SESSION_MISSING", "OFFICE_SIGNAL_RECIPIENT_STALE"])(
     "keeps the allowlisted signaling conflict %s without remote text", async code => {
-      for (const [method, endpoint] of [["GET", "signals"], ["POST", "signal"], ["POST", "call-session"]]) {
+      for (const [method, endpoint] of [["GET", "signals"], ["GET", "call-session"], ["POST", "signal"], ["POST", "call-session"]]) {
         const client = make(fakeFetch(() => json({ code, error: "PRIVATE_UPSTREAM_DETAIL", extra: "SECRET" }, 409)));
         try { await client.interface(identity, method, endpoint); }
         catch (error) {
@@ -124,11 +124,13 @@ describe("CRM private office gateway client", () => {
   );
   it("ignores call conflict codes outside signaling or status409", async () => {
     const code = "OFFICE_CALL_SESSION_REPLACED";
-    for (const [method, endpoint] of [["GET", "state"], ["GET", "call-session"], ["POST", "signals"], ["GET", "signal"]]) {
+    for (const [method, endpoint] of [["GET", "state"], ["POST", "signals"], ["GET", "signal"]]) {
       await expect(make(fakeFetch(() => json({ code }, 409))).interface(identity, method, endpoint))
         .rejects.toMatchObject({ status: 409, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
     }
     await expect(make(fakeFetch(() => json({ code }, 403))).interface(identity, "GET", "signals"))
+      .rejects.toMatchObject({ status: 403, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
+    await expect(make(fakeFetch(() => json({ code }, 403))).interface(identity, "GET", "call-session"))
       .rejects.toMatchObject({ status: 403, code: "OFFICE_GATEWAY_OPERATION_FAILED" });
     await expect(make(fakeFetch(() => json({ code }, 409))).asset(identity, "app.js"))
       .rejects.toMatchObject({ status: 409, code: "OFFICE_GATEWAY_OPERATION_FAILED" });

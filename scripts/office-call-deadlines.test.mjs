@@ -16,16 +16,16 @@ async function clientFixture({ambient=false}={}){
  let clock=1000;
  const self=identity('fixture-user'),remote=identity('remote');
  const core=createInterfaceService({now:()=>clock});
- const request=(who,method,path,body={},query={})=>core.requestAsCrm(who,method,path,body,query);
- for(const who of [self,remote]){await request(who,'GET','/state');if(ambient)await request(who,'POST','/spatial-presence',{x:who===self?200:300,y:400});}
+ const leases=new Map(),request=(who,method,path,body={},query={})=>{const lease=leases.get(who.user.id),fields=lease?{spatialInstanceId:lease.instanceId,spatialVersion:lease.expectedVersion}:{};return core.requestAsCrm(who,method,path,method==='POST'?{...body,...fields}:body,method==='GET'?{...query,...fields}:query);};
+ for(const who of [self,remote]){await request(who,'GET','/state');if(ambient){const instanceId='fixture-tab-'+who.user.id,result=await request(who,'POST','/spatial-presence',{x:who===self?200:300,y:400,instanceId,expectedVersion:0,takeControl:true});leases.set(who.user.id,{instanceId,expectedVersion:result.control.version});}}
  let room=null;
  if(!ambient){room=(await request(self,'POST','/meetings',{name:'Fixture',type:'meeting'})).meeting;await request(remote,'POST','/meeting-action',{id:room.id,action:'join'});room=structuredClone((await request(self,'GET','/state')).meetings.find(m=>m.id===room.id));}
  await request(remote,'POST','/call-session',{meeting:ambient?(await request(remote,'GET','/proximity')).room.id:room.id});
- const h=harness(source,{allowPeers:true});h.window.aureonReplicaUI.state.view='chat';h.window.aureonReplicaUI.state.data.capabilities={proximityAudio:ambient};h.setMeeting(room);
+ const h=harness(source,{allowPeers:true});h.window.aureonReplicaUI.state.view='chat';h.window.aureonReplicaUI.state.data.capabilities={proximityAudio:ambient};h.setMeeting(room);if(ambient)h.setSpatialLease(leases.get(self.user.id));
  let intercept=null;
  const normal=(endpoint,body,query)=>request(self,body===undefined?'GET':'POST','/'+endpoint,body||{},query||{});
  h.setApi((endpoint,body,query)=>intercept?intercept(endpoint,body,query,normal):normal(endpoint,body,query));
- return {h,core,self,remote,room,normal,request,setIntercept:value=>intercept=value,advance(ms){clock+=ms;h.advance(ms);}};
+ return {h,core,self,remote,room,normal,request,setIntercept:value=>intercept=value,async advance(ms){const until=clock+ms;while(clock<until){const step=Math.min(5000,until-clock);clock+=step;h.advance(step);if(ambient){for(const who of [self,remote]){const lease=leases.get(who.user.id);await request(who,'POST','/spatial-presence',{x:who===self?200:300,y:400,...lease,takeControl:false});}}}}};
 }
 
 test('hung proximity and signals reads abort at10s, release polling and recover without stopping capture',async()=>{
@@ -34,7 +34,7 @@ test('hung proximity and signals reads abort at10s, release polling and recover 
   f.setIntercept((name,body,query,normal)=>name===endpoint&&once?(once=false,new Promise(resolve=>{finish=resolve;})):normal(name,body,query));
   const first=f.h.tickPending();await settle();const request=f.h.apiCalls.find(call=>call.endpoint===endpoint);assert.ok(request.signal);assert.equal(request.signal.aborted,false);
   const count=f.h.apiCalls.length;await f.h.tick();assert.equal(f.h.apiCalls.length,count);
-  f.advance(9999);await settle();assert.equal(request.signal.aborted,false);f.advance(1);await first;assert.equal(request.signal.aborted,true);assert.equal(f.h.pendingSignalDeadlines(),0);expectLive(f.h);
+  await f.advance(9999);await settle();assert.equal(request.signal.aborted,false);await f.advance(1);await first;assert.equal(request.signal.aborted,true);assert.equal(f.h.pendingSignalDeadlines(),0);expectLive(f.h);
   await f.h.tick();assert.equal(f.h.apiCalls.filter(call=>call.endpoint===endpoint).length,2);assert.equal(posts(f.h).length,1);assert.equal(f.h.connections.length,1);expectLive(f.h);
   const after=f.h.apiCalls.length;finish(endpoint==='proximity'?{room:null}:{members:[],roster:{},signals:[],cursor:999});await settle();assert.equal(f.h.apiCalls.length,after);assert.equal(f.h.connections[0].closeCalls,0);await f.h.ended();
  }

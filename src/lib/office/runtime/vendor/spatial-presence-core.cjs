@@ -49,7 +49,10 @@ function createSpatialPresence({now=()=>Date.now(),ttlMs=20000,leaseMs=7000,init
   return structuredClone(record);
  }
  function control(user){snapshot(user);const lease=liveLease(user?.id,now());return {version:version(user?.id),active:!!lease,leaseExpiresAt:lease?.until||null};}
+ // Private server contract only; the public control response never exposes a
+ // different tab's instance identifier.
+ function ownership(user){const lease=active(user)&&liveLease(user.id,now());return lease?{instanceId:lease.instance,expectedVersion:version(user.id)}:null;}
  function clear(user,value){const choice=options(user.id,value),lease=liveLease(user.id,now());if(lease&&lease.instance!==choice.instance)fail(409,'Outra guia controla a posição atual.');remove(user.id);}
- return {publish,snapshot,remove,control,clear,exportState:()=>structuredClone({records:[...records],leases:[...leases],versions:[...versions]})};
+ return {publish,snapshot,remove,control,ownership,clear,exportState:()=>structuredClone({records:[...records],leases:[...leases],versions:[...versions]})};
 }
 module.exports={createSpatialPresence,areaForPosition};

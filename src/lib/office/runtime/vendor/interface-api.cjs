@@ -83,6 +83,18 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
   };
   const proximity = u => proximityRoom(u,{users:state.users,meetings:state.meetings,snapshot:spatialPresence.snapshot,phase:meetingPhase,now:now()});
   const callRoom=(u,room)=>{const explicit=state.meetings.find(m=>m.id===room&&!m.ended);if(explicit)return explicit;const nearby=proximity(u);return nearby?.id===room?nearby:null;};
+  const sameSpatialLease=(a,b)=>!!a&&!!b&&a.instanceId===b.instanceId&&a.expectedVersion===b.expectedVersion;
+  function callSpatialLease(u,m,source){
+    if(m.type!=='proximity')return null;
+    const actual=spatialPresence.ownership(u),raw=source?.spatialVersion,version=typeof raw==='string'&&/^(0|[1-9][0-9]{0,15})$/.test(raw)?Number(raw):raw;
+    // A missed heartbeat is not evidence that another tab replaced the caller.
+    // Suspend ambient transport until position renews, while keeping capture.
+    if(!actual)fail(403,'Renove sua posição para continuar a conversa.');
+    if(!Number.isSafeInteger(version)||version<0||source?.spatialInstanceId!==actual.instanceId)fail(409,'A chamada foi substituída.','OFFICE_CALL_SESSION_REPLACED');
+    if(version!==actual.expectedVersion)fail(403,'A posição desta guia está sendo atualizada.');
+    return actual;
+  }
+  const ownsSpatialCall=(uid,m,call)=>m.type!=='proximity'||sameSpatialLease(call?.spatialLease,spatialPresence.ownership(state.users.find(p=>p.id===uid)));
   const publicMeeting = (u,m) => ({...m,...meetingPhase(m),requests:(m.owner===u.id?m.requests:m.requests.filter(r=>r.userId===u.id)).map(r=>({...r,state:r.state==='pending'&&r.time<now()-120000?'expired':r.state}))});
   const hasActiveMeeting = (userId,exceptId) => state.meetings.some(m=>m.id!==exceptId&&!m.ended&&m.members.includes(userId)&&meetingPhase(m).phase!=='completed');
   const messageAccess = (u,m) => {
@@ -195,10 +207,11 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
       if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');
       const m=callRoom(u,method==='GET'?query.meeting:body.meeting);
       if(!m||!m.members.includes(u.id)||m.ended||m.type!=='proximity'&&meetingPhase(m).phase==='completed')fail(403,'Você não participa dessa chamada.');
+      const spatialLease=callSpatialLease(u,m,method==='GET'?query:body);
       pruneCallGrants();const key=m.id+':'+u.id,current=callSessions.get(key);
       if(method==='GET'){
         while(callGrants.size>=CALL_GRANT_LIMIT)callGrants.delete(callGrants.keys().next().value);
-        const requestId=id();callGrants.set(requestId,{userId:u.id,roomId:m.id,previousCallId:current?.id||null,expiresAt:now()+CALL_GRANT_TTL_MS,callId:null});
+        const requestId=id();callGrants.set(requestId,{userId:u.id,roomId:m.id,previousCallId:current?.id||null,expiresAt:now()+CALL_GRANT_TTL_MS,callId:null,...(spatialLease?{spatialLease}: {})});
         return {requestId};
       }
       let grant=null;
@@ -207,20 +220,21 @@ function createInterfaceService({snapshot = null, ephemeral = null, revision = 0
         grant=callGrants.get(body.requestId);
         if(!grant)fail(409,'A tentativa de chamada expirou.','OFFICE_CALL_SESSION_MISSING');
         if(grant.userId!==u.id||grant.roomId!==m.id)fail(403,'Tentativa de chamada indisponível.');
+        if(spatialLease&&!sameSpatialLease(grant.spatialLease,spatialLease))fail(409,'A chamada foi substituída.','OFFICE_CALL_SESSION_REPLACED');
         if(grant.invalidated||grant.callId&&grant.callId!==current?.id||!grant.callId&&grant.previousCallId!==(current?.id||null))fail(409,'A chamada foi substituída.','OFFICE_CALL_SESSION_REPLACED');
         if(grant.callId){current.lastSeen=now();return {callId:current.id};}
       }
-      const call={id:id(),lastSeen:now()};callSessions.set(key,call);if(grant)grant.callId=call.id;return {callId:call.id};
+      const call={id:id(),lastSeen:now(),...(spatialLease?{spatialLease}: {})};callSessions.set(key,call);if(grant)grant.callId=call.id;return {callId:call.id};
     }
     if(method==='GET' && pathname==='/signals') {
       if(u.status==='offline')fail(403,'Entre no escritório para participar da chamada.');
       const m=callRoom(u,query.meeting);if(!m||!m.members.includes(u.id))fail(403,'Você não participa dessa chamada.');
-      const call=callSessions.get(m.id+':'+u.id);if(!call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(call.id!==query.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');call.lastSeen=now();const roster=Object.fromEntries(m.members.map(uid=>[uid,callSessions.get(m.id+':'+uid)]).filter(([uid,c])=>c&&c.lastSeen>now()-45000&&state.users.some(p=>p.id===uid&&!p.archived&&p.status!=='offline')).map(([uid,c])=>[uid,c.id]));signals=signals.filter(s=>s.time>now()-90000);return {signals:signals.filter(s=>s.meeting===m.id&&s.to===u.id&&s.toCall===call.id&&m.members.includes(s.from)&&s.sequence>(Number(query.after)||0)),cursor:signalSequence,members:m.members,roster};
+      const spatialLease=callSpatialLease(u,m,query),call=callSessions.get(m.id+':'+u.id);if(!call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(call.id!==query.call||spatialLease&&!sameSpatialLease(call.spatialLease,spatialLease))fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');call.lastSeen=now();const roster=Object.fromEntries(m.members.map(uid=>[uid,callSessions.get(m.id+':'+uid)]).filter(([uid,c])=>c&&ownsSpatialCall(uid,m,c)&&c.lastSeen>now()-45000&&state.users.some(p=>p.id===uid&&!p.archived&&p.status!=='offline')).map(([uid,c])=>[uid,c.id]));signals=signals.filter(s=>s.time>now()-90000);return {signals:signals.filter(s=>s.meeting===m.id&&s.to===u.id&&s.toCall===call.id&&m.members.includes(s.from)&&ownsSpatialCall(s.from,m,callSessions.get(m.id+':'+s.from))&&s.sequence>(Number(query.after)||0)),cursor:signalSequence,members:m.members,roster};
     }
     if(method==='POST' && pathname==='/signal') {
       if(u.status==='offline'||!state.users.some(p=>p.id===body.to&&!p.archived&&p.status!=='offline'))fail(403,'Sinalização exige participantes conectados ao escritório.');
       const m=callRoom(u,body.meeting);if(!m||!m.members.includes(u.id)||!m.members.includes(body.to)||body.to===u.id)fail(403,'Sinalização permitida somente entre participantes.');
-      const caller=callSessions.get(m.id+':'+u.id),recipient=callSessions.get(m.id+':'+body.to);if(!caller)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(caller.id!==body.call)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');if(!recipient||recipient.id!==body.toCall)fail(409,'A chamada foi reiniciada.','OFFICE_SIGNAL_RECIPIENT_STALE');
+      const spatialLease=callSpatialLease(u,m,body),caller=callSessions.get(m.id+':'+u.id),recipient=callSessions.get(m.id+':'+body.to);if(!caller)fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_MISSING');if(caller.id!==body.call||spatialLease&&!sameSpatialLease(caller.spatialLease,spatialLease))fail(409,'A chamada foi reiniciada.','OFFICE_CALL_SESSION_REPLACED');if(!recipient||recipient.id!==body.toCall||!ownsSpatialCall(body.to,m,recipient))fail(409,'A chamada foi reiniciada.','OFFICE_SIGNAL_RECIPIENT_STALE');
       const signal=body.signal;if(!signal||!['offer','answer','candidate','renegotiate'].includes(signal.type))fail(400,'Sinal inválido.');
       let safe;
       if(signal.type==='renegotiate')safe={type:'renegotiate',...(signal.iceRestart===true?{iceRestart:true}:{})};

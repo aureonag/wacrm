@@ -136,7 +136,7 @@ export function createOfficeGatewayClient({
         // Signaling and a version-bound creation can identify a replaced call. Never
         // forward an upstream message, arbitrary code, or an unbounded error body.
         const signaling = operation.operation === "interface" &&
-          (operation.method === "GET" && operation.endpoint === "signals" ||
+          (operation.method === "GET" && (operation.endpoint === "signals" || operation.endpoint === "call-session") ||
            operation.method === "POST" && (operation.endpoint === "signal" || operation.endpoint === "call-session"));
         if (response.status === 409 && signaling && jsonMime(response.headers.get("content-type"))) {
           try {
