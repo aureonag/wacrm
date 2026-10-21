@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2 } from "lucide-react";
 
@@ -59,7 +58,8 @@ export function OfficeNavLink() {
   const selected = pathname === "/escritorio" || pathname.startsWith("/escritorio/");
   return (
     <li>
-      <Link
+      {/* Enter as a complete document; router prefetch and client transitions are intentionally avoided. */}
+      <a
         href="/escritorio"
         aria-current={selected ? "page" : undefined}
         className={cn(
@@ -71,7 +71,7 @@ export function OfficeNavLink() {
       >
         <Building2 className="size-4" aria-hidden="true" />
         Escritório
-      </Link>
+      </a>
     </li>
   );
 }

@@ -9,7 +9,6 @@ import { ForbiddenError, UnauthorizedError } from "@/lib/auth/account";
 import { getOfficeContext, OfficeConfigurationError } from "@/lib/office/access";
 import type { OfficeContext } from "@/lib/office/access";
 import { isOfficeEnabled } from "@/lib/office/runtime/server";
-import { OfficeFrame } from "@/components/office/office-frame";
 
 export const metadata: Metadata = {
   title: "Escritório Aureon",
@@ -47,8 +46,9 @@ export default async function OfficePage() {
     }
     throw error;
   }
-  // The flag stays off until the private bundle and database migration are installed.
-  if (isOfficeEnabled()) return <OfficeFrame userId={identity.user.id} accountId={identity.accountId} />;
+  // Use the authenticated runtime as a complete document. It checks membership
+  // again and already provides the visible return to the CRM.
+  if (isOfficeEnabled()) redirect("/api/office/runtime/index.html");
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6 py-8">
       <header className="flex flex-col gap-2">
