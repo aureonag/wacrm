@@ -403,6 +403,7 @@
         "nUsers": "{count, plural, one {# user} other {# users}}",
         "nCampaigns": "{count, plural, one {# campaign} other {# campaigns}}",
         "nAffiliates": "{count, plural, one {# affiliate} other {# affiliates}}",
+        "editUsers": "Edit users",
         "openAccount": "Open account"
       },
       "workspace": {

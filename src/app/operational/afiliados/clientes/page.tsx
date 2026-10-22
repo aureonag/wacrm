@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Building2, ChevronRight, Loader2, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Building2, ChevronRight, Loader2, Pause, Pencil, Play, Plus, Search, Trash2, Users } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -205,24 +205,32 @@ export default function AffiliateClientsPage() {
                       .join(" · ") || "—"}
                   </p>
                 </div>
+                {/* Counters (information only) */}
                 <div className="flex shrink-0 gap-2 text-[11px] font-medium text-muted-foreground">
-                  <Link
-                    href={`/operational/afiliados/clientes/${c.id}/equipe`}
-                    className="rounded-full bg-muted px-2.5 py-1 transition-colors hover:bg-primary/10 hover:text-primary"
-                  >
-                    {t("clients.nUsers", { count: c.users })}
-                  </Link>
                   <span className="rounded-full bg-muted px-2.5 py-1">{t("clients.nCampaigns", { count: c.campaigns })}</span>
                   <span className="rounded-full bg-muted px-2.5 py-1">{t("clients.nAffiliates", { count: c.affiliates })}</span>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                {/* Actions: real buttons, same look as the rest of the CRM */}
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Link
+                    href={`/operational/afiliados/clientes/${c.id}/equipe`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    {t("clients.editUsers")}
+                    <span className="ml-0.5 rounded-full bg-muted px-1.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                      {c.users}
+                    </span>
+                  </Link>
                   <Link
                     href={`/operational/afiliados/clientes/${c.id}/dashboard`}
-                    className="mr-1 inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
+                    className={buttonVariants({ size: "sm" })}
                   >
                     {t("clients.openAccount")}
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
                   <Button variant="ghost" size="icon" aria-label={t("clients.edit")} onClick={() => openEdit(c)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
