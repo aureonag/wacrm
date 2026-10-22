@@ -624,7 +624,7 @@ export function ServiceLinesTab() {
                           {m}
                         </TableHead>
                       ))}
-                      <TableHead className="w-20" />
+                      <TableHead className="min-w-[280px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -758,7 +758,15 @@ export function ServiceLinesTab() {
                                 >
                                   <Repeat className="size-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon-sm" onClick={() => handleToggleClientStatus(client)} title="Encerrar cliente">
+                                {/* Auto width (not the square icon button): the "Encerrar" label is
+                                    wider than an icon and used to spill over the bin next to it. */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 shrink-0 px-1"
+                                  onClick={() => handleToggleClientStatus(client)}
+                                  title="Encerrar cliente"
+                                >
                                   <Badge variant="secondary" className="cursor-pointer">
                                     Encerrar
                                   </Badge>
@@ -807,7 +815,13 @@ export function ServiceLinesTab() {
                           </TableCell>
                         ))}
                         <TableCell className="whitespace-nowrap p-0.5 text-right">
-                          <Button variant="ghost" size="icon-sm" onClick={() => handleToggleClientStatus(client)} title="Reativar cliente">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 shrink-0 px-1"
+                            onClick={() => handleToggleClientStatus(client)}
+                            title="Reativar cliente"
+                          >
                             <Badge variant="default" className="cursor-pointer">
                               Reativar
                             </Badge>
