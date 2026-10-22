@@ -126,7 +126,18 @@ export async function POST(request: Request) {
 
     const affiliate = await admin
       .from("aff_affiliates")
-      .insert({ user_id: createdUserId, name: input.name, email: input.email, instagram: input.instagram })
+      .insert({
+        user_id: createdUserId,
+        name: input.name,
+        email: input.email,
+        instagram: input.instagram,
+        // Contact + Pix collected up front, so nobody has to chase the affiliate for them later.
+        phone: input.phone,
+        city: input.city,
+        state: input.state,
+        pix_key_type: input.pix_key_type,
+        pix_key: input.pix_key,
+      })
       .select("id")
       .single();
     if (affiliate.error) {

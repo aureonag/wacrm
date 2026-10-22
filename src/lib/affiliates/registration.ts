@@ -8,6 +8,13 @@ export interface RegisterInput {
   name: string;
   email: string;
   instagram: string | null;
+  phone: string;
+  city: string;
+  /** Two-letter UF, upper case. */
+  state: string;
+  pix_key_type: PixKeyType;
+  /** Already normalized for its type (digits only for CPF/CNPJ). */
+  pix_key: string;
   password: string;
   /** 6-digit code e-mailed to the address (confirms it belongs to the person). */
   code: string;
@@ -36,6 +43,41 @@ function optText(v: unknown, max: number): string | null {
   return s === "" ? null : s;
 }
 
+export const BR_STATES = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
+  "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+] as const;
+
+const digitsOf = (v: string) => v.replace(/\D/g, "");
+
+/**
+ * Light check of a Pix key against its type, so a typo does not block a payment
+ * later: lengths for CPF/CNPJ/phone, e-mail shape, random key (EVP) shape.
+ * Returns the normalized key, or null when it does not fit the type.
+ */
+export function normalizePixKey(type: PixKeyType, raw: string): string | null {
+  const key = raw.trim();
+  switch (type) {
+    case "cpf": {
+      const d = digitsOf(key);
+      return d.length === 11 ? d : null;
+    }
+    case "cnpj": {
+      const d = digitsOf(key);
+      return d.length === 14 ? d : null;
+    }
+    case "phone": {
+      const d = digitsOf(key);
+      // DDD + number (10-11 digits), optionally with the country code 55.
+      return d.length >= 10 && d.length <= 13 ? key : null;
+    }
+    case "email":
+      return key.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key) ? key.toLowerCase() : null;
+    case "random":
+      return /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(key) ? key.toLowerCase() : null;
+  }
+}
+
 /** Validates the public sign-up body. Throws BadInput. */
 export function parseRegisterInput(body: unknown): RegisterInput {
   const b = (body ?? {}) as Record<string, unknown>;
@@ -54,7 +96,33 @@ export function parseRegisterInput(body: unknown): RegisterInput {
   const code = typeof b.code === "string" ? b.code.trim() : "";
   if (!/^\d{6}$/.test(code)) throw new BadInput("Informe o código de 6 dígitos enviado ao seu e-mail.");
 
-  return { campaign_id: b.campaign_id, revision, name, email, instagram: optText(b.instagram, 100), password, code, accept: true };
+
+  const phone = typeof b.phone === "string" ? b.phone.trim() : "";
+  if (phone.length > 40 || digitsOf(phone).length < 10) throw new BadInput("Informe seu telefone com DDD.");
+  const city = typeof b.city === "string" ? b.city.trim() : "";
+  if (city.length < 2 || city.length > 100) throw new BadInput("Informe sua cidade.");
+  const state = (typeof b.state === "string" ? b.state.trim() : "").toUpperCase();
+  if (!(BR_STATES as readonly string[]).includes(state)) throw new BadInput("Informe o estado (UF).");
+  const pixType = typeof b.pix_key_type === "string" ? b.pix_key_type : "";
+  if (!(PIX_KEY_TYPES as readonly string[]).includes(pixType)) throw new BadInput("Selecione o tipo da chave Pix.");
+  const pix_key = normalizePixKey(pixType as PixKeyType, typeof b.pix_key === "string" ? b.pix_key : "");
+  if (!pix_key) throw new BadInput("A chave Pix não confere com o tipo escolhido. Confira e tente de novo.");
+
+  return {
+    campaign_id: b.campaign_id,
+    revision,
+    name,
+    email,
+    instagram: optText(b.instagram, 100),
+    phone,
+    city,
+    state,
+    pix_key_type: pixType as PixKeyType,
+    pix_key,
+    password,
+    code,
+    accept: true,
+  };
 }
 
 /** Coupon code candidate from the person's name: letters + random digits. */

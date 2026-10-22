@@ -8,8 +8,10 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
-import type { Reward } from "@/lib/affiliates/campaigns";
+import { PIX_KEY_TYPES, type Reward } from "@/lib/affiliates/campaigns";
+import { BR_STATES } from "@/lib/affiliates/registration";
 
 interface PublicCampaign {
   id: string;
@@ -41,7 +43,18 @@ export default function CampaignSignupPage() {
   const [done, setDone] = useState<"registered" | "joined" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", email: "", instagram: "", password: "", accept: false });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    instagram: "",
+    phone: "",
+    city: "",
+    state: "",
+    pix_key_type: "",
+    pix_key: "",
+    password: "",
+    accept: false,
+  });
   const [step, setStep] = useState<"form" | "code">("form");
   const [code, setCode] = useState("");
   const [maskedEmail, setMaskedEmail] = useState("");
@@ -278,6 +291,83 @@ export default function CampaignSignupPage() {
             <Input id="s-ig" maxLength={100} value={form.instagram} onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))} />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="s-phone">{t("phone")}</Label>
+            <Input
+              id="s-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              required
+              maxLength={40}
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-[1fr_6rem] gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="s-city">{t("city")}</Label>
+              <Input
+                id="s-city"
+                autoComplete="address-level2"
+                required
+                maxLength={100}
+                value={form.city}
+                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-state">{t("state")}</Label>
+              <Select value={form.state || null} onValueChange={(v) => v && setForm((f) => ({ ...f, state: v }))}>
+                <SelectTrigger id="s-state" className="w-full">
+                  <SelectValue>{form.state || "—"}</SelectValue>
+                </SelectTrigger>
+                <SelectContent align="end" alignItemWithTrigger={false}>
+                  {BR_STATES.map((uf) => (
+                    <SelectItem key={uf} value={uf}>
+                      {uf}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">{t("pixTitle")}</p>
+              <p className="text-xs text-muted-foreground">{t("pixHint")}</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="s-pixtype">{t("pixType")}</Label>
+                <Select
+                  value={form.pix_key_type || null}
+                  onValueChange={(v) => v && setForm((f) => ({ ...f, pix_key_type: v }))}
+                >
+                  <SelectTrigger id="s-pixtype" className="w-full">
+                    <SelectValue>{form.pix_key_type ? ta(`members.pix_${form.pix_key_type}`) : "—"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent align="start" alignItemWithTrigger={false}>
+                    {PIX_KEY_TYPES.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {ta(`members.pix_${p}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="s-pix">{t("pixKey")}</Label>
+                <Input
+                  id="s-pix"
+                  required
+                  maxLength={200}
+                  value={form.pix_key}
+                  onChange={(e) => setForm((f) => ({ ...f, pix_key: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="s-pass">{t("password")}</Label>
             <Input
               id="s-pass"
@@ -305,7 +395,7 @@ export default function CampaignSignupPage() {
               {error}
             </p>
           )}
-          <Button type="submit" className="w-full" disabled={busy || !form.accept}>
+          <Button type="submit" className="w-full" disabled={busy || !form.accept || !form.state || !form.pix_key_type}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             {busy ? t("sendingCode") : t("submit")}
           </Button>
