@@ -30,6 +30,13 @@ import { useWorkspace } from "./workspace";
 
 type Level = "inherit" | "none" | "view" | "edit";
 const LEVELS: Level[] = ["inherit", "none", "view", "edit"];
+/** Colour of the choice: only an exception to the profile stands out. */
+const LEVEL_TONE: Record<Level, string> = {
+  inherit: "text-muted-foreground",
+  none: "text-red-400",
+  view: "text-sky-400",
+  edit: "text-emerald-400",
+};
 
 interface Form {
   name: string;
@@ -230,7 +237,7 @@ export function TeamView() {
       )}
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && !saving && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] gap-5 overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>{isNew ? t("team.addTitle") : t("team.editTitle")}</DialogTitle>
             <DialogDescription>{t("team.formHint")}</DialogDescription>
@@ -283,21 +290,28 @@ export function TeamView() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">{t("team.permissionsTitle")}</p>
-            <p className="text-xs text-muted-foreground">{t("team.permissionsHint")}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
+          {/* Same look as the access screens in Settings: one card, a header, a row per
+              module with the choice on the right (colored when it is an exception). */}
+          <section className="overflow-hidden rounded-xl border border-border bg-card/40">
+            <header className="border-b border-border bg-muted/40 px-4 py-3">
+              <h4 className="text-sm font-semibold text-foreground">{t("team.permissionsTitle")}</h4>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t("team.permissionsHint")}</p>
+            </header>
+            <div className="grid max-sm:[&>*:last-child]:border-b-0 sm:grid-cols-2 sm:divide-x sm:divide-border/50 sm:[&>*:nth-last-child(-n+2)]:border-b-0">
               {STORE_MODULES.map((m) => (
-                <div key={m} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-1.5">
+                <div key={m} className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2">
                   <span className="text-sm text-foreground">{t(`team.module_${m}`)}</span>
                   <Select
                     value={form.levels[m]}
                     onValueChange={(v) => v && setForm((f) => ({ ...f, levels: { ...f.levels, [m]: v as Level } }))}
                   >
-                    <SelectTrigger aria-label={t(`team.module_${m}`)} className="h-8 w-36">
+                    <SelectTrigger
+                      aria-label={t(`team.module_${m}`)}
+                      className={`h-8 w-40 shrink-0 border-border bg-muted text-xs font-medium ${LEVEL_TONE[form.levels[m]]}`}
+                    >
                       <SelectValue>{t(`team.level_${form.levels[m]}`)}</SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="end" alignItemWithTrigger={false}>
                       {LEVELS.map((l) => (
                         <SelectItem key={l} value={l}>
                           {t(`team.level_${l}`)}
@@ -308,7 +322,7 @@ export function TeamView() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>
