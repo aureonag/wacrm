@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useHasPermission } from "@/hooks/use-permissions";
@@ -21,6 +21,7 @@ import { TaskLabelsField } from "./task-labels";
 import { TaskShareDialog } from "./task-share-dialog";
 import { moveTaskToTopForUser } from "@/lib/ordering/column-order-db";
 import { MembersField } from "./members-field";
+import { normalizeDriveUrl } from "@/lib/tasks/drive-url";
 import type { TaskMember } from "@/lib/tasks/members";
 import { loadEnvironmentMembers } from "@/lib/auth/environment-members";
 import type {
@@ -243,6 +244,13 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
     await reloadAll();
   }
 
+  // The task the panel is on RIGHT NOW. A slow load of the previous task must never
+  // paint over (or be saved into) the one that was opened after it.
+  const currentTaskId = useRef(taskId);
+  useEffect(() => {
+    currentTaskId.current = taskId;
+  }, [taskId]);
+
   const reloadAll = useCallback(async () => {
     if (!taskId) return;
     const { data: taskRow } = await supabase
@@ -250,6 +258,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
       .select("*, assignee:profiles!tasks_assignee_id_fkey(*), contact:contacts(*)")
       .eq("id", taskId)
       .maybeSingle();
+    if (currentTaskId.current !== taskId) return;
     if (!taskRow) {
       setTask(null);
       setLoading(false);
@@ -281,6 +290,9 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
       candidates = (siblingRows ?? []) as Task[];
     }
 
+    // Another task was opened while this one was loading: drop this answer.
+    if (currentTaskId.current !== taskId) return;
+
     setTask(loadedTask);
     setStages(stageRows);
     setComments(comms);
@@ -298,6 +310,8 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
   useEffect(() => {
     if (!open || !taskId) return;
     setLoading(true);
+    // Never keep showing (or saving into) the previous task while this one loads.
+    setTask((prev) => (prev && prev.id !== taskId ? null : prev));
     setActiveTab("briefing");
     setDraft({});
     let cancelled = false;
@@ -881,28 +895,18 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
                     </button>
                   </PropRow>
                   <PropRow icon={FolderOpen} label={t("driveFolder")}>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="url"
-                        disabled={!canEdit}
-                        value={(field("drive_folder_url") as string | null) ?? ""}
-                        placeholder={t("driveFolderPlaceholder")}
-                        onChange={(e) => setField("drive_folder_url", e.target.value.trim() || null)}
-                        className="h-8 min-w-0 flex-1 border-border bg-muted text-xs text-foreground"
-                      />
-                      {task.drive_folder_url && (
-                        <a
-                          href={task.drive_folder_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={t("driveFolderOpen")}
-                          aria-label={t("driveFolderOpen")}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground"
-                        >
-                          <FolderOpen className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                    </div>
+                    {/* Saves by itself when you leave the field (like labels and members), so a
+                        pasted link is never lost for not pressing "Salvar alterações". Keyed by
+                        task + stored value so it can never show another task's link. */}
+                    <DriveFolderField
+                      key={`${task.id}:${task.drive_folder_url ?? ""}`}
+                      value={task.drive_folder_url ?? null}
+                      disabled={!canEdit}
+                      placeholder={t("driveFolderPlaceholder")}
+                      openLabel={t("driveFolderOpen")}
+                      invalidMessage={t("driveFolderInvalid")}
+                      onSave={(url) => patchTask({ drive_folder_url: url }).then(Boolean)}
+                    />
                   </PropRow>
                 </div>
               </aside>
@@ -1089,6 +1093,75 @@ function PropRow({
         <span>{label}</span>
       </span>
       <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/** The materials-folder link: saved on blur / Enter, normalized (https:// added), refused when it is not a web link. */
+function DriveFolderField({
+  value,
+  disabled,
+  placeholder,
+  openLabel,
+  invalidMessage,
+  onSave,
+}: {
+  value: string | null;
+  disabled: boolean;
+  placeholder: string;
+  openLabel: string;
+  invalidMessage: string;
+  onSave: (url: string | null) => Promise<boolean>;
+}) {
+  const [text, setText] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function commit() {
+    if (saving) return;
+    const parsed = normalizeDriveUrl(text);
+    if (!parsed.ok) {
+      toast.error(invalidMessage);
+      return;
+    }
+    const next = parsed.url ?? "";
+    if (next === (value ?? "")) {
+      setText(next);
+      return;
+    }
+    setSaving(true);
+    const ok = await onSave(parsed.url);
+    setSaving(false);
+    if (ok) setText(next);
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="text"
+        inputMode="url"
+        autoComplete="off"
+        disabled={disabled || saving}
+        value={text}
+        placeholder={placeholder}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        className="h-8 min-w-0 flex-1 border-border bg-muted text-xs text-foreground"
+      />
+      {value && (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={openLabel}
+          aria-label={openLabel}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground"
+        >
+          <FolderOpen className="h-3.5 w-3.5" />
+        </a>
+      )}
     </div>
   );
 }

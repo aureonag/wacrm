@@ -1223,6 +1223,7 @@
       "weekday6": "토요일",
       "driveFolder": "Materials delivery link",
       "driveFolderPlaceholder": "Paste the link of the materials delivery folder here",
+      "driveFolderInvalid": "Paste a valid link (e.g. https://drive.google.com/...).",
       "driveFolderOpen": "Open link",
       "toastStageRequirements": "이동할 수 없습니다: {items} 필요",
       "stageRequirement_file": "파일",

@@ -1223,6 +1223,7 @@
       "weekday6": "Sábado",
       "driveFolder": "Link de entrega dos materiais",
       "driveFolderPlaceholder": "Cole aqui o link da pasta de entrega dos materiais",
+      "driveFolderInvalid": "Cole um link válido (ex.: https://drive.google.com/...).",
       "driveFolderOpen": "Abrir link",
       "toastStageRequirements": "Não é possível mover: falta {items}",
       "stageRequirement_file": "arquivo",

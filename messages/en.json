@@ -1223,6 +1223,7 @@
       "weekday6": "Saturday",
       "driveFolder": "Materials delivery link",
       "driveFolderPlaceholder": "Paste the link of the materials delivery folder here",
+      "driveFolderInvalid": "Paste a valid link (e.g. https://drive.google.com/...).",
       "driveFolderOpen": "Open link",
       "toastStageRequirements": "Can't move: missing {items}",
       "stageRequirement_file": "file",
