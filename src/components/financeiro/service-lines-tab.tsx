@@ -665,19 +665,20 @@ export function ServiceLinesTab() {
                               }}
                               className={`hover:bg-muted/60 ${dragOverKey === group.key ? "bg-primary/20" : "bg-muted/60"}`}
                             >
-                              <TableCell
-                                colSpan={MONTHS.length + 2}
-                                className="sticky left-0 z-10 text-xs font-semibold text-foreground"
-                              >
-                                {group.label ?? "Sem responsável"}
-                                <span className="ml-2 font-normal text-muted-foreground">
-                                  Faturamento no ano: {formatCurrency(groupTotal, "BRL")}
-                                </span>
-                                {group.clients.length === 0 && (
-                                  <span className="ml-2 font-normal italic text-muted-foreground">
-                                    Arraste contas para cá
+                              <TableCell colSpan={MONTHS.length + 2} className="p-0 text-xs font-semibold text-foreground">
+                                {/* The cell spans the whole table, so it is the inner block that
+                                    stays in place (sticky) while the months scroll sideways. */}
+                                <div className="sticky left-0 z-10 w-max max-w-[calc(100vw-6rem)] px-2 py-2">
+                                  {group.label ?? "Sem responsável"}
+                                  <span className="ml-2 font-normal text-muted-foreground">
+                                    Faturamento no ano: {formatCurrency(groupTotal, "BRL")}
                                   </span>
-                                )}
+                                  {group.clients.length === 0 && (
+                                    <span className="ml-2 font-normal italic text-muted-foreground">
+                                      Arraste contas para cá
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                             </TableRow>
                           )}
