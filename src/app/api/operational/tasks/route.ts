@@ -103,6 +103,16 @@ export async function POST(request: Request) {
         }
       }
       ({ assigneeId, participantIds } = splitMembers(wanted));
+    } else if (!assigneeId) {
+      // Nobody was named: whoever creates the task is on it (they can take themselves
+      // off or add others afterwards). An explicit empty `member_ids` is respected above.
+      const { data: me } = await ctx.supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", ctx.userId)
+        .eq("account_id", ctx.accountId)
+        .maybeSingle();
+      if (me) assigneeId = me.id as string;
     }
 
     const { count } = await ctx.supabase

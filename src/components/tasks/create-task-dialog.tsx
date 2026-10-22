@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { BoardStage, Profile, Sector, TaskPriority } from "@/types";
@@ -60,7 +60,11 @@ export function CreateTaskDialog({
   const t = useTranslations("Operational.createTaskDialog");
   const tPriority = useTranslations("Operational.tasks.card.priority");
   const supabase = createClient();
-  const { accountId } = useAuth();
+  const { accountId, profile } = useAuth();
+  // Whoever creates the task starts as a member of it (they can add others or leave).
+  const myProfileId = profile?.id ?? null;
+  const myProfileIdRef = useRef<string | null>(myProfileId);
+  const membersTouched = useRef(false);
 
   const [title, setTitle] = useState("");
   const [stageId, setStageId] = useState("");
@@ -97,8 +101,17 @@ export function CreateTaskDialog({
     setBriefingText("");
     setChecklistText("");
     setAiDescription("");
-    setMemberIds([]);
+    membersTouched.current = false;
+    setMemberIds(myProfileIdRef.current ? [myProfileIdRef.current] : []);
   }, [open, defaultStageId, stages]);
+
+  // The profile can arrive after the dialog opened: seed it unless the person already chose.
+  useEffect(() => {
+    myProfileIdRef.current = myProfileId;
+    if (open && myProfileId && !membersTouched.current) {
+      setMemberIds((current) => (current.length === 0 ? [myProfileId] : current));
+    }
+  }, [open, myProfileId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -293,7 +306,10 @@ export function CreateTaskDialog({
                   return p ? [{ id: p.id, name: p.full_name, avatarUrl: p.avatar_url ?? null }] : [];
                 })}
                 candidates={profiles.map((p) => ({ id: p.id, name: p.full_name, avatarUrl: p.avatar_url ?? null }))}
-                onChange={setMemberIds}
+                onChange={(ids) => {
+                  membersTouched.current = true;
+                  setMemberIds(ids);
+                }}
               />
             </div>
 
