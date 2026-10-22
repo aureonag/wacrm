@@ -182,7 +182,7 @@ export function CampaignEditor({ campaign }: { clientId?: string; campaign: Camp
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
+      <div className="grid gap-5">
         <div className="space-y-5">
           <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
@@ -246,6 +246,66 @@ export function CampaignEditor({ campaign }: { clientId?: string; campaign: Camp
               </div>
             </div>
             {edit && <p className="text-xs text-muted-foreground">{t("editor.discountTypeLocked")}</p>}
+          </section>
+
+          <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <h3 className="text-sm font-semibold text-foreground">{t("editor.periodTitle")}</h3>
+            <div className="space-y-1.5">
+              <Label htmlFor="c-freq">{t("editor.fieldFrequency")}</Label>
+              <Select
+                value={draft.frequency || null}
+                disabled={edit}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setDirty(true);
+                  setReward(null);
+                  setDraft((d) => ({ ...d, frequency: v as Frequency, rewards: [] }));
+                }}
+              >
+                <SelectTrigger id="c-freq" className="w-full">
+                  <SelectValue>
+                    {draft.frequency === "RECURRENT"
+                      ? t("editor.recurrent")
+                      : draft.frequency === "PERIODIC"
+                        ? t("editor.periodic")
+                        : t("editor.select")}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RECURRENT">{t("editor.recurrent")}</SelectItem>
+                  <SelectItem value="PERIODIC">{t("editor.periodic")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {draft.frequency && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="c-start">{t("editor.fieldStart")}</Label>
+                  <Input
+                    id="c-start"
+                    type="date"
+                    disabled={edit}
+                    value={draft.start_date}
+                    onChange={(e) => update("start_date", e.target.value)}
+                  />
+                </div>
+                {draft.frequency === "PERIODIC" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="c-end">{t("editor.fieldEnd")}</Label>
+                    <Input
+                      id="c-end"
+                      type="date"
+                      disabled={edit}
+                      min={draft.start_date}
+                      value={draft.end_date}
+                      onChange={(e) => update("end_date", e.target.value)}
+                    />
+                  </div>
+                )}
+                {draft.frequency === "RECURRENT" && <p className="text-xs text-muted-foreground">{t("editor.recurrentHint")}</p>}
+              </>
+            )}
+            {edit && <p className="text-xs text-muted-foreground">{t("editor.periodLocked")}</p>}
           </section>
 
           <section className="space-y-3 rounded-xl border border-border bg-card p-4">
@@ -392,65 +452,6 @@ export function CampaignEditor({ campaign }: { clientId?: string; campaign: Camp
           </section>
         </div>
 
-        <aside className="h-fit space-y-3 rounded-xl border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold text-foreground">{t("editor.periodTitle")}</h3>
-          <div className="space-y-1.5">
-            <Label htmlFor="c-freq">{t("editor.fieldFrequency")}</Label>
-            <Select
-              value={draft.frequency || null}
-              disabled={edit}
-              onValueChange={(v) => {
-                if (!v) return;
-                setDirty(true);
-                setReward(null);
-                setDraft((d) => ({ ...d, frequency: v as Frequency, rewards: [] }));
-              }}
-            >
-              <SelectTrigger id="c-freq" className="w-full">
-                <SelectValue>
-                  {draft.frequency === "RECURRENT"
-                    ? t("editor.recurrent")
-                    : draft.frequency === "PERIODIC"
-                      ? t("editor.periodic")
-                      : t("editor.select")}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="RECURRENT">{t("editor.recurrent")}</SelectItem>
-                <SelectItem value="PERIODIC">{t("editor.periodic")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {draft.frequency && (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="c-start">{t("editor.fieldStart")}</Label>
-                <Input
-                  id="c-start"
-                  type="date"
-                  disabled={edit}
-                  value={draft.start_date}
-                  onChange={(e) => update("start_date", e.target.value)}
-                />
-              </div>
-              {draft.frequency === "PERIODIC" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="c-end">{t("editor.fieldEnd")}</Label>
-                  <Input
-                    id="c-end"
-                    type="date"
-                    disabled={edit}
-                    min={draft.start_date}
-                    value={draft.end_date}
-                    onChange={(e) => update("end_date", e.target.value)}
-                  />
-                </div>
-              )}
-              {draft.frequency === "RECURRENT" && <p className="text-xs text-muted-foreground">{t("editor.recurrentHint")}</p>}
-            </>
-          )}
-          {edit && <p className="text-xs text-muted-foreground">{t("editor.periodLocked")}</p>}
-        </aside>
       </div>
 
       <Dialog open={discarding} onOpenChange={setDiscarding}>
