@@ -798,8 +798,22 @@
           }
         }
       },
+      "avatar": {
+        "title": "Photo of {name}",
+        "hint": "Shown in the portal and in the team list. The image is cropped to a square.",
+        "choose": "Choose photo",
+        "chooseAnother": "Choose another",
+        "save": "Save photo",
+        "cancel": "Cancel",
+        "remove": "Remove photo",
+        "saved": "Photo updated.",
+        "removed": "Photo removed.",
+        "failed": "Could not update the photo.",
+        "notImage": "Choose an image (PNG, JPG or WebP)."
+      },
       "team": {
         "add": "Add person",
+        "photo": "Photo",
         "empty": "Nobody added yet.",
         "emptyHint": "Add who will follow this store's affiliate program.",
         "edit": "Edit",
@@ -4080,6 +4094,7 @@
       "backToPortal": "Back to the portal",
       "menuLabel": "My portal",
       "signOut": "Sign out",
+      "changePhoto": "Change my photo",
       "selectStore": "Select store",
       "viewingAs": "Viewing as client · {name}",
       "backToAdmin": "Back to administration",

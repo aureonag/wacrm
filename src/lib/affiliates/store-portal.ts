@@ -17,6 +17,9 @@ export interface StoreMembership {
   client_name: string;
   role: StoreRole;
   permissions: StorePermissions;
+  /** The person's own row in this store (aff_client_users.id) and photo. Absent for staff. */
+  user_row_id?: string;
+  avatar_url?: string | null;
 }
 
 export interface PortalSession {
@@ -55,7 +58,7 @@ export async function loadPortalSession(staffClientId?: string | null): Promise<
   const [rows, affiliate] = await Promise.all([
     admin
       .from("aff_client_users")
-      .select("client_id, name, role, permissions, status, aff_clients(name, status)")
+      .select("id, client_id, name, role, permissions, status, avatar_url, aff_clients(name, status)")
       .eq("user_id", user.id)
       .eq("status", "active"),
     admin.from("aff_affiliates").select("id").eq("user_id", user.id).eq("status", "active").maybeSingle(),
@@ -68,6 +71,8 @@ export async function loadPortalSession(staffClientId?: string | null): Promise<
   const stores: StoreMembership[] = [];
   let name: string | null = null;
   for (const r of (rows.data ?? []) as unknown as {
+    id: string;
+    avatar_url: string | null;
     client_id: string;
     name: string;
     role: string;
@@ -77,7 +82,14 @@ export async function loadPortalSession(staffClientId?: string | null): Promise<
     if (r.aff_clients?.status !== "active") continue;
     name = name ?? r.name;
     const role = isStoreRole(r.role) ? r.role : "viewer";
-    stores.push({ client_id: r.client_id, client_name: r.aff_clients.name, role, permissions: effectivePermissions(role, r.permissions) });
+    stores.push({
+      client_id: r.client_id,
+      client_name: r.aff_clients.name,
+      role,
+      permissions: effectivePermissions(role, r.permissions),
+      user_row_id: r.id,
+      avatar_url: r.avatar_url ?? null,
+    });
   }
   stores.sort((a, b) => a.client_name.localeCompare(b.client_name, "pt-BR"));
   return { kind: "portal", userId: user.id, name, isAffiliate: Boolean(affiliate.data), stores };

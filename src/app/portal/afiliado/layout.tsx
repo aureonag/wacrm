@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { ModeToggle } from "@/components/layout/mode-toggle";
 
 const TABS = [
   { href: "/portal/afiliado", key: "campaigns", exact: true },
@@ -33,10 +34,13 @@ export default function AffiliatePortalLayout({ children }: { children: React.Re
             <img src="/brand/aureon-logo-black.png" alt="Aureon" className="aureon-logo aureon-logo--light h-6 w-auto" />
             <span className="hidden text-sm text-muted-foreground sm:inline">{t("title")}</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-            {t("signOut")}
-          </Button>
+          <div className="flex items-center gap-1">
+            <ModeToggle />
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+              {t("signOut")}
+            </Button>
+          </div>
         </div>
         <nav className="mx-auto flex max-w-4xl gap-1 px-4 pb-2" aria-label={t("title")}>
           {TABS.map((tab) => {

@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { can, type StoreModule, type StorePermissions } from "@/lib/affiliates/store-access";
 import { WorkspaceProvider } from "@/app/operational/afiliados/_components/workspace";
+import { AvatarEditorDialog, StoreAvatar } from "@/app/operational/afiliados/_components/store-avatar";
+import { ModeToggle } from "@/components/layout/mode-toggle";
 
 // Portal da loja: the people of a store (owner, manager, finance, viewer) see
 // the SAME screens as the Aureon team, scoped to their own store and to what
@@ -36,7 +38,15 @@ interface Session {
   kind: "portal" | "staff";
   name: string | null;
   is_affiliate: boolean;
-  stores: { client_id: string; client_name: string; role: string; permissions: StorePermissions }[];
+  stores: {
+    client_id: string;
+    client_name: string;
+    role: string;
+    permissions: StorePermissions;
+    /** The person's own row in this store and photo (absent for staff). */
+    user_row_id?: string;
+    avatar_url?: string | null;
+  }[];
 }
 
 type State = { kind: "loading" } | { kind: "error" } | { kind: "ready"; session: Session };
@@ -73,6 +83,9 @@ export default function StorePortalLayout({ children }: { children: React.ReactN
   const pathname = usePathname();
   const router = useRouter();
   const [state, setState] = useState<State>({ kind: "loading" });
+  // Own photo: undefined = the one the session came with, null = removed.
+  const [myAvatar, setMyAvatar] = useState<string | null | undefined>(undefined);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +132,9 @@ export default function StorePortalLayout({ children }: { children: React.ReactN
   const showHeading = rest.length <= 1 && HEADING_KEY[section] !== undefined;
   const visible = SECTIONS.filter((s) => s.module === null || can(store.permissions, s.module, "view"));
   const isStaff = session.kind === "staff";
+  const myName = session.name ?? "";
+  const myPhoto = myAvatar !== undefined ? myAvatar : (store.avatar_url ?? null);
+  const canEditPhoto = !isStaff && Boolean(store.user_row_id);
 
   const nav = (
     <ul className="flex gap-1 lg:flex-col">
@@ -159,8 +175,13 @@ export default function StorePortalLayout({ children }: { children: React.ReactN
           </nav>
           {!isStaff && (
             <div className="border-t border-border p-3">
-              <p className="truncate px-2 text-sm font-medium text-foreground">{session.name ?? ""}</p>
-              <p className="truncate px-2 pb-2 text-xs text-muted-foreground">{tp(`role_${store.role}`)}</p>
+              <div className="flex items-center gap-2.5 px-2 pb-2">
+                <StoreAvatar name={myName} url={myPhoto} size={36} />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{myName}</p>
+                  <p className="truncate text-xs text-muted-foreground">{tp(`role_${store.role}`)}</p>
+                </div>
+              </div>
               <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
                 {tp("signOut")}
@@ -173,6 +194,18 @@ export default function StorePortalLayout({ children }: { children: React.ReactN
           <header className="flex h-14 items-center justify-between gap-3 border-b border-border px-4 lg:px-6">
             <strong className="truncate text-base font-semibold text-foreground">{store.client_name}</strong>
             <div className="flex items-center gap-2">
+              <ModeToggle />
+              {canEditPhoto && (
+                <button
+                  type="button"
+                  onClick={() => setAvatarOpen(true)}
+                  title={tp("changePhoto")}
+                  aria-label={tp("changePhoto")}
+                  className="rounded-full ring-offset-background transition-shadow hover:ring-2 hover:ring-primary/40"
+                >
+                  <StoreAvatar name={myName} url={myPhoto} size={36} />
+                </button>
+              )}
               {session.stores.length > 1 && (
                 <Select value={clientId} onValueChange={(v) => v && router.push(`/portal/loja/${v}/dashboard`)}>
                   <SelectTrigger aria-label={tp("selectStore")} className="h-9 w-48">
@@ -199,6 +232,18 @@ export default function StorePortalLayout({ children }: { children: React.ReactN
           <nav className="overflow-x-auto border-b border-border px-3 py-2 lg:hidden" aria-label={store.client_name}>
             {nav}
           </nav>
+
+          {canEditPhoto && store.user_row_id && (
+            <AvatarEditorDialog
+              open={avatarOpen}
+              onOpenChange={setAvatarOpen}
+              apiBase={`/api/operational/affiliates/clients/${clientId}`}
+              userRowId={store.user_row_id}
+              name={myName}
+              currentUrl={myPhoto}
+              onChanged={setMyAvatar}
+            />
+          )}
 
           <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 lg:px-6">
             {isStaff && (

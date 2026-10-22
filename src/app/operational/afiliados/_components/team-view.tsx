@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Mail, Pause, Pencil, Play, Plus } from "lucide-react";
+import { Camera, Loader2, Mail, Pause, Pencil, Play, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ import { STORE_MODULES, STORE_ROLES, type StoreModule, type StoreOverrides, type
 import type { StoreUser } from "@/lib/affiliates/store-users";
 import { Badge } from "./metric";
 import { useWorkspace } from "./workspace";
+import { AvatarEditorDialog, StoreAvatar } from "./store-avatar";
 
 type Level = "inherit" | "none" | "view" | "edit";
 const LEVELS: Level[] = ["inherit", "none", "view", "edit"];
@@ -81,6 +82,7 @@ export function TeamView() {
   const [form, setForm] = useState<Form>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [photoFor, setPhotoFor] = useState<StoreUser | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`${apiBase}/users`);
@@ -193,6 +195,7 @@ export function TeamView() {
             const disabled = u.status === "disabled";
             return (
               <li key={u.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
+                <StoreAvatar name={u.name} url={u.avatar_url} size={44} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-semibold text-foreground">{u.name}</p>
@@ -209,6 +212,10 @@ export function TeamView() {
                         {t("team.resendInvite")}
                       </Button>
                     )}
+                    <Button variant="outline" size="sm" onClick={() => setPhotoFor(u)}>
+                      <Camera className="h-3.5 w-3.5" />
+                      {t("team.photo")}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => openEdit(u)}>
                       <Pencil className="h-3.5 w-3.5" />
                       {t("team.edit")}
@@ -234,6 +241,18 @@ export function TeamView() {
             );
           })}
         </ul>
+      )}
+
+      {photoFor && (
+        <AvatarEditorDialog
+          open
+          onOpenChange={(o) => !o && setPhotoFor(null)}
+          apiBase={apiBase}
+          userRowId={photoFor.id}
+          name={photoFor.name}
+          currentUrl={photoFor.avatar_url}
+          onChanged={() => void load()}
+        />
       )}
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && !saving && setEditing(null)}>

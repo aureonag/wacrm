@@ -798,8 +798,22 @@
           }
         }
       },
+      "avatar": {
+        "title": "Foto de {name}",
+        "hint": "Aparece no portal e na lista da equipe. A imagem é recortada em quadrado.",
+        "choose": "Escolher foto",
+        "chooseAnother": "Escolher outra",
+        "save": "Salvar foto",
+        "cancel": "Cancelar",
+        "remove": "Remover foto",
+        "saved": "Foto atualizada.",
+        "removed": "Foto removida.",
+        "failed": "Não foi possível atualizar a foto.",
+        "notImage": "Escolha uma imagem (PNG, JPG ou WebP)."
+      },
       "team": {
         "add": "Adicionar pessoa",
+        "photo": "Foto",
         "empty": "Nenhuma pessoa cadastrada ainda.",
         "emptyHint": "Adicione quem vai acompanhar o programa de afiliados desta loja.",
         "edit": "Editar",
@@ -4080,6 +4094,7 @@
       "backToPortal": "Voltar ao portal",
       "menuLabel": "Meu portal",
       "signOut": "Sair",
+      "changePhoto": "Alterar minha foto",
       "selectStore": "Selecionar loja",
       "viewingAs": "Visualizando como cliente · {name}",
       "backToAdmin": "Voltar à administração",

@@ -10,7 +10,7 @@ import {
   type StoreRole,
 } from "./store-access";
 
-export const STORE_USER_COLUMNS = "id, user_id, name, email, role, permissions, status, created_at";
+export const STORE_USER_COLUMNS = "id, user_id, name, email, role, permissions, status, avatar_url, created_at";
 
 export interface StoreUserRow {
   id: string;
@@ -20,6 +20,7 @@ export interface StoreUserRow {
   role: string;
   permissions: unknown;
   status: string;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -34,6 +35,7 @@ export function toStoreUser(r: StoreUserRow) {
     overrides: parseOverrides(r.permissions),
     permissions: effectivePermissions(role, r.permissions),
     status: r.status,
+    avatar_url: r.avatar_url ?? null,
     created_at: r.created_at,
   };
 }
