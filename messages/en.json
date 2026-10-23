@@ -1938,11 +1938,11 @@
     },
     "search": {
       "triggerLabel": "Search deals (Ctrl K)",
-      "placeholder": "Search deal, client, or company...",
-      "hint": "Start typing to search deals across every pipeline.",
+      "placeholder": "Search deal, client, company, or phone...",
+      "hint": "Start typing to search deals across every pipeline. You can search by the client's phone number (e.g. 11 95166-7706).",
       "loading": "Searching...",
       "emptyTitle": "No deal found for \"{term}\".",
-      "emptyHint": "Try searching by client name, company, or something from the deal.",
+      "emptyHint": "Try searching by client name, company, phone, or something from the deal.",
       "assignee": "Owner: {name}",
       "viewAll": "{count} results total — keep typing to narrow it down"
     },

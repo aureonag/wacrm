@@ -1938,11 +1938,11 @@
     },
     "search": {
       "triggerLabel": "Buscar negócios (Ctrl K)",
-      "placeholder": "Buscar negócio, cliente ou empresa...",
-      "hint": "Comece a digitar para buscar negócios em todos os pipelines.",
+      "placeholder": "Buscar negócio, cliente, empresa ou telefone...",
+      "hint": "Comece a digitar para buscar negócios em todos os pipelines. Dá para buscar pelo telefone do cliente (ex.: 11 95166-7706).",
       "loading": "Buscando...",
       "emptyTitle": "Nenhum negócio encontrado para \"{term}\".",
-      "emptyHint": "Tente buscar pelo nome do cliente, empresa ou alguma informação do negócio.",
+      "emptyHint": "Tente buscar pelo nome do cliente, empresa, telefone ou alguma informação do negócio.",
       "assignee": "Responsável: {name}",
       "viewAll": "{count} resultados no total — refine a busca para reduzir"
     },
