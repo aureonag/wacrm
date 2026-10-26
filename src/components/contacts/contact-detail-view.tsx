@@ -180,7 +180,7 @@ export function ContactDetailView({
     setLoadingDeals(true);
     const { data } = await supabase
       .from('deals')
-      .select('*, stage:pipeline_stages(*)')
+      .select('*, stage:pipeline_stages!deals_stage_id_fkey(*)')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false });
     setDeals((data ?? []) as Deal[]);

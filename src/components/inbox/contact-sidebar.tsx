@@ -52,7 +52,7 @@ export function ContactSidebar({ contact, conversationId }: ContactSidebarProps)
     const [dealsRes, notesRes, tagsRes] = await Promise.all([
       supabase
         .from("deals")
-        .select("*, stage:pipeline_stages(*)")
+        .select("*, stage:pipeline_stages!deals_stage_id_fkey(*)")
         .eq("contact_id", contact.id)
         .order("created_at", { ascending: false }),
       supabase

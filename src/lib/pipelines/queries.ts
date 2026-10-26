@@ -124,7 +124,7 @@ async function hydrateLineItemsAndTags(db: SupabaseClient, deals: Deal[]): Promi
 export async function loadDealById(db: SupabaseClient, dealId: string): Promise<Deal | null> {
   const { data } = await db
     .from("deals")
-    .select("*, contact:contacts(*), stage:pipeline_stages(*), assignee:profiles!deals_assigned_to_fkey(*)")
+    .select("*, contact:contacts(*), stage:pipeline_stages!deals_stage_id_fkey(*), assignee:profiles!deals_assigned_to_fkey(*)")
     .eq("id", dealId)
     .maybeSingle();
   if (!data) return null;
