@@ -17,6 +17,13 @@ describe("safeNextPath", () => {
     expect(safeNextPath(undefined)).toBeNull();
   });
 
+  it("drops Next's internal _rsc parameter (it would open the raw payload after login)", () => {
+    expect(safeNextPath("/dashboard?_rsc=H_fFy2_Q06N8BA7")).toBe("/dashboard");
+    expect(safeNextPath("/operational/boards/abc?task=123&_rsc=xyz")).toBe("/operational/boards/abc?task=123");
+    expect(safeNextPath("/pipelines?_rsc=a#topo")).toBe("/pipelines#topo");
+    expect(loginUrlFor("/dashboard?_rsc=abc")).toBe("/login?next=%2Fdashboard");
+  });
+
   it("does not loop into the auth pages", () => {
     expect(safeNextPath("/login")).toBeNull();
     expect(safeNextPath("/login?next=/x")).toBeNull();
