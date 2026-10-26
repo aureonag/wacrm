@@ -102,8 +102,11 @@ export function PipelineSettings({
   // and add-stage logic below operate on `editableStages` and then splice
   // the locked stage back in at the end, so it can never end up anywhere
   // but last.
-  const editableStages = localStages.filter((s) => s.kind !== "contract_closed");
-  const lockedStage = localStages.find((s) => s.kind === "contract_closed");
+  // "Perdido" (migration 124) is fixed in the same way, right before it.
+  const editableStages = localStages.filter((s) => s.kind !== "contract_closed" && s.kind !== "lost");
+  const lockedStages = (["lost", "contract_closed"] as const)
+    .map((kind) => localStages.find((s) => s.kind === kind))
+    .filter((s): s is PipelineStage => Boolean(s));
 
   function handleReorder(event: DragEndEvent) {
     const { active, over } = event;
@@ -112,7 +115,7 @@ export function PipelineSettings({
     const newIndex = editableStages.findIndex((s) => s.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
     const reordered = arrayMove(editableStages, oldIndex, newIndex);
-    setLocalStages(lockedStage ? [...reordered, lockedStage] : reordered);
+    setLocalStages([...reordered, ...lockedStages]);
   }
 
   async function handleSave() {
@@ -167,8 +170,19 @@ export function PipelineSettings({
       toast.error(t("toastFailedAddStage"));
       return;
     }
-    // Insert before the locked stage so it always stays last.
-    setLocalStages([...editableStages, data as PipelineStage, ...(lockedStage ? [lockedStage] : [])]);
+    // Insert before the locked stages so they always stay last — and push them down in the
+    // database too, so the new stage does not tie with them in the board's order.
+    if (lockedStages.length > 0) {
+      await Promise.all(
+        lockedStages.map((s, i) =>
+          supabase
+            .from("pipeline_stages")
+            .update({ position: editableStages.length + 1 + i })
+            .eq("id", s.id),
+        ),
+      );
+    }
+    setLocalStages([...editableStages, data as PipelineStage, ...lockedStages]);
     setNewStageName("");
     setNewStageColor(STAGE_COLORS[(editableStages.length + 1) % STAGE_COLORS.length]);
   }
@@ -279,12 +293,12 @@ export function PipelineSettings({
                           onNameChange={(v) => {
                             const updated = [...editableStages];
                             updated[index] = { ...updated[index], name: v };
-                            setLocalStages(lockedStage ? [...updated, lockedStage] : updated);
+                            setLocalStages([...updated, ...lockedStages]);
                           }}
                           onColorChange={(v) => {
                             const updated = [...editableStages];
                             updated[index] = { ...updated[index], color: v };
-                            setLocalStages(lockedStage ? [...updated, lockedStage] : updated);
+                            setLocalStages([...updated, ...lockedStages]);
                           }}
                           onRemove={() => handleRemoveStage(stage.id)}
                           colors={STAGE_COLORS}
@@ -295,20 +309,20 @@ export function PipelineSettings({
                   </SortableContext>
                 </DndContext>
 
-                {/* "Contrato fechado" (migration 054) — always last, never
-                    draggable/editable/deletable. A signed contract moves
-                    the deal here automatically. */}
-                {lockedStage && (
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/60 p-2 opacity-80">
+                {/* "Perdido" (migration 124) and "Contrato fechado" (054) — always last, never
+                    draggable/editable/deletable. A lost deal goes to the first one by itself,
+                    a signed contract moves the deal to the second. */}
+                {lockedStages.map((locked) => (
+                  <div
+                    key={locked.id}
+                    className="flex items-center gap-2 rounded-lg border border-border bg-muted/60 p-2 opacity-80"
+                  >
                     <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span
-                      className="h-4 w-4 shrink-0 rounded-full"
-                      style={{ backgroundColor: lockedStage.color }}
-                    />
-                    <span className="flex-1 text-sm text-foreground">{lockedStage.name}</span>
+                    <span className="h-4 w-4 shrink-0 rounded-full" style={{ backgroundColor: locked.color }} />
+                    <span className="flex-1 text-sm text-foreground">{locked.name}</span>
                     <span className="text-[11px] text-muted-foreground">{t("automaticStage")}</span>
                   </div>
-                )}
+                ))}
 
                 {/* Add new stage */}
                 <div className="mt-1 flex flex-wrap gap-1">

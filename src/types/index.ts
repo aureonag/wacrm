@@ -471,8 +471,10 @@ export interface PipelineStage {
    * pipeline gets (see migration 054) — a signed contract moves the deal
    * here automatically. Locked in the Pipeline settings UI: no rename,
    * recolor, reorder, or delete.
+   * 'lost' (migration 124) is the equally fixed "Perdido" stage, right before it: a
+   * deal marked lost goes there on its own (and back to where it was when reopened).
    */
-  kind: "custom" | "contract_closed";
+  kind: "custom" | "contract_closed" | "lost";
   created_at: string;
 }
 
@@ -703,6 +705,8 @@ export interface Deal {
   lost_reason?: string | null;
   /** Optional observation attached to a loss, independent of `lost_reason` (migration 056). */
   lost_reason_note?: string | null;
+  /** Stage the deal was in before it went to "Perdido" (reopening sends it back there). */
+  lost_from_stage_id?: string | null;
   /** Structured acquisition-channel key, or free text when "Outro" was picked (migration 056). */
   origin?: string | null;
   /** Set when this deal was created by importing a Prospecção candidate (migration 049). */

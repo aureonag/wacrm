@@ -8,6 +8,7 @@ import { useColumnOrder } from "@/hooks/use-column-order";
 import { applyColumnOrder, applyOrderByStage, moveInOrder, type DropTarget } from "@/lib/ordering/column-order";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealCreateModal } from "@/components/pipelines/deal-create-modal";
+import { LostReasonDialog } from "@/components/pipelines/lost-reason-dialog";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { PipelineSelector } from "@/components/pipelines/pipeline-selector";
 import { PipelineSearch } from "@/components/pipelines/pipeline-search";
@@ -83,8 +84,17 @@ const SPEC_DEFAULT_STAGES = [
 const CONTRACT_CLOSED_STAGE = {
   name: "Contrato fechado",
   color: "#22c55e",
-  position: SPEC_DEFAULT_STAGES.length,
+  position: SPEC_DEFAULT_STAGES.length + 1,
   kind: "contract_closed" as const,
+};
+
+// ... and this one, always right before it (migration 124): a deal marked lost
+// goes here on its own.
+const LOST_STAGE = {
+  name: "Perdido",
+  color: "#ef4444",
+  position: SPEC_DEFAULT_STAGES.length,
+  kind: "lost" as const,
 };
 
 export default function PipelinesPage() {
@@ -174,6 +184,7 @@ export default function PipelinesPage() {
         // the locked one, or this insert 400s with a not-null violation.
         kind: "custom" as const,
       })),
+      { pipeline_id: pipeline.id, ...LOST_STAGE },
       { pipeline_id: pipeline.id, ...CONTRACT_CLOSED_STAGE },
     ];
     await supabase.from("pipeline_stages").insert(stagesPayload);
@@ -355,8 +366,14 @@ export default function PipelinesPage() {
   const handleDealMoved = useCallback(
     async (dealId: string, newStageId: string) => {
       // Optimistic update â€” board already animated; just persist.
+      const leavingLost =
+        stages.find((st) => st.id === deals.find((d) => d.id === dealId)?.stage_id)?.kind === "lost";
       setDeals((prev) =>
-        prev.map((d) => (d.id === dealId ? { ...d, stage_id: newStageId } : d)),
+        prev.map((d) =>
+          d.id === dealId
+            ? { ...d, stage_id: newStageId, ...(leavingLost ? { status: "open" as const, lost_reason: null, lost_reason_note: null } : {}) }
+            : d,
+        ),
       );
       const { error } = await supabase
         .from("deals")
@@ -382,7 +399,37 @@ export default function PipelinesPage() {
         detail: tActivity("movedDetail"),
       });
     },
-    [supabase, refreshDeals, t, tActivity, stages, accountId],
+    [supabase, refreshDeals, t, tActivity, stages, accountId, deals],
+  );
+
+  // A card dropped in the Perdido column: ask why it was lost first, then mark it lost
+  // (the database moves it into the stage).
+  const [lostDealId, setLostDealId] = useState<string | null>(null);
+
+  const handleConfirmLost = useCallback(
+    async (reason: string, note: string | null) => {
+      const id = lostDealId;
+      if (!id) return;
+      const lostStage = stages.find((st) => st.kind === "lost");
+      setDeals((prev) =>
+        prev.map((d) =>
+          d.id === id
+            ? { ...d, status: "lost" as const, stage_id: lostStage?.id ?? d.stage_id, lost_reason: reason, lost_reason_note: note }
+            : d,
+        ),
+      );
+      const { error } = await supabase
+        .from("deals")
+        .update({ status: "lost", lost_reason: reason, lost_reason_note: note })
+        .eq("id", id);
+      if (error) {
+        toast.error(t("toastFailedMoveDeal"));
+        void refreshDeals();
+        return;
+      }
+      toast.success(t("toastMarkedLost"));
+    },
+    [lostDealId, stages, supabase, t, refreshDeals],
   );
 
   /**
@@ -393,6 +440,14 @@ export default function PipelinesPage() {
     async (dealId: string, targetStageId: string, target: DropTarget) => {
       const deal = deals.find((d) => d.id === dealId);
       if (!deal) return;
+      if (stages.find((st) => st.id === targetStageId)?.kind === "lost" && deal.stage_id !== targetStageId) {
+        if (deal.status === "won") {
+          toast.error(t("toastWonCannotBeLost"));
+          return;
+        }
+        setLostDealId(dealId);
+        return;
+      }
       const column = applyColumnOrder(
         deals.filter((d) => d.stage_id === targetStageId),
         orders[targetStageId],
@@ -404,7 +459,7 @@ export default function PipelinesPage() {
         await handleDealMoved(dealId, targetStageId);
       }
     },
-    [deals, orders, saveOrder, handleDealMoved],
+    [deals, stages, orders, saveOrder, handleDealMoved, t],
   );
 
   const handleAddDeal = useCallback(
@@ -549,6 +604,7 @@ export default function PipelinesPage() {
         // the locked one, or this insert 400s with a not-null violation.
         kind: "custom" as const,
       })),
+      { pipeline_id: pipeline.id, ...LOST_STAGE },
       { pipeline_id: pipeline.id, ...CONTRACT_CLOSED_STAGE },
     ];
     await supabase.from("pipeline_stages").insert(stagesPayload);
@@ -742,6 +798,14 @@ export default function PipelinesPage() {
       )}
 
       {/* Bulk delete confirmation */}
+      <LostReasonDialog
+        open={lostDealId !== null}
+        onOpenChange={(o) => {
+          if (!o) setLostDealId(null);
+        }}
+        onConfirm={handleConfirmLost}
+      />
+
       <Dialog open={confirmDeleteOpen} onOpenChange={(o) => !bulkDeleting && setConfirmDeleteOpen(o)}>
         <DialogContent className="sm:max-w-sm bg-popover border-border">
           <DialogHeader>

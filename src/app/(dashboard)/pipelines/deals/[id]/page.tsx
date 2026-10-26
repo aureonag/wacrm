@@ -35,11 +35,11 @@ import { frenteLabelKey } from "@/lib/deals/frente";
 import { DEAL_TAG_COLORS } from "@/lib/deals/tag-colors";
 import { DEAL_ORIGIN_KEYS, isKnownDealOrigin } from "@/lib/deals/origin";
 import { LOST_REASON_KEYS } from "@/lib/deals/lost-reason";
+import { LostReasonDialog } from "@/components/pipelines/lost-reason-dialog";
 import { relativeTime } from "@/lib/dashboard/relative-time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { TextareaWithEmoji } from "@/components/ui/textarea-with-emoji";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -240,7 +240,24 @@ export default function DealDetailPage() {
   async function handleStageChange(newStageId: string) {
     if (!deal || newStageId === deal.stage_id) return;
     const newStage = stages.find((s) => s.id === newStageId);
+    if (newStage?.kind === "lost") {
+      if (deal.status === "won") {
+        toast.error(t("toastWonCannotBeLost"));
+        return;
+      }
+      openLostReasonDialog();
+      return;
+    }
     await updateDealField({ stage_id: newStageId });
+    // Leaving "Perdido" by hand reopens the deal (the database does it): read it back.
+    if (stages.find((s) => s.id === deal.stage_id)?.kind === "lost") {
+      const { data: fresh } = await supabase
+        .from("deals")
+        .select("stage_id, status, lost_reason, lost_reason_note, lost_from_stage_id")
+        .eq("id", deal.id)
+        .single();
+      if (fresh) setDeal((prev) => (prev ? ({ ...prev, ...fresh } as Deal) : prev));
+    }
     if (!newStage || !accountId) return;
     const { data } = await supabase
       .from("deal_activities")
@@ -277,13 +294,20 @@ export default function DealDetailPage() {
     }
     // "Won" never goes through here: it needs the closing sheet, which the
     // database enforces (migration 085) — see CloseDealDialog.
-    const { error } = await supabase.from("deals").update(patch).eq("id", deal.id);
+    // The database moves the card: marked lost -> the "Perdido" stage; reopened -> back
+    // to the stage it came from. Read the result instead of guessing it.
+    const { data: saved, error } = await supabase
+      .from("deals")
+      .update(patch)
+      .eq("id", deal.id)
+      .select("stage_id, lost_from_stage_id, status")
+      .single();
     setStatusAction(null);
     if (error) {
       toast.error(t("toastFailedStatus"));
       return;
     }
-    setDeal({ ...deal, ...patch });
+    setDeal({ ...deal, ...patch, ...(saved ?? {}) } as Deal);
     toast.success(status === "lost" ? t("toastMarkedLost") : t("toastReopened"));
   }
 
@@ -338,22 +362,13 @@ export default function DealDetailPage() {
 
   // ---- Lost reason (asked before actually marking a deal Lost) ----
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
-  const [selectedLostReason, setSelectedLostReason] = useState<(typeof LOST_REASON_KEYS)[number]>("price");
-  const [lostReasonOtherText, setLostReasonOtherText] = useState("");
-  const [lostReasonNoteText, setLostReasonNoteText] = useState("");
 
   function openLostReasonDialog() {
-    setSelectedLostReason("price");
-    setLostReasonOtherText("");
-    setLostReasonNoteText("");
     setLostReasonDialogOpen(true);
   }
 
-  async function confirmMarkLost() {
-    const reason = selectedLostReason === "other" ? lostReasonOtherText.trim() : selectedLostReason;
-    if (!reason) return;
-    await handleStatusChange("lost", reason, lostReasonNoteText.trim() || null);
-    setLostReasonDialogOpen(false);
+  async function confirmMarkLost(reason: string, note: string | null) {
+    await handleStatusChange("lost", reason, note);
   }
 
   /** `lost_reason` stores one of the fixed keys verbatim, or free text
@@ -1380,57 +1395,7 @@ export default function DealDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={lostReasonDialogOpen} onOpenChange={setLostReasonDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-popover border-border text-popover-foreground">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">{t("lostReasonTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="flex flex-wrap gap-2">
-              {LOST_REASON_KEYS.map((key) => (
-                <Chip key={key} selected={selectedLostReason === key} onClick={() => setSelectedLostReason(key)}>
-                  {t(`lostReason_${key}` as Parameters<typeof t>[0])}
-                </Chip>
-              ))}
-            </div>
-            {selectedLostReason === "other" && (
-              <Input
-                autoFocus
-                value={lostReasonOtherText}
-                onChange={(e) => setLostReasonOtherText(e.target.value)}
-                placeholder={t("lostReasonOtherPlaceholder")}
-                className="border-border bg-muted text-foreground"
-              />
-            )}
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground">{t("lostReasonNoteLabel")}</Label>
-              <Textarea
-                value={lostReasonNoteText}
-                onChange={(e) => setLostReasonNoteText(e.target.value)}
-                placeholder={t("lostReasonNotePlaceholder")}
-                rows={3}
-                className="border-border bg-muted text-foreground"
-              />
-            </div>
-          </div>
-          <DialogFooter className="bg-popover/50 border-border">
-            <Button
-              variant="outline"
-              onClick={() => setLostReasonDialogOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              onClick={confirmMarkLost}
-              disabled={selectedLostReason === "other" && !lostReasonOtherText.trim()}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {t("markAsLost")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LostReasonDialog open={lostReasonDialogOpen} onOpenChange={setLostReasonDialogOpen} onConfirm={confirmMarkLost} />
 
       <CloseDealDialog
         open={closingOpen}
