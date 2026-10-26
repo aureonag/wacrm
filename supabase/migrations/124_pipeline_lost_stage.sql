@@ -22,7 +22,10 @@
 -- ============================================================
 
 -- ---- 1. schema ---------------------------------------------------------------
-ALTER TABLE deals ADD COLUMN IF NOT EXISTS lost_from_stage_id uuid REFERENCES pipeline_stages(id) ON DELETE SET NULL;
+ALTER TABLE deals ADD COLUMN IF NOT EXISTS lost_from_stage_id uuid;
+-- Sem FK de proposito: um 2o vinculo deals -> pipeline_stages deixa ambiguo o embed
+-- `stage:pipeline_stages(*)` do PostgREST e todo negocio vira "nao encontrado".
+ALTER TABLE deals DROP CONSTRAINT IF EXISTS deals_lost_from_stage_id_fkey;
 
 ALTER TABLE pipeline_stages DROP CONSTRAINT IF EXISTS pipeline_stages_kind_check;
 ALTER TABLE pipeline_stages
