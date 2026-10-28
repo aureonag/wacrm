@@ -65,6 +65,7 @@ describe("buildCommissionGrid", () => {
     expect(items[0].months[11]).toBe(500);
     expect(items[0].total).toBe(2000);
     expect(items[1].dueDate).toBe("2026-11-15");
+    expect(items[0].dueDates).toEqual(["2026-11-10", "2026-12-10"]);
     expect(grid.rows[0].total).toBe(3000);
   });
   it("is empty when nothing is due that year", () => {

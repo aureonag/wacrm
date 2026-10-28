@@ -41,6 +41,8 @@ export interface CommissionGridItem {
   label: string;
   /** Earliest due date, YYYY-MM-DD. */
   dueDate: string;
+  /** Every due date of the contract (the commission can be paid in parts), earliest first. */
+  dueDates: string[];
   /** index 0 = January */
   months: number[];
   total: number;
@@ -76,8 +78,11 @@ export function buildCommissionGrid(rows: CommissionRow[], year: number): Commis
       dealId: r.deal_id ?? null,
       label: displayClient(r.deal_title || r.client_label),
       dueDate: r.due_date,
+      dueDates: [] as string[],
       cents: new Array(12).fill(0),
     };
+    if (!item.dueDates.includes(r.due_date)) item.dueDates.push(r.due_date);
+    item.dueDates.sort();
     item.cents[monthOf(r.due_date) - 1] += toCents(r.amount);
     if (r.due_date < item.dueDate) item.dueDate = r.due_date;
     person.items.set(key, item);

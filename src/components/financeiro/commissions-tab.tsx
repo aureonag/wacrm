@@ -223,7 +223,7 @@ export function CommissionsTab() {
                             ) : (
                               item.label
                             )}
-                            <span className="ml-1.5 tabular-nums text-muted-foreground/70">· vence {formatDayMonth(item.dueDate)}</span>
+                            <span className="ml-1.5 tabular-nums text-muted-foreground/70">· vence {item.dueDates.map(formatDayMonth).join(" e ")}</span>
                           </TableCell>
                           {item.months.map((v, i) => (
                             <TableCell key={i} className="px-1.5 py-1.5 text-right text-xs tabular-nums text-muted-foreground">
