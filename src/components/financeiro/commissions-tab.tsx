@@ -223,11 +223,22 @@ export function CommissionsTab() {
                             ) : (
                               item.label
                             )}
-                            <span className="ml-1.5 tabular-nums text-muted-foreground/70">· vence {item.dueDates.map(formatDayMonth).join(" e ")}</span>
+                            {item.dueDates.length > 1 && (
+                              <span className="ml-1.5 text-muted-foreground/70">· {item.dueDates.length} parcelas</span>
+                            )}
                           </TableCell>
                           {item.months.map((v, i) => (
                             <TableCell key={i} className="px-1.5 py-1.5 text-right text-xs tabular-nums text-muted-foreground">
-                              {v > 0 ? formatCurrency(v, "BRL") : "—"}
+                              {v > 0 ? (
+                                <>
+                                  {formatCurrency(v, "BRL")}
+                                  <span className="block text-[10px] leading-tight text-primary/80">
+                                    {item.days[i].length > 1 ? "dias" : "dia"} {item.days[i].join(" e ")}
+                                  </span>
+                                </>
+                              ) : (
+                                "—"
+                              )}
                             </TableCell>
                           ))}
                           <TableCell className="px-1.5 py-1.5 text-right text-xs tabular-nums text-muted-foreground">

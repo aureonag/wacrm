@@ -43,6 +43,8 @@ export interface CommissionGridItem {
   dueDate: string;
   /** Every due date of the contract (the commission can be paid in parts), earliest first. */
   dueDates: string[];
+  /** index 0 = January; the days of that month on which a part falls due (e.g. [30]). */
+  days: number[][];
   /** index 0 = January */
   months: number[];
   total: number;
@@ -73,14 +75,19 @@ export function buildCommissionGrid(rows: CommissionRow[], year: number): Commis
     person.cents[monthOf(r.due_date) - 1] += toCents(r.amount);
     // One line per contract; a contract without a deal link stays on its own line.
     const key = r.deal_id ?? r.id;
-    const item = person.items.get(key) ?? {
+    const item: GridItemAcc = person.items.get(key) ?? {
       key,
       dealId: r.deal_id ?? null,
       label: displayClient(r.deal_title || r.client_label),
       dueDate: r.due_date,
       dueDates: [] as string[],
+      days: Array.from({ length: 12 }, () => [] as number[]),
       cents: new Array(12).fill(0),
     };
+    const day = Number(r.due_date.slice(8, 10));
+    const monthDays = item.days[monthOf(r.due_date) - 1];
+    if (!monthDays.includes(day)) monthDays.push(day);
+    monthDays.sort((a, b) => a - b);
     if (!item.dueDates.includes(r.due_date)) item.dueDates.push(r.due_date);
     item.dueDates.sort();
     item.cents[monthOf(r.due_date) - 1] += toCents(r.amount);
