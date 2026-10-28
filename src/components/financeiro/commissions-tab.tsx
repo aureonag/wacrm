@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +41,7 @@ export function CommissionsTab() {
     (async () => {
       const { data: rows, error } = await supabase
         .from("fin_commissions")
-        .select("id, recipient_name, client_label, pct, base_amount, amount, due_date")
+        .select("id, recipient_name, client_label, pct, base_amount, amount, due_date, deal_id, deal:deals!fin_commissions_deal_id_fkey(title)")
         .gte("due_date", `${year}-01-01`)
         .lte("due_date", `${year}-12-31`)
         .order("due_date");
@@ -48,11 +49,12 @@ export function CommissionsTab() {
       setData({
         year,
         failed: !!error,
-        rows: (rows ?? []).map((r) => ({
+        rows: (rows ?? []).map(({ deal, ...r }) => ({
           ...r,
           pct: Number(r.pct),
           base_amount: Number(r.base_amount),
           amount: Number(r.amount),
+          deal_title: (Array.isArray(deal) ? deal[0]?.title : (deal as { title?: string } | null)?.title) ?? null,
         })) as CommissionRow[],
       });
     })();
@@ -172,7 +174,7 @@ export function CommissionsTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 z-10 min-w-[180px] bg-card">Pessoa</TableHead>
+                    <TableHead className="sticky left-0 z-10 min-w-[280px] bg-card">Pessoa</TableHead>
                     {MONTHS.map((m) => (
                       <TableHead
                         key={m}
@@ -199,17 +201,41 @@ export function CommissionsTab() {
                     </TableCell>
                   </TableRow>
                   {grid.rows.map((row) => (
-                    <TableRow key={row.recipient}>
-                      <TableCell className="sticky left-0 z-10 bg-card text-sm text-foreground">{row.recipient}</TableCell>
-                      {row.months.map((v, i) => (
-                        <TableCell key={i} className="px-1.5 text-right text-xs tabular-nums text-muted-foreground">
-                          {v > 0 ? formatCurrency(v, "BRL") : "—"}
+                    <Fragment key={row.recipient}>
+                      <TableRow>
+                        <TableCell className="sticky left-0 z-10 bg-card text-sm font-medium text-foreground">{row.recipient}</TableCell>
+                        {row.months.map((v, i) => (
+                          <TableCell key={i} className="px-1.5 text-right text-xs tabular-nums text-foreground">
+                            {v > 0 ? formatCurrency(v, "BRL") : "—"}
+                          </TableCell>
+                        ))}
+                        <TableCell className="px-1.5 text-right text-xs font-semibold tabular-nums text-foreground">
+                          {formatCurrency(row.total, "BRL")}
                         </TableCell>
+                      </TableRow>
+                      {row.items.map((item) => (
+                        <TableRow key={item.key} className="hover:bg-muted/30">
+                          <TableCell className="sticky left-0 z-10 bg-card py-1.5 pl-6 text-xs text-muted-foreground">
+                            {item.dealId ? (
+                              <Link href={`/pipelines/deals/${item.dealId}`} className="hover:text-foreground hover:underline">
+                                {item.label}
+                              </Link>
+                            ) : (
+                              item.label
+                            )}
+                            <span className="ml-1.5 tabular-nums text-muted-foreground/70">· vence {formatDayMonth(item.dueDate)}</span>
+                          </TableCell>
+                          {item.months.map((v, i) => (
+                            <TableCell key={i} className="px-1.5 py-1.5 text-right text-xs tabular-nums text-muted-foreground">
+                              {v > 0 ? formatCurrency(v, "BRL") : "—"}
+                            </TableCell>
+                          ))}
+                          <TableCell className="px-1.5 py-1.5 text-right text-xs tabular-nums text-muted-foreground">
+                            {formatCurrency(item.total, "BRL")}
+                          </TableCell>
+                        </TableRow>
                       ))}
-                      <TableCell className="px-1.5 text-right text-xs font-semibold tabular-nums text-foreground">
-                        {formatCurrency(row.total, "BRL")}
-                      </TableCell>
-                    </TableRow>
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>

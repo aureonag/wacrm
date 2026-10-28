@@ -50,6 +50,23 @@ describe("buildCommissionGrid", () => {
     expect(grid.monthTotals[0]).toBe(310.3);
     expect(grid.grandTotal).toBe(360.3);
   });
+  it("lists one line per contract under each person", () => {
+    const grid = buildCommissionGrid(
+      [
+        row({ id: "1", recipient_name: "Ana", deal_id: "d2", deal_title: "00356 - Dra Elisabete | Podologa", client_label: "Elisabete Melo", due_date: "2026-11-15", amount: 1000 }),
+        row({ id: "2", recipient_name: "Ana", deal_id: "d1", deal_title: "00357 - First response group", client_label: "00357 - First response group", due_date: "2026-11-10", amount: 1500 }),
+        row({ id: "3", recipient_name: "Ana", deal_id: "d1", due_date: "2026-12-10", amount: 500, client_label: "x" }),
+      ],
+      2026,
+    );
+    const items = grid.rows[0].items;
+    expect(items.map((i) => i.label)).toEqual(["00357 - First response group", "00356 - Dra Elisabete"]);
+    expect(items[0].months[10]).toBe(1500);
+    expect(items[0].months[11]).toBe(500);
+    expect(items[0].total).toBe(2000);
+    expect(items[1].dueDate).toBe("2026-11-15");
+    expect(grid.rows[0].total).toBe(3000);
+  });
   it("is empty when nothing is due that year", () => {
     const grid = buildCommissionGrid([row({ due_date: "2025-05-01" })], 2026);
     expect(grid.rows).toEqual([]);
