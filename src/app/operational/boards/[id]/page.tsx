@@ -196,9 +196,11 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
   // boards are ignored; the cards are re-read in one go after a short pause so
   // a burst (bulk move) costs a single fetch.
   const taskIdsRef = useRef<Set<string>>(new Set());
+  const tasksRef = useRef<Task[]>([]);
   const movesInFlight = useRef(0);
   useEffect(() => {
     taskIdsRef.current = new Set(tasks.map((x) => x.id));
+    tasksRef.current = tasks;
   }, [tasks]);
 
   useEffect(() => {
@@ -242,7 +244,23 @@ function BoardKanbanPageInner({ params }: { params: Promise<{ id: string }> }) {
       // sits in, title, dates...). The re-read right after fills in the rest
       // (people, tags, times) and confirms.
       if (payload.eventType === "UPDATE") {
-        const row = payload.new as Task;
+        // The briefing is not kept on the cards (the board does not read it),
+        // and somebody typing in one pings this event on every pause: when
+        // nothing a card shows changed, there is nothing to redraw or re-read.
+        // Any doubt (a column that reads differently) falls through to the
+        // normal refresh below.
+        const { briefing: _briefing, ...row } = payload.new as Task;
+        void _briefing;
+        const shown = tasksRef.current.find((x) => x.id === row.id);
+        if (
+          shown &&
+          row.board_id === boardId &&
+          (Object.keys(row) as (keyof typeof row)[]).every(
+            (k) => k === "updated_at" || JSON.stringify(shown[k] ?? null) === JSON.stringify(row[k] ?? null),
+          )
+        ) {
+          return;
+        }
         if (row.board_id === boardId && movesInFlight.current === 0) {
           setTasks((prev) => prev.map((x) => (x.id === row.id ? { ...x, ...row } : x)));
         }

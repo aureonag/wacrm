@@ -65,8 +65,12 @@ const Highlight = Mark.create({
 });
 
 // Checkbox/auto-save: marcar uma caixa não tira o foco do editor, então salvar
-// só no blur perderia o clique se a pessoa fechasse a tarefa logo depois.
-const AUTOSAVE_MS = 800;
+// só no blur perderia o clique se a pessoa fechasse a tarefa logo depois (ao
+// fechar, o que está pendente é gravado na hora — veja o cleanup abaixo). Cada
+// salvamento vira um evento ao vivo para quem está no quadro, por isso o
+// intervalo não pode ser curto: com 0,8s, uma pessoa digitando gerava um
+// salvamento a cada pausa e derrubou o banco em 30/10/2026.
+const AUTOSAVE_MS = 2500;
 
 interface BriefingEditorProps {
   content: JSONContent | null | undefined;

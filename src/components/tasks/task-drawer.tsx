@@ -348,8 +348,13 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
   }, [open, accountId, supabase]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  async function patchTask(fields: Record<string, unknown>) {
+  // `quiet`: the write changes nothing else on screen (the briefing's
+  // auto-save), so skip re-reading the whole panel and the board — that
+  // re-read, run on every pause in typing, is what overloaded the database on
+  // 30/10/2026. The saved fields are merged into the open task instead.
+  async function patchTask(fields: Record<string, unknown>, opts?: { quiet?: boolean }) {
     if (!task) return;
+    const savedTaskId = task.id;
     const res = await fetch(`/api/operational/tasks/${task.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -363,6 +368,10 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
         toast.error(t("toastFailed"));
       }
       return false;
+    }
+    if (opts?.quiet) {
+      setTask((prev) => (prev && prev.id === savedTaskId ? ({ ...prev, ...fields } as Task) : prev));
+      return true;
     }
     await reloadAll();
     onChanged();
@@ -720,7 +729,7 @@ export function TaskDrawer({ taskId, open, onOpenChange, onChanged, onNavigate, 
                   <BriefingEditor
                     content={task.briefing as JSONContent | null}
                     editable={canEdit}
-                    onSave={(json) => patchTask({ briefing: json })}
+                    onSave={(json) => patchTask({ briefing: json }, { quiet: true })}
                   />
                 </div>
               </TabsContent>

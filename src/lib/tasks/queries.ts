@@ -44,10 +44,18 @@ export async function loadBoardStages(db: SupabaseClient, boardId: string): Prom
   return (data ?? []) as BoardStage[];
 }
 
+// Every column of `tasks` except `briefing`: a card never shows it, and it is
+// the heavy one (up to ~26 KB of JSON per task). The board is re-read whenever
+// anybody touches a card, so carrying every briefing each time was most of the
+// load on 30/10/2026. A new column on `tasks` has to be added here to reach the
+// cards; the task panel (task-drawer) still reads the full row.
+const BOARD_TASK_COLUMNS =
+  "id, account_id, board_id, stage_id, parent_task_id, title, contact_id, sector_id, assignee_id, priority, is_urgent, position, status, start_date, due_date, estimated_minutes, created_by, completed_at, created_at, updated_at, recurrence_rule_id, drive_folder_url, overdue_notified_at, deal_id, task_number, project_id";
+
 export async function loadBoardTasks(db: SupabaseClient, boardId: string): Promise<Task[]> {
   const { data, error } = await db
     .from("tasks")
-    .select("*, assignee:profiles!tasks_assignee_id_fkey(*), contact:contacts(*)")
+    .select(`${BOARD_TASK_COLUMNS}, assignee:profiles!tasks_assignee_id_fkey(*), contact:contacts(*)`)
     .eq("board_id", boardId)
     .is("parent_task_id", null)
     .order("position");
@@ -57,7 +65,7 @@ export async function loadBoardTasks(db: SupabaseClient, boardId: string): Promi
   }
   return hydrateTaskMembers(
     db,
-    await hydrateTaskProject(db, await hydrateTaskTime(db, await hydrateTaskTags(db, (data ?? []) as Task[]))),
+    await hydrateTaskProject(db, await hydrateTaskTime(db, await hydrateTaskTags(db, (data ?? []) as unknown as Task[]))),
   );
 }
 
