@@ -84,7 +84,7 @@ export function AffiliatesNav() {
         <ul className="mt-1 ml-2 flex flex-col gap-0.5 border-l border-border pl-2">
           {label(t("nav.administration"))}
           <li>
-            <Link href={`${BASE}/clientes`} className={cn(subRowBase, onClientsList ? rowActive : rowInactive)}>
+            <Link prefetch={false} href={`${BASE}/clientes`} className={cn(subRowBase, onClientsList ? rowActive : rowInactive)}>
               <Building2 className="h-4 w-4" />
               <span className="flex-1">{t("nav.clients")}</span>
             </Link>
@@ -93,7 +93,7 @@ export function AffiliatesNav() {
           {label(t("nav.operation"))}
           {CLIENT_SECTIONS.map(({ slug, key, icon: Icon }) => (
             <li key={slug}>
-              <Link
+              <Link prefetch={false}
                 href={clientId ? `${BASE}/clientes/${clientId}/${slug}` : `${BASE}/clientes`}
                 className={cn(subRowBase, activeSection === slug ? rowActive : rowInactive)}
               >
@@ -105,7 +105,7 @@ export function AffiliatesNav() {
 
           {label(t("nav.system"))}
           <li>
-            <Link
+            <Link prefetch={false}
               href={`${BASE}/desenvolvimento`}
               className={cn(subRowBase, pathname.startsWith(`${BASE}/desenvolvimento`) ? rowActive : rowInactive)}
             >

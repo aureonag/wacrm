@@ -389,7 +389,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         aria-label="Primary"
       >
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-6">
-          <Link href={logoHref} className="flex items-center gap-2">
+          <Link prefetch={false} href={logoHref} className="flex items-center gap-2">
             <img
               src="/brand/aureon-logo-white.png"
               alt={t("title")}
@@ -431,7 +431,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
                       return (
                         <li key={item.href}>
-                          <Link href={item.href} className={cn(navRowBase, isActive ? navRowActive : navRowInactive)}>
+                          <Link prefetch={false} href={item.href} className={cn(navRowBase, isActive ? navRowActive : navRowInactive)}>
                             <item.icon className="h-4 w-4" />
                             <span className="flex-1">{t(item.labelKey)}</span>
                             {item.beta && (
@@ -472,7 +472,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                   <ul className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
                     {can("op_dashboard") && (
                       <li>
-                        <Link
+                        <Link prefetch={false}
                           href="/operational/dashboard"
                           className={cn(
                             navRowBase,
@@ -486,7 +486,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     )}
                     {canViewBoards && can("op_boards") && (
                       <li>
-                        <Link
+                        <Link prefetch={false}
                           href="/operational/boards"
                           className={cn(
                             navRowBase,
@@ -500,7 +500,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     )}
                     {canViewBoards && can("op_clients") && (
                       <li>
-                        <Link
+                        <Link prefetch={false}
                           href="/operational/clients"
                           className={cn(
                             navRowBase,
@@ -536,7 +536,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       const isActive = pathname.startsWith(item.href);
                       return (
                         <li key={item.href}>
-                          <Link href={item.href} className={cn(navRowBase, isActive ? navRowActive : navRowInactive)}>
+                          <Link prefetch={false} href={item.href} className={cn(navRowBase, isActive ? navRowActive : navRowInactive)}>
                             <item.icon className="h-4 w-4" />
                             <span className="flex-1">{tFin(item.labelKey)}</span>
                           </Link>
@@ -580,7 +580,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       const isActive = pathname === href;
                       return (
                         <li key={c.id}>
-                          <Link
+                          <Link prefetch={false}
                             href={href}
                             className={cn(
                               "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors",
@@ -608,7 +608,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                           const isActive = pathname === href;
                           return (
                             <li key={c.id}>
-                              <Link
+                              <Link prefetch={false}
                                 href={href}
                                 className={cn(
                                   "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors",
@@ -734,7 +734,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <ul className="flex flex-col gap-1">
             <OfficeNavLink />
             <li>
-              <Link
+              <Link prefetch={false}
                 href="/settings"
                 className={cn(navRowBase, pathname.startsWith("/settings") ? navRowActive : navRowInactive)}
               >
@@ -792,7 +792,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             >
               <DropdownMenuItem
                 render={
-                  <Link
+                  <Link prefetch={false}
                     href="/settings?tab=profile"
                     onClick={onClose}
                     className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
@@ -804,7 +804,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 render={
-                  <Link
+                  <Link prefetch={false}
                     href="/settings?tab=whatsapp"
                     onClick={onClose}
                     className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
