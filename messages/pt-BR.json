@@ -347,6 +347,22 @@
       "clients": "Clientes",
       "affiliates": "Afiliados"
     },
+    "reportei": {
+      "noAccessTitle": "Sem acesso ao Reportei",
+      "noAccessHint": "Peça acesso a um administrador.",
+      "comingSoonTitle": "Em breve",
+      "comingSoonHint": "Esta seção ainda está em construção.",
+      "nav": {
+        "title": "Reportei",
+        "administration": "Administração",
+        "operation": "Operação",
+        "clients": "Clientes",
+        "integrations": "Integrações",
+        "reports": "Relatórios",
+        "automations": "Automações",
+        "templates": "Templates"
+      }
+    },
     "affiliates": {
       "title": "Afiliados",
       "description": "Gestão do programa de afiliados dos clientes: lojas, afiliados, campanhas e comissões.",

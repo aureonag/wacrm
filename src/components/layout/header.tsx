@@ -64,6 +64,20 @@ function affiliatesTitleKey(pathname: string): string | null {
   return AFFILIATE_SECTION_KEYS[segs[5] ?? ""] ?? "title";
 }
 
+// Operacional → Reportei: same idea, one flat level (/operational/reportei/<section>).
+const REPORTEI_SECTION_KEYS: Record<string, string> = {
+  clientes: "clients",
+  integracoes: "integrations",
+  relatorios: "reports",
+  automacoes: "automations",
+  templates: "templates",
+};
+
+function reporteiTitleKey(pathname: string): string | null {
+  if (!pathname.startsWith("/operational/reportei")) return null;
+  return REPORTEI_SECTION_KEYS[pathname.split("/")[3] ?? ""] ?? "title";
+}
+
 interface HeaderProps {
   /** Wired to the shell's drawer state. Used only on mobile — the
    *  hamburger button is hidden on lg+. */
@@ -79,6 +93,8 @@ export function Header({ onOpenSidebar }: HeaderProps) {
   const tAff = useTranslations("Operational.affiliates.nav");
   const titleKey = getPageTitleKey(pathname);
   const affiliatesKey = affiliatesTitleKey(pathname);
+  const tRep = useTranslations("Operational.reportei.nav");
+  const reporteiKey = reporteiTitleKey(pathname);
 
   const initial =
     profile?.full_name?.charAt(0)?.toUpperCase() ??
@@ -98,7 +114,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </button>
         <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
-          {affiliatesKey ? tAff(affiliatesKey) : t(titleKey as string)}
+          {affiliatesKey ? tAff(affiliatesKey) : reporteiKey ? tRep(reporteiKey) : t(titleKey as string)}
         </h1>
       </div>
 

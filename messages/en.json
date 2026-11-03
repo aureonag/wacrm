@@ -347,6 +347,22 @@
       "clients": "Clients",
       "affiliates": "Affiliates"
     },
+    "reportei": {
+      "noAccessTitle": "No access to Reportei",
+      "noAccessHint": "Ask an administrator for access.",
+      "comingSoonTitle": "Coming soon",
+      "comingSoonHint": "This section is still under construction.",
+      "nav": {
+        "title": "Reportei",
+        "administration": "Administration",
+        "operation": "Operation",
+        "clients": "Clients",
+        "integrations": "Integrations",
+        "reports": "Reports",
+        "automations": "Automations",
+        "templates": "Templates"
+      }
+    },
     "affiliates": {
       "title": "Affiliates",
       "description": "Manage the affiliate program of your clients: stores, affiliates, campaigns and commissions.",

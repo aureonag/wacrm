@@ -69,6 +69,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useTranslations } from "next-intl";
 import { AffiliatesNav } from "@/components/layout/affiliates-nav";
+import { ReporteiNav } from "@/components/layout/reportei-nav";
 import { OfficeNavLink } from "@/components/office/office-nav-link";
 
 // ============================================================
@@ -515,6 +516,11 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     {(canManageMembers || permissions.has("operational:affiliates:access")) && can("op_affiliates") && (
                       <li>
                         <AffiliatesNav />
+                      </li>
+                    )}
+                    {canViewBoards && (
+                      <li>
+                        <ReporteiNav />
                       </li>
                     )}
                   </ul>
