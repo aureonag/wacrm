@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { ValidationError } from "@/lib/operational/clients-projects";
+import { getConnection } from "@/lib/reportei/meta-connection";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const MAX_PER_REQUEST = 100;
@@ -48,10 +49,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (client.error) return NextResponse.json({ error: "Failed to load client" }, { status: 500 });
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    // The accounts were listed through this person's Facebook, so that login is
+    // the one later reads of them go through (see meta_connections, migration 159).
+    const connection = await getConnection(ctx.accountId, ctx.userId);
+
     const { error } = await ctx.supabase.from("ad_integrations").upsert(
       accounts.map((a) => ({
         account_id: ctx.accountId,
         client_id: id,
+        connection_id: connection?.id ?? null,
         provider: "meta_ads",
         external_account_id: a.id,
         external_account_name: a.name,

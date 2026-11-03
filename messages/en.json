@@ -439,12 +439,21 @@
         "integrateSelected": "Integrate selected accounts",
         "linked": "{count, plural, one {# integration added successfully.} other {# integrations added successfully.}}",
         "linkError": "Could not integrate. Try again.",
-        "notConfiguredTitle": "Meta access not configured yet",
-        "notConfiguredHint": "META_ADS_ACCESS_TOKEN must be set on the server to list ad accounts.",
+        "notConfiguredTitle": "Facebook login not configured yet",
+        "notConfiguredHint": "The Meta app must be created and META_ADS_APP_ID and META_ADS_APP_SECRET set on the server.",
         "loadError": "Could not load the Meta accounts.",
-        "hint_token_invalid": "The Meta token expired or was revoked. Generate a new one and update it on the server.",
-        "hint_permission": "The token lacks permission to read ads (ads_read).",
-        "hint_request_failed": "Try again in a moment."
+        "hint_token_invalid": "The Facebook sign-in expired. Sign in again to continue.",
+        "hint_permission": "Facebook did not grant ad reading (ads_read) for this sign-in.",
+        "hint_request_failed": "Try again in a moment.",
+        "connectTitle": "Sign in with your Facebook",
+        "connectHint": "You will see the ad accounts you already have access to. Aureon only reads data, it changes nothing.",
+        "connectButton": "Continue with Facebook",
+        "connectedAs": "Connected as {name}",
+        "connected": "Connected to Facebook",
+        "switchAccount": "Sign in with another account",
+        "metaResult_denied": "You cancelled the Facebook sign-in.",
+        "metaResult_error": "Could not complete the Facebook sign-in. Try again.",
+        "metaResult_not_configured": "Facebook sign-in is not configured on the server yet."
       }
     },
     "affiliates": {
