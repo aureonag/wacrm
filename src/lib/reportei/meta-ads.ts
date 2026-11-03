@@ -21,6 +21,8 @@ export class MetaAdsError extends Error {
   constructor(
     message: string,
     readonly code: "not_configured" | "token_invalid" | "permission" | "request_failed",
+    /** What Meta said (code and message, never a token), so an admin can see why it failed. */
+    readonly detail?: string,
   ) {
     super(message);
   }
@@ -33,6 +35,13 @@ interface RawAccount {
   currency?: string;
   timezone_name?: string;
   account_status?: number;
+}
+
+/** One short line from Meta's error object: "(#200) message". Pure. */
+export function describeMetaError(e: { code?: number; message?: string } | undefined): string | undefined {
+  if (!e) return undefined;
+  const text = [e.code !== undefined ? `#${e.code}` : null, e.message].filter(Boolean).join(" ");
+  return text ? text.slice(0, 300) : undefined;
 }
 
 interface Page {
@@ -77,7 +86,7 @@ export async function listMetaAdAccounts(token: string): Promise<MetaAdAccount[]
     const body = (await res.json().catch(() => ({}))) as Page;
     if (!res.ok || body.error) {
       const kind = metaErrorKind(body.error?.code);
-      throw new MetaAdsError(`Meta request failed (${res.status}${body.error?.code ? `/${body.error.code}` : ""})`, kind);
+      throw new MetaAdsError(`Meta request failed (${res.status}${body.error?.code ? `/${body.error.code}` : ""})`, kind, describeMetaError(body.error));
     }
     out.push(...(body.data ?? []));
     next = body.paging?.next;

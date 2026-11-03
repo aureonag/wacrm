@@ -46,7 +46,7 @@ export async function GET() {
     if (working.length === 0) {
       // Every connection was revoked: ask for a new sign-in. Any other failure is an error.
       if (lastError?.code === "token_invalid") return NextResponse.json({ configured: true, connected: false });
-      return NextResponse.json({ error: lastError?.code ?? "request_failed" }, { status: 502 });
+      return NextResponse.json({ error: lastError?.code ?? "request_failed", detail: lastError?.detail }, { status: 502 });
     }
 
     return NextResponse.json({

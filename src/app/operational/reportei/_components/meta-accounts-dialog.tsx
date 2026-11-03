@@ -28,7 +28,7 @@ type State =
   | { kind: "loading" }
   | { kind: "notConfigured" }
   | { kind: "notConnected" }
-  | { kind: "error"; reason: "token_invalid" | "permission" | "request_failed" }
+  | { kind: "error"; reason: "token_invalid" | "permission" | "request_failed"; detail?: string }
   | { kind: "ready"; accounts: AdAccount[]; connectedAs: string | null };
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -70,13 +70,14 @@ export function MetaAccountsDialog({
         connections?: { name: string | null }[];
         accounts?: AdAccount[];
         error?: string;
+        detail?: string;
       } | null;
       if (cancelled) return;
       if (res.ok && data?.configured === false) return setState({ kind: "notConfigured" });
       if (res.ok && data?.connected === false) return setState({ kind: "notConnected" });
       if (res.ok && data?.accounts) return setState({ kind: "ready", accounts: data.accounts, connectedAs: (data.connections ?? []).map((c) => c.name).filter(Boolean).join(", ") || null });
       const reason = data?.error === "token_invalid" || data?.error === "permission" ? data.error : "request_failed";
-      setState({ kind: "error", reason });
+      setState({ kind: "error", reason, detail: data?.detail });
     })();
     return () => {
       cancelled = true;
@@ -149,7 +150,7 @@ export function MetaAccountsDialog({
             </Button>
           </div>
         )}
-        {state.kind === "error" && <EmptyState title={t("loadError")} hint={t(`hint_${state.reason}`)} className="min-h-40" />}
+        {state.kind === "error" && <EmptyState title={t("loadError")} hint={state.detail ? `${t(`hint_${state.reason}`)} (${state.detail})` : t(`hint_${state.reason}`)} className="min-h-40" />}
 
         {state.kind === "ready" && (
           <>
