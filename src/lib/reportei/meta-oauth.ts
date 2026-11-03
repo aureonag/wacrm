@@ -8,7 +8,7 @@
 // without App Review, which is the case for the Aureon team.
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { META_API_BASE, META_API_VERSION, metaErrorKind, MetaAdsError } from "./meta-ads";
+import { describeMetaError, META_API_BASE, META_API_VERSION, metaErrorKind, MetaAdsError } from "./meta-ads";
 
 export const META_SCOPES = ["ads_read"] as const;
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -141,13 +141,27 @@ export async function exchangeCode({ code, redirectUri }: { code: string; redire
   // already permanent: it has no `expires_in`, and there is nothing to exchange.
   if (!needsLongLivedExchange(short)) return { token: short.access_token, expiresAt: null };
 
+  return exchangeForLongLived(short.access_token);
+}
+
+/**
+ * Trades a token (a fresh short-lived one, or a long-lived one that is about to
+ * expire) for a new ~60-day token. Meta returns a fresh 60 days as long as the
+ * token is still valid and the person has not removed the app or changed
+ * their password. Never logs the secret or the tokens.
+ */
+export async function exchangeForLongLived(token: string): Promise<{ token: string; expiresAt: Date | null }> {
+  const appId = process.env.META_ADS_APP_ID;
+  const appSecret = process.env.META_ADS_APP_SECRET;
+  if (!appId || !appSecret) throw new MetaAdsError("Meta login is not configured", "not_configured");
+
   const longUrl = new URL(`${META_API_BASE}/oauth/access_token`);
   longUrl.searchParams.set("grant_type", "fb_exchange_token");
   longUrl.searchParams.set("client_id", appId);
   longUrl.searchParams.set("client_secret", appSecret);
-  longUrl.searchParams.set("fb_exchange_token", short.access_token);
+  longUrl.searchParams.set("fb_exchange_token", token);
   const long = await getJson<TokenResponse>(longUrl);
-  if (!long.access_token) throw new MetaAdsError(`Meta long-lived exchange failed (${long.error?.code ?? "?"})`, metaErrorKind(long.error?.code));
+  if (!long.access_token) throw new MetaAdsError(`Meta long-lived exchange failed (${long.error?.code ?? "?"})`, metaErrorKind(long.error?.code), describeMetaError(long.error));
 
   return {
     token: long.access_token,
@@ -163,4 +177,18 @@ export async function fetchMetaProfile(token: string): Promise<{ id: string; nam
   const body = (await res.json().catch(() => ({}))) as { id?: string; name?: string; error?: { code?: number } };
   if (!res.ok || !body.id) throw new MetaAdsError(`Meta profile failed (${body.error?.code ?? res.status})`, metaErrorKind(body.error?.code));
   return { id: body.id, name: body.name ?? null };
+}
+
+/** Renew a ~60-day token once it has this many days or fewer left. */
+export const REFRESH_WINDOW_DAYS = 30;
+
+/**
+ * True when a connection's token is within the refresh window. A token with no
+ * expiry (permanent) or an unreadable date is never "due". Pure.
+ */
+export function isRefreshDue(tokenExpiresAt: string | null, now = Date.now(), windowDays = REFRESH_WINDOW_DAYS): boolean {
+  if (!tokenExpiresAt) return false;
+  const t = Date.parse(tokenExpiresAt);
+  if (Number.isNaN(t)) return false;
+  return t - now <= windowDays * 24 * 60 * 60 * 1000;
 }
