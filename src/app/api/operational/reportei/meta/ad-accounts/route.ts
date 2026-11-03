@@ -13,19 +13,26 @@
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
-import { listConnectionAdAccounts, MetaAdsError, mergeConnectionAccounts, type MetaAdAccount } from "@/lib/reportei/meta-ads";
+import { diagnoseToken, listConnectionAdAccounts, MetaAdsError, mergeConnectionAccounts, type MetaAdAccount } from "@/lib/reportei/meta-ads";
 import { isMetaLoginConfigured } from "@/lib/reportei/meta-oauth";
 import { listCompanyConnections, markConnectionFailed } from "@/lib/reportei/meta-connection";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const ctx = await requirePermission("operational", "tasks", "edit_boards");
     if (!isMetaLoginConfigured()) return NextResponse.json({ configured: false });
 
     const connections = await listCompanyConnections(ctx.accountId);
     if (connections.length === 0) return NextResponse.json({ configured: true, connected: false });
+
+    // ?diagnose=1: what each connection's token can see (scopes, granted assets, Meta's errors). Never the token.
+    if (new URL(req.url).searchParams.get("diagnose") === "1") {
+      const diagnostics = [];
+      for (const c of connections) diagnostics.push({ name: c.fbUserName, ...(await diagnoseToken(c.token)) });
+      return NextResponse.json({ diagnostics });
+    }
 
     const lists: { connectionId: string; accounts: MetaAdAccount[] }[] = [];
     const working: { name: string | null }[] = [];
