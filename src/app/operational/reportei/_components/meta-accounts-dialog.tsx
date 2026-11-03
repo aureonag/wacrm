@@ -20,6 +20,8 @@ interface AdAccount {
   name: string;
   currency: string | null;
   timezone: string | null;
+  /** Company Meta connection that can read it (sent back when linking). */
+  connectionId: string;
 }
 
 type State =
@@ -65,14 +67,14 @@ export function MetaAccountsDialog({
       const data = (await res.json().catch(() => null)) as {
         configured?: boolean;
         connected?: boolean;
-        connection?: { name: string | null };
+        connections?: { name: string | null }[];
         accounts?: AdAccount[];
         error?: string;
       } | null;
       if (cancelled) return;
       if (res.ok && data?.configured === false) return setState({ kind: "notConfigured" });
       if (res.ok && data?.connected === false) return setState({ kind: "notConnected" });
-      if (res.ok && data?.accounts) return setState({ kind: "ready", accounts: data.accounts, connectedAs: data.connection?.name ?? null });
+      if (res.ok && data?.accounts) return setState({ kind: "ready", accounts: data.accounts, connectedAs: (data.connections ?? []).map((c) => c.name).filter(Boolean).join(", ") || null });
       const reason = data?.error === "token_invalid" || data?.error === "permission" ? data.error : "request_failed";
       setState({ kind: "error", reason });
     })();

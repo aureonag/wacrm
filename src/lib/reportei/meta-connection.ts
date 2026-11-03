@@ -94,3 +94,49 @@ export async function markConnectionFailed(connectionId: string, status: "error"
   await admin.from("meta_connections").update({ status, last_error: message.slice(0, 300) }).eq("id", connectionId);
   await admin.from("ad_integrations").update({ status: "error", last_error: message.slice(0, 300) }).eq("connection_id", connectionId);
 }
+
+export interface ConnectionWithToken {
+  id: string;
+  fbUserName: string | null;
+  tokenExpiresAt: string | null;
+  token: string;
+}
+
+/**
+ * Every working Meta connection of the company, with its decrypted token. The
+ * company shares them: anyone in the CRM who can link ad accounts reads
+ * through these, so only the people who signed in need a role on the Meta app.
+ * Server-only; never return the token.
+ */
+export async function listCompanyConnections(accountId: string): Promise<ConnectionWithToken[]> {
+  const { data, error } = await supabaseAdmin()
+    .from("meta_connections")
+    .select("id, fb_user_name, token_expires_at, token_encrypted")
+    .eq("account_id", accountId)
+    .eq("status", "connected")
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`meta_connections read failed: ${error.message}`);
+  const out: ConnectionWithToken[] = [];
+  for (const row of data ?? []) {
+    try {
+      out.push({
+        id: row.id as string,
+        fbUserName: (row.fb_user_name as string | null) ?? null,
+        tokenExpiresAt: (row.token_expires_at as string | null) ?? null,
+        token: decrypt(row.token_encrypted as string),
+      });
+    } catch {
+      // An undecryptable row (key changed) is skipped instead of breaking the list.
+      console.error("[meta_connections] could not decrypt a connection", row.id);
+    }
+  }
+  return out;
+}
+
+/** Which of the given connection ids really belong to this company. */
+export async function filterCompanyConnectionIds(accountId: string, ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const { data, error } = await supabaseAdmin().from("meta_connections").select("id").eq("account_id", accountId).in("id", ids);
+  if (error) throw new Error(`meta_connections read failed: ${error.message}`);
+  return new Set((data ?? []).map((r) => r.id as string));
+}
