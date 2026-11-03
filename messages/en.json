@@ -361,6 +361,31 @@
         "reports": "Reports",
         "automations": "Automations",
         "templates": "Templates"
+      },
+      "clientsPage": {
+        "title": "Clients",
+        "description": "The operation's clients, seen from the reporting side: each one's integrations, reports and automations.",
+        "search": "Search by name or contract no.",
+        "filterLabel": "Filter",
+        "filter_active": "Active clients",
+        "filter_inactive": "Inactive clients",
+        "filter_all": "All clients",
+        "add": "New client",
+        "error": "Could not load.",
+        "empty": "No clients here.",
+        "emptyHint": "Register a client in Operational → Clients to get started.",
+        "noResults": "No clients found.",
+        "colClient": "Client",
+        "colStatus": "Status",
+        "statusActive": "Active",
+        "statusInactive": "Inactive",
+        "count": "{count, plural, one {# client} other {# clients}}"
+      },
+      "clientPage": {
+        "back": "Back to clients",
+        "notFound": "Client not found.",
+        "error": "Could not load.",
+        "inactive": "Inactive"
       }
     },
     "affiliates": {
