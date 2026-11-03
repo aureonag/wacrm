@@ -2,8 +2,9 @@
 
 // Operacional → Reportei → Clientes: the same clients as Operacional → Clientes
 // (ops_clients), seen from the reporting side. Click a client to open its
-// Reportei page (integrations, reports, automations). Registering a client
-// stays in Operacional → Clientes so there is a single place and permission.
+// Reportei page (integrations, reports, automations). "Novo cliente" opens the
+// two-step wizard (preferences, then integrations); it creates the same
+// ops_clients row as Operacional → Clientes, under the same permission.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -94,7 +95,7 @@ export default function ReporteiClientsPage() {
           </Select>
         </div>
         {canEdit && (
-          <Button onClick={() => router.push("/operational/clients")}>
+          <Button onClick={() => router.push("/operational/reportei/clientes/novo")}>
             <Plus className="h-4 w-4" />
             {t("add")}
           </Button>
