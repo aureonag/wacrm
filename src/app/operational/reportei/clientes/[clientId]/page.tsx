@@ -7,6 +7,7 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
@@ -33,14 +34,17 @@ export default function ReporteiClientPage({
   searchParams,
 }: {
   params: Promise<{ clientId: string }>;
-  searchParams: Promise<{ novo?: string }>;
+  searchParams: Promise<{ novo?: string; meta?: string }>;
 }) {
   const { clientId } = use(params);
-  const { novo } = use(searchParams);
+  const { novo, meta } = use(searchParams);
   const isWizard = novo === "1";
+  // Back from "Entrar com Facebook": reopen the picker on success, explain otherwise.
+  const openPicker = meta === "connected";
   const t = useTranslations("Operational.reportei");
   const tc = useTranslations("Operational.reportei.clientPage");
   const tw = useTranslations("Operational.reportei.wizard");
+  const ti = useTranslations("Operational.reportei.integrations");
   const [state, setState] = useState<State>({ kind: "loading" });
   const [tab, setTab] = useState<Tab>("integrations");
 
@@ -57,6 +61,10 @@ export default function ReporteiClientPage({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (meta === "denied" || meta === "error" || meta === "not_configured") toast.error(ti(`metaResult_${meta}`));
+  }, [meta, ti]);
 
   const back = (
     <Link href="/operational/reportei/clientes" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -84,7 +92,9 @@ export default function ReporteiClientPage({
   }
 
   const { client, integrations } = state;
-  const panel = <IntegrationsPanel clientId={client.id} clientName={client.name} integrations={integrations} onChanged={load} />;
+  const panel = (
+    <IntegrationsPanel clientId={client.id} clientName={client.name} integrations={integrations} onChanged={load} openPicker={openPicker} />
+  );
 
   if (isWizard) {
     return (

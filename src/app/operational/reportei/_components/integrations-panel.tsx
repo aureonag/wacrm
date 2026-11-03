@@ -32,16 +32,19 @@ export function IntegrationsPanel({
   clientName,
   integrations,
   onChanged,
+  openPicker = false,
 }: {
   clientId: string;
   clientName: string;
   integrations: Integration[];
   onChanged: () => void;
+  /** Open the account picker on arrival (coming back from "Entrar com Facebook"). */
+  openPicker?: boolean;
 }) {
   const t = useTranslations("Operational.reportei.integrations");
   const canEdit = useHasPermission("operational", "tasks", "edit_boards");
   const [query, setQuery] = useState("");
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState(openPicker);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const linkedIds = useMemo(() => new Set(integrations.map((i) => i.external_account_id)), [integrations]);

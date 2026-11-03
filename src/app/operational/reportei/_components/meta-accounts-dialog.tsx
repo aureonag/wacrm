@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Check, Loader2, Megaphone, Search } from "lucide-react";
+import { Check, Loader2, LogIn, Megaphone, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,8 +25,9 @@ interface AdAccount {
 type State =
   | { kind: "loading" }
   | { kind: "notConfigured" }
+  | { kind: "notConnected" }
   | { kind: "error"; reason: "token_invalid" | "permission" | "request_failed" }
-  | { kind: "ready"; accounts: AdAccount[] };
+  | { kind: "ready"; accounts: AdAccount[]; connectedAs: string | null };
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -61,10 +62,17 @@ export function MetaAccountsDialog({
     setSelected(new Set());
     (async () => {
       const res = await fetch("/api/operational/reportei/meta/ad-accounts");
-      const data = (await res.json().catch(() => null)) as { configured?: boolean; accounts?: AdAccount[]; error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        configured?: boolean;
+        connected?: boolean;
+        connection?: { name: string | null };
+        accounts?: AdAccount[];
+        error?: string;
+      } | null;
       if (cancelled) return;
       if (res.ok && data?.configured === false) return setState({ kind: "notConfigured" });
-      if (res.ok && data?.accounts) return setState({ kind: "ready", accounts: data.accounts });
+      if (res.ok && data?.connected === false) return setState({ kind: "notConnected" });
+      if (res.ok && data?.accounts) return setState({ kind: "ready", accounts: data.accounts, connectedAs: data.connection?.name ?? null });
       const reason = data?.error === "token_invalid" || data?.error === "permission" ? data.error : "request_failed";
       setState({ kind: "error", reason });
     })();
@@ -86,6 +94,15 @@ export function MetaAccountsDialog({
       else next.add(id);
       return next;
     });
+  }
+
+  // Full-page trip to Facebook and back; the page comes back with ?meta=connected
+  // and reopens this picker. `meta` is dropped so it does not stack up.
+  function connectFacebook() {
+    const here = new URL(window.location.href);
+    here.searchParams.delete("meta");
+    const returnTo = `${here.pathname}${here.search}`;
+    window.location.href = `/api/operational/reportei/meta/connect?returnTo=${encodeURIComponent(returnTo)}`;
   }
 
   async function link() {
@@ -120,6 +137,16 @@ export function MetaAccountsDialog({
           </div>
         )}
         {state.kind === "notConfigured" && <EmptyState title={t("notConfiguredTitle")} hint={t("notConfiguredHint")} className="min-h-40" />}
+        {state.kind === "notConnected" && (
+          <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-4 py-6 text-center">
+            <p className="text-sm font-medium text-foreground">{t("connectTitle")}</p>
+            <p className="max-w-xs text-xs text-muted-foreground">{t("connectHint")}</p>
+            <Button onClick={connectFacebook}>
+              <LogIn className="h-4 w-4" />
+              {t("connectButton")}
+            </Button>
+          </div>
+        )}
         {state.kind === "error" && <EmptyState title={t("loadError")} hint={t(`hint_${state.reason}`)} className="min-h-40" />}
 
         {state.kind === "ready" && (
@@ -128,6 +155,12 @@ export function MetaAccountsDialog({
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchAccount")} className="h-9 border-border bg-muted pl-8 text-sm" />
             </div>
+            <p className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>{state.connectedAs ? t("connectedAs", { name: state.connectedAs }) : t("connected")}</span>
+              <button type="button" onClick={connectFacebook} className="font-medium text-primary hover:underline">
+                {t("switchAccount")}
+              </button>
+            </p>
             <div>
               <p className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                 <Megaphone className="h-4 w-4 text-primary" />
@@ -181,7 +214,7 @@ export function MetaAccountsDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               {t("cancel")}
             </Button>
-            <Button onClick={link} disabled={saving || selected.size === 0}>
+            <Button onClick={link} disabled={saving || state.kind !== "ready" || selected.size === 0}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("integrateSelected")}
             </Button>

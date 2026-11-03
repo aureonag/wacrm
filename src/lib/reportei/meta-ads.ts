@@ -1,10 +1,10 @@
-// Meta Ads access for Operacional → Reportei. One system-user token (never
-// expires) in META_ADS_ACCESS_TOKEN reads every ad account assigned to that
-// user in Aureon's Business Manager. The token stays on the server: nothing
-// here returns it, logs it, or stores it in the database.
+// Meta Ads access for Operacional → Reportei. Each team member signs in with
+// their own Facebook (see meta-oauth.ts); the long-lived token is stored
+// encrypted and only ever used here, on the server, to read the ad accounts that
+// person can already see. Nothing here returns, logs or exposes a token.
 
-const META_API_VERSION = "v21.0";
-const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
+export const META_API_VERSION = "v21.0";
+export const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 const MAX_ACCOUNTS = 500;
 
 export interface MetaAdAccount {
@@ -57,15 +57,15 @@ export function parseAdAccounts(raw: RawAccount[]): MetaAdAccount[] {
     .filter((a) => a.id !== "");
 }
 
-export function isMetaAdsConfigured(): boolean {
-  return Boolean(process.env.META_ADS_ACCESS_TOKEN);
+/** Maps a Graph API error code to our error kind. 190 = token invalid/expired; 10/200/294 = missing permission. */
+export function metaErrorKind(code: number | undefined): "token_invalid" | "permission" | "request_failed" {
+  if (code === 190) return "token_invalid";
+  if (code === 10 || code === 200 || code === 294) return "permission";
+  return "request_failed";
 }
 
-/** Ad accounts the system user can see, alphabetically. */
-export async function listMetaAdAccounts(): Promise<MetaAdAccount[]> {
-  const token = process.env.META_ADS_ACCESS_TOKEN;
-  if (!token) throw new MetaAdsError("META_ADS_ACCESS_TOKEN is not set", "not_configured");
-
+/** Ad accounts the given person's token can see, alphabetically. */
+export async function listMetaAdAccounts(token: string): Promise<MetaAdAccount[]> {
   const first = new URL(`${META_API_BASE}/me/adaccounts`);
   first.searchParams.set("fields", "account_id,name,currency,timezone_name,account_status");
   first.searchParams.set("limit", "100");
@@ -76,10 +76,8 @@ export async function listMetaAdAccounts(): Promise<MetaAdAccount[]> {
     const res: Response = await fetch(next, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
     const body = (await res.json().catch(() => ({}))) as Page;
     if (!res.ok || body.error) {
-      const code = body.error?.code;
-      if (code === 190) throw new MetaAdsError("Meta token is invalid or expired", "token_invalid");
-      if (code === 10 || code === 200 || code === 294) throw new MetaAdsError("Meta token lacks permission", "permission");
-      throw new MetaAdsError(`Meta request failed (${res.status}${code ? `/${code}` : ""})`, "request_failed");
+      const kind = metaErrorKind(body.error?.code);
+      throw new MetaAdsError(`Meta request failed (${res.status}${body.error?.code ? `/${body.error.code}` : ""})`, kind);
     }
     out.push(...(body.data ?? []));
     next = body.paging?.next;
