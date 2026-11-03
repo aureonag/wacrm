@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeMetaError, grantedAdAccountIds, mergeConnectionAccounts, parseAdAccounts } from "./meta-ads";
+import { describeMetaError, grantedAdAccountIds, mergeConnectionAccounts, parseAdAccounts, parseInsights } from "./meta-ads";
 
 describe("parseAdAccounts", () => {
   it("builds the act_ id from account_id and keeps currency and timezone", () => {
@@ -63,5 +63,24 @@ describe("grantedAdAccountIds", () => {
   it("ignores ids that are not numeric and a missing granular_scopes", () => {
     expect(grantedAdAccountIds({ data: { granular_scopes: [{ scope: "ads_read", target_ids: ["abc", "12x"] }] } })).toEqual([]);
     expect(grantedAdAccountIds({})).toEqual([]);
+  });
+});
+
+describe("parseInsights", () => {
+  it("turns Meta's string numbers into numbers", () => {
+    expect(parseInsights({ spend: "12.34", impressions: "1000", reach: "800", clicks: "25", ctr: "2.5", cpc: "0.49", cpm: "12.34" })).toEqual({
+      spend: 12.34,
+      impressions: 1000,
+      reach: 800,
+      clicks: 25,
+      ctr: 2.5,
+      cpc: 0.49,
+      cpm: 12.34,
+    });
+  });
+
+  it("returns zeros when there is no row or the values are junk", () => {
+    expect(parseInsights(undefined).spend).toBe(0);
+    expect(parseInsights({ spend: "abc", impressions: null }).impressions).toBe(0);
   });
 });

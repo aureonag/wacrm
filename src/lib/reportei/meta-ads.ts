@@ -250,3 +250,48 @@ export async function diagnoseToken(token: string): Promise<TokenDiagnostic> {
   }
   return out;
 }
+
+export interface AccountInsights {
+  spend: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  cpm: number;
+}
+
+const ZERO_INSIGHTS: AccountInsights = { spend: 0, impressions: 0, reach: 0, clicks: 0, ctr: 0, cpc: 0, cpm: 0 };
+
+/** One Insights row (Meta sends every number as a string) to numbers. No row means no delivery in the period: all zeros. Pure. */
+export function parseInsights(row: Record<string, unknown> | undefined): AccountInsights {
+  if (!row) return { ...ZERO_INSIGHTS };
+  const n = (v: unknown) => {
+    const x = typeof v === "string" || typeof v === "number" ? Number(v) : 0;
+    return Number.isFinite(x) ? x : 0;
+  };
+  return {
+    spend: n(row.spend),
+    impressions: n(row.impressions),
+    reach: n(row.reach),
+    clicks: n(row.clicks),
+    ctr: n(row.ctr),
+    cpc: n(row.cpc),
+    cpm: n(row.cpm),
+  };
+}
+
+/** Account-level totals for a period (`since`/`until` as YYYY-MM-DD), read with ads_read. */
+export async function fetchAccountInsights(token: string, accountId: string, since: string, until: string): Promise<AccountInsights> {
+  if (!/^act_\d+$/.test(accountId)) throw new MetaAdsError("Invalid ad account id", "request_failed");
+  const url = new URL(`${META_API_BASE}/${accountId}/insights`);
+  url.searchParams.set("fields", "spend,impressions,reach,clicks,ctr,cpc,cpm");
+  url.searchParams.set("time_range", JSON.stringify({ since, until }));
+  url.searchParams.set("level", "account");
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  const body = (await res.json().catch(() => ({}))) as { data?: Record<string, unknown>[]; error?: { code?: number; message?: string } };
+  if (!res.ok || body.error) {
+    throw new MetaAdsError(`Meta insights failed (${res.status}${body.error?.code ? `/${body.error.code}` : ""})`, metaErrorKind(body.error?.code), describeMetaError(body.error));
+  }
+  return parseInsights(body.data?.[0]);
+}

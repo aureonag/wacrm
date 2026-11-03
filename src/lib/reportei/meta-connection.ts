@@ -201,3 +201,27 @@ export async function refreshDueConnections(): Promise<{ checked: number; refres
   }
   return { checked: data?.length ?? 0, refreshed };
 }
+
+/** One working connection of the company by id, with its token (renewed if due). Server-only. */
+export async function getCompanyConnection(accountId: string, connectionId: string): Promise<ConnectionWithToken | null> {
+  const { data, error } = await supabaseAdmin()
+    .from("meta_connections")
+    .select("id, fb_user_name, token_expires_at, token_encrypted")
+    .eq("id", connectionId)
+    .eq("account_id", accountId)
+    .eq("status", "connected")
+    .maybeSingle();
+  if (error) throw new Error(`meta_connections read failed: ${error.message}`);
+  if (!data) return null;
+  try {
+    return await refreshConnectionIfDue({
+      id: data.id as string,
+      fbUserName: (data.fb_user_name as string | null) ?? null,
+      tokenExpiresAt: (data.token_expires_at as string | null) ?? null,
+      token: decrypt(data.token_encrypted as string),
+    });
+  } catch {
+    console.error("[meta_connections] could not decrypt a connection", connectionId);
+    return null;
+  }
+}
