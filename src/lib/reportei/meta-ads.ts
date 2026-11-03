@@ -184,3 +184,69 @@ export async function listConnectionAdAccounts(token: string): Promise<MetaAdAcc
     throw err;
   }
 }
+
+export interface TokenDiagnostic {
+  /** From debug_token: token type, scopes, and the assets granted per scope. Never the token. */
+  debug: { type?: string; expiresAt?: number; scopes?: string[]; granular?: { scope?: string; targetCount: number; targetIds: string[] }[]; error?: string };
+  me: { id?: string; name?: string; error?: string };
+  assignedAdAccounts: { count?: number; sample?: { id: string; name?: string }[]; error?: string };
+}
+
+/**
+ * Asks Meta what a connection's token can actually see, so an admin can tell why
+ * the account list is empty. Returns scopes, granted asset ids and Meta's own
+ * error messages: no token, no secret.
+ */
+export async function diagnoseToken(token: string): Promise<TokenDiagnostic> {
+  const appId = process.env.META_ADS_APP_ID;
+  const appSecret = process.env.META_ADS_APP_SECRET;
+  const out: TokenDiagnostic = { debug: {}, me: {}, assignedAdAccounts: {} };
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  if (appId && appSecret) {
+    const u = new URL(`${META_API_BASE}/debug_token`);
+    u.searchParams.set("input_token", token);
+    u.searchParams.set("access_token", `${appId}|${appSecret}`);
+    const r = await fetch(u, { cache: "no-store" });
+    const b = (await r.json().catch(() => ({}))) as {
+      data?: { type?: string; expires_at?: number; scopes?: string[]; granular_scopes?: { scope?: string; target_ids?: unknown[] }[] };
+      error?: { code?: number; message?: string };
+    };
+    if (b.error || !b.data) out.debug.error = describeMetaError(b.error) ?? `HTTP ${r.status}`;
+    else {
+      out.debug = {
+        type: b.data.type,
+        expiresAt: b.data.expires_at,
+        scopes: b.data.scopes,
+        granular: (b.data.granular_scopes ?? []).map((g) => ({
+          scope: g.scope,
+          targetCount: g.target_ids?.length ?? 0,
+          targetIds: (g.target_ids ?? []).slice(0, 20).map(String),
+        })),
+      };
+    }
+  }
+
+  const meUrl = new URL(`${META_API_BASE}/me`);
+  meUrl.searchParams.set("fields", "id,name");
+  const meRes = await fetch(meUrl, { headers: authHeaders, cache: "no-store" });
+  const me = (await meRes.json().catch(() => ({}))) as { id?: string; name?: string; error?: { code?: number; message?: string } };
+  if (me.error || !me.id) out.me.error = describeMetaError(me.error) ?? `HTTP ${meRes.status}`;
+  else out.me = { id: me.id, name: me.name };
+
+  if (me.id) {
+    const u = new URL(`${META_API_BASE}/${me.id}/assigned_ad_accounts`);
+    u.searchParams.set("fields", "account_id,name");
+    u.searchParams.set("limit", "50");
+    const r = await fetch(u, { headers: authHeaders, cache: "no-store" });
+    const b = (await r.json().catch(() => ({}))) as { data?: { id?: string; account_id?: string; name?: string }[]; error?: { code?: number; message?: string } };
+    if (b.error) out.assignedAdAccounts.error = describeMetaError(b.error);
+    else {
+      out.assignedAdAccounts = {
+        count: b.data?.length ?? 0,
+        sample: (b.data ?? []).slice(0, 10).map((a) => ({ id: a.id ?? `act_${a.account_id}`, name: a.name })),
+      };
+    }
+  }
+  return out;
+}
