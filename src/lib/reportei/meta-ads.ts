@@ -111,3 +111,76 @@ export function mergeConnectionAccounts(lists: { connectionId: string; accounts:
   }
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }
+
+interface DebugTokenResponse {
+  data?: { granular_scopes?: { scope?: string; target_ids?: unknown[] }[] };
+  error?: { code?: number; message?: string };
+}
+
+/**
+ * The ad accounts a Facebook-Login-for-Business token was granted: the assets
+ * picked at sign-in are recorded in debug_token's granular_scopes, under
+ * ads_read (or ads_management). Always returned as "act_<id>". Pure.
+ */
+export function grantedAdAccountIds(debug: DebugTokenResponse): string[] {
+  const ids = new Set<string>();
+  for (const s of debug.data?.granular_scopes ?? []) {
+    if (s.scope !== "ads_read" && s.scope !== "ads_management") continue;
+    for (const raw of s.target_ids ?? []) {
+      const id = String(raw);
+      if (/^(act_)?\d+$/.test(id)) ids.add(id.startsWith("act_") ? id : `act_${id}`);
+    }
+  }
+  return [...ids];
+}
+
+const MAX_GRANTED = 50;
+
+/**
+ * Accounts the token was granted at sign-in. A system-user token (the "Nunca
+ * expira" configuration) cannot list /me/adaccounts, but it can read each ad
+ * account it was given, so we ask Meta which ones (debug_token, with the app's
+ * own credentials) and read their details one by one.
+ */
+export async function listGrantedAdAccounts(token: string): Promise<MetaAdAccount[]> {
+  const appId = process.env.META_ADS_APP_ID;
+  const appSecret = process.env.META_ADS_APP_SECRET;
+  if (!appId || !appSecret) throw new MetaAdsError("Meta app is not configured", "not_configured");
+
+  const dbg = new URL(`${META_API_BASE}/debug_token`);
+  dbg.searchParams.set("input_token", token);
+  dbg.searchParams.set("access_token", `${appId}|${appSecret}`);
+  const dbgRes = await fetch(dbg, { cache: "no-store" });
+  const dbgBody = (await dbgRes.json().catch(() => ({}))) as DebugTokenResponse;
+  if (!dbgRes.ok || dbgBody.error) {
+    throw new MetaAdsError(`Meta debug_token failed (${dbgRes.status})`, metaErrorKind(dbgBody.error?.code), describeMetaError(dbgBody.error));
+  }
+
+  const ids = grantedAdAccountIds(dbgBody).slice(0, MAX_GRANTED);
+  const raw: RawAccount[] = [];
+  let firstError: MetaAdsError | null = null;
+  for (const id of ids) {
+    const url = new URL(`${META_API_BASE}/${id}`);
+    url.searchParams.set("fields", "account_id,name,currency,timezone_name,account_status");
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+    const body = (await res.json().catch(() => ({}))) as RawAccount & { error?: { code?: number; message?: string } };
+    if (!res.ok || body.error) {
+      firstError ??= new MetaAdsError(`Meta account read failed (${res.status})`, metaErrorKind(body.error?.code), describeMetaError(body.error));
+      continue;
+    }
+    raw.push({ ...body, id: body.id ?? id });
+  }
+  // Granted accounts exist but none could be read: surface why instead of an empty list.
+  if (ids.length > 0 && raw.length === 0 && firstError) throw firstError;
+  return parseAdAccounts(raw).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
+/** The accounts one connection can read: the normal listing, or the granted assets when Meta refuses that listing with a permission error. */
+export async function listConnectionAdAccounts(token: string): Promise<MetaAdAccount[]> {
+  try {
+    return await listMetaAdAccounts(token);
+  } catch (err) {
+    if (err instanceof MetaAdsError && err.code === "permission") return listGrantedAdAccounts(token);
+    throw err;
+  }
+}

@@ -13,7 +13,7 @@
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
-import { listMetaAdAccounts, MetaAdsError, mergeConnectionAccounts, type MetaAdAccount } from "@/lib/reportei/meta-ads";
+import { listConnectionAdAccounts, MetaAdsError, mergeConnectionAccounts, type MetaAdAccount } from "@/lib/reportei/meta-ads";
 import { isMetaLoginConfigured } from "@/lib/reportei/meta-oauth";
 import { listCompanyConnections, markConnectionFailed } from "@/lib/reportei/meta-connection";
 
@@ -32,7 +32,7 @@ export async function GET() {
     let lastError: MetaAdsError | null = null;
     for (const c of connections) {
       try {
-        lists.push({ connectionId: c.id, accounts: await listMetaAdAccounts(c.token) });
+        lists.push({ connectionId: c.id, accounts: await listConnectionAdAccounts(c.token) });
         working.push({ name: c.fbUserName });
       } catch (err) {
         if (!(err instanceof MetaAdsError)) throw err;
