@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { ValidationError } from "@/lib/operational/clients-projects";
-import { getConnection } from "@/lib/reportei/meta-connection";
+import { filterCompanyConnectionIds, getConnection } from "@/lib/reportei/meta-connection";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const MAX_PER_REQUEST = 100;
@@ -18,6 +18,8 @@ interface AccountInput {
   name: string | null;
   currency: string | null;
   timezone: string | null;
+  /** Company Meta connection the picker listed it under (optional). */
+  connectionId: string | null;
 }
 
 function str(v: unknown, max: number): string | null {
@@ -34,7 +36,9 @@ function parseBody(body: unknown): AccountInput[] {
     const o = (a ?? {}) as Record<string, unknown>;
     const id = str(o.id, 100);
     if (!id || !/^act_\d+$/.test(id)) throw new ValidationError("Conta inválida.");
-    return { id, name: str(o.name, 200), currency: str(o.currency, 10), timezone: str(o.timezone, 60) };
+    const cid = str(o.connectionId, 40);
+    if (cid && !UUID.test(cid)) throw new ValidationError("Conexão inválida.");
+    return { id, name: str(o.name, 200), currency: str(o.currency, 10), timezone: str(o.timezone, 60), connectionId: cid };
   });
 }
 
@@ -49,15 +53,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (client.error) return NextResponse.json({ error: "Failed to load client" }, { status: 500 });
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // The accounts were listed through this person's Facebook, so that login is
-    // the one later reads of them go through (see meta_connections, migration 159).
-    const connection = await getConnection(ctx.accountId, ctx.userId);
+    // Each account is read later through the company connection the picker listed
+    // it under (meta_connections, migration 159). Ids that are not this company's
+    // are ignored; without one we fall back to the person's own login, if any.
+    const allowed = await filterCompanyConnectionIds(ctx.accountId, [...new Set(accounts.map((a) => a.connectionId).filter((c): c is string => !!c))]);
+    const own = await getConnection(ctx.accountId, ctx.userId);
 
     const { error } = await ctx.supabase.from("ad_integrations").upsert(
       accounts.map((a) => ({
         account_id: ctx.accountId,
         client_id: id,
-        connection_id: connection?.id ?? null,
+        connection_id: a.connectionId && allowed.has(a.connectionId) ? a.connectionId : (own?.id ?? null),
         provider: "meta_ads",
         external_account_id: a.id,
         external_account_name: a.name,

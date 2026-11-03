@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAdAccounts } from "./meta-ads";
+import { mergeConnectionAccounts, parseAdAccounts } from "./meta-ads";
 
 describe("parseAdAccounts", () => {
   it("builds the act_ id from account_id and keeps currency and timezone", () => {
@@ -14,5 +14,25 @@ describe("parseAdAccounts", () => {
 
   it("drops entries with no id at all", () => {
     expect(parseAdAccounts([{ name: "x" }])).toEqual([]);
+  });
+});
+
+describe("mergeConnectionAccounts", () => {
+  const acc = (id: string, name: string) => ({ id, name, currency: "BRL", timezone: null, status: 1 });
+
+  it("lists each account once, under the first connection that sees it, sorted by name", () => {
+    const merged = mergeConnectionAccounts([
+      { connectionId: "c1", accounts: [acc("act_2", "Beta"), acc("act_1", "Alfa")] },
+      { connectionId: "c2", accounts: [acc("act_1", "Alfa"), acc("act_3", "Gama")] },
+    ]);
+    expect(merged.map((a) => [a.id, a.connectionId])).toEqual([
+      ["act_1", "c1"],
+      ["act_2", "c1"],
+      ["act_3", "c2"],
+    ]);
+  });
+
+  it("returns an empty list when there are no connections", () => {
+    expect(mergeConnectionAccounts([])).toEqual([]);
   });
 });

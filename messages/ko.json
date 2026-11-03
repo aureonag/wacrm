@@ -446,11 +446,11 @@
         "hint_permission": "Facebook did not grant ad reading (ads_read) for this sign-in.",
         "hint_request_failed": "Try again in a moment.",
         "connectTitle": "Sign in with your Facebook",
-        "connectHint": "You will see the ad accounts you already have access to. Aureon only reads data, it changes nothing.",
+        "connectHint": "Sign in with the Facebook of someone who already has access to the clients' ad accounts. The connection belongs to the company: after that, the whole team picks accounts here. Only people with a role on the Meta app can sign in.",
         "connectButton": "Continue with Facebook",
         "connectedAs": "Connected as {name}",
         "connected": "Connected to Facebook",
-        "switchAccount": "Sign in with another account",
+        "switchAccount": "Connect another Facebook account",
         "metaResult_denied": "You cancelled the Facebook sign-in.",
         "metaResult_error": "Could not complete the Facebook sign-in. Try again.",
         "metaResult_not_configured": "Facebook sign-in is not configured on the server yet."

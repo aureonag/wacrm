@@ -85,3 +85,20 @@ export async function listMetaAdAccounts(token: string): Promise<MetaAdAccount[]
 
   return parseAdAccounts(out).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
+
+export interface MetaAdAccountWithConnection extends MetaAdAccount {
+  /** The company connection (meta_connections.id) whose login can read this account. */
+  connectionId: string;
+}
+
+/**
+ * Joins the accounts each connection can see into one list. An account that two
+ * connections both see is listed once, under the first connection. Pure.
+ */
+export function mergeConnectionAccounts(lists: { connectionId: string; accounts: MetaAdAccount[] }[]): MetaAdAccountWithConnection[] {
+  const seen = new Map<string, MetaAdAccountWithConnection>();
+  for (const { connectionId, accounts } of lists) {
+    for (const a of accounts) if (!seen.has(a.id)) seen.set(a.id, { ...a, connectionId });
+  }
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}

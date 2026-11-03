@@ -446,11 +446,11 @@
         "hint_permission": "O Facebook não liberou a leitura de anúncios (ads_read) para este login.",
         "hint_request_failed": "Tente de novo em instantes.",
         "connectTitle": "Entre com o seu Facebook",
-        "connectHint": "Você verá as contas de anúncio que já acessa. A Aureon só lê os dados, não altera nada.",
+        "connectHint": "Entre com o Facebook de quem já acessa as contas de anúncio dos clientes. A conexão fica da empresa: depois disso, todo o time escolhe as contas aqui. Só quem tem função no app da Meta consegue entrar.",
         "connectButton": "Continuar com Facebook",
         "connectedAs": "Conectado como {name}",
         "connected": "Conectado ao Facebook",
-        "switchAccount": "Entrar com outra conta",
+        "switchAccount": "Conectar outra conta do Facebook",
         "metaResult_denied": "Você cancelou o login com o Facebook.",
         "metaResult_error": "Não foi possível concluir o login com o Facebook. Tente de novo.",
         "metaResult_not_configured": "O login com Facebook ainda não foi configurado no servidor."
