@@ -361,6 +361,31 @@
         "reports": "Relatórios",
         "automations": "Automações",
         "templates": "Templates"
+      },
+      "clientsPage": {
+        "title": "Clientes",
+        "description": "Os clientes da operação, vistos pelo lado dos relatórios: integrações, relatórios e automações de cada um.",
+        "search": "Buscar por nome ou nº do contrato",
+        "filterLabel": "Filtro",
+        "filter_active": "Clientes ativos",
+        "filter_inactive": "Clientes inativos",
+        "filter_all": "Todos os clientes",
+        "add": "Novo cliente",
+        "error": "Não foi possível carregar.",
+        "empty": "Nenhum cliente por aqui.",
+        "emptyHint": "Cadastre um cliente em Operacional → Clientes para começar.",
+        "noResults": "Nenhum cliente encontrado.",
+        "colClient": "Cliente",
+        "colStatus": "Situação",
+        "statusActive": "Ativo",
+        "statusInactive": "Inativo",
+        "count": "{count, plural, one {# cliente} other {# clientes}}"
+      },
+      "clientPage": {
+        "back": "Voltar para clientes",
+        "notFound": "Cliente não encontrado.",
+        "error": "Não foi possível carregar.",
+        "inactive": "Inativo"
       }
     },
     "affiliates": {
