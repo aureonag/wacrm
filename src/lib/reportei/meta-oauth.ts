@@ -109,6 +109,15 @@ interface TokenResponse {
   error?: { code?: number; message?: string };
 }
 
+/**
+ * A user-token sign-in returns a short-lived token (`expires_in` of an hour or
+ * two) that must be traded for a ~60-day one. A system-user token with
+ * expiration "Nunca" comes without `expires_in` and is kept as it is.
+ */
+export function needsLongLivedExchange(resp: { expires_in?: number }): boolean {
+  return typeof resp.expires_in === "number" && resp.expires_in > 0;
+}
+
 async function getJson<T>(url: URL): Promise<T> {
   const res = await fetch(url, { cache: "no-store" });
   return (await res.json().catch(() => ({}))) as T;
@@ -127,6 +136,10 @@ export async function exchangeCode({ code, redirectUri }: { code: string; redire
   shortUrl.searchParams.set("code", code);
   const short = await getJson<TokenResponse>(shortUrl);
   if (!short.access_token) throw new MetaAdsError(`Meta code exchange failed (${short.error?.code ?? "?"})`, metaErrorKind(short.error?.code));
+
+  // A system-user configuration ("Nunca" expira) hands back a token that is
+  // already permanent: it has no `expires_in`, and there is nothing to exchange.
+  if (!needsLongLivedExchange(short)) return { token: short.access_token, expiresAt: null };
 
   const longUrl = new URL(`${META_API_BASE}/oauth/access_token`);
   longUrl.searchParams.set("grant_type", "fb_exchange_token");

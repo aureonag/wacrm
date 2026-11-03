@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildAuthUrl, safeReturnTo, signState, verifyState, withMetaResult } from "./meta-oauth";
+import { buildAuthUrl, needsLongLivedExchange, safeReturnTo, signState, verifyState, withMetaResult } from "./meta-oauth";
+
+describe("needsLongLivedExchange", () => {
+  it("trades a short-lived user token, but keeps a permanent system-user token", () => {
+    expect(needsLongLivedExchange({ expires_in: 5183944 })).toBe(true);
+    expect(needsLongLivedExchange({ expires_in: 3600 })).toBe(true);
+    expect(needsLongLivedExchange({})).toBe(false);
+    expect(needsLongLivedExchange({ expires_in: 0 })).toBe(false);
+  });
+});
 
 const SECRET = "test-secret";
 
