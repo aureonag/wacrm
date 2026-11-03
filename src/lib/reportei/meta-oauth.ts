@@ -73,13 +73,33 @@ export function verifyState(token: string | null | undefined, secret: string, no
   }
 }
 
-export function buildAuthUrl({ appId, redirectUri, state }: { appId: string; redirectUri: string; state: string }): string {
+/**
+ * Meta's sign-in URL. An app with "Facebook Login for Business" does not take
+ * `scope`: its permissions live in a configuration (META_ADS_CONFIG_ID), passed
+ * as `config_id`. Without a configuration id we fall back to the classic `scope`.
+ */
+export function buildAuthUrl({
+  appId,
+  redirectUri,
+  state,
+  configId,
+}: {
+  appId: string;
+  redirectUri: string;
+  state: string;
+  configId?: string;
+}): string {
   const url = new URL(`https://www.facebook.com/${META_API_VERSION}/dialog/oauth`);
   url.searchParams.set("client_id", appId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
-  url.searchParams.set("scope", META_SCOPES.join(","));
   url.searchParams.set("response_type", "code");
+  if (configId) {
+    url.searchParams.set("config_id", configId);
+    url.searchParams.set("override_default_response_type", "true");
+  } else {
+    url.searchParams.set("scope", META_SCOPES.join(","));
+  }
   return url.toString();
 }
 

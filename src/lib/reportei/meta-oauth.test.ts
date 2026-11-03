@@ -46,6 +46,16 @@ describe("withMetaResult", () => {
   });
 });
 
+describe("buildAuthUrl with a Login for Business configuration", () => {
+  it("sends config_id instead of scope and still asks for a code", () => {
+    const url = new URL(buildAuthUrl({ appId: "123", redirectUri: "https://aureonag.com/cb", state: "s", configId: "999" }));
+    expect(url.searchParams.get("config_id")).toBe("999");
+    expect(url.searchParams.get("override_default_response_type")).toBe("true");
+    expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.has("scope")).toBe(false);
+  });
+});
+
 describe("buildAuthUrl", () => {
   it("asks only for ads_read and carries the state", () => {
     const url = new URL(buildAuthUrl({ appId: "123", redirectUri: "https://aureonag.com/api/operational/reportei/meta/callback", state: "s" }));
