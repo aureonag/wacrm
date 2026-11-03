@@ -4,6 +4,8 @@
 
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { decrypt, encrypt } from "@/lib/whatsapp/encryption";
+import { MetaAdsError } from "./meta-ads";
+import { exchangeForLongLived, isRefreshDue, REFRESH_WINDOW_DAYS } from "./meta-oauth";
 
 export interface MetaConnection {
   id: string;
@@ -139,4 +141,63 @@ export async function filterCompanyConnectionIds(accountId: string, ids: string[
   const { data, error } = await supabaseAdmin().from("meta_connections").select("id").eq("account_id", accountId).in("id", ids);
   if (error) throw new Error(`meta_connections read failed: ${error.message}`);
   return new Set((data ?? []).map((r) => r.id as string));
+}
+
+/**
+ * Renews a connection's ~60-day token when it is within the refresh window and
+ * saves the new one. Returns the connection to use from now on. A failed
+ * renewal keeps the old token until it really expires; a revoked login is
+ * marked so the team sees it must sign in again. Server-only.
+ */
+export async function refreshConnectionIfDue(c: ConnectionWithToken): Promise<ConnectionWithToken> {
+  if (!isRefreshDue(c.tokenExpiresAt)) return c;
+  try {
+    const next = await exchangeForLongLived(c.token);
+    const expiresAt = next.expiresAt?.toISOString() ?? null;
+    const { error } = await supabaseAdmin()
+      .from("meta_connections")
+      .update({ token_encrypted: encrypt(next.token), token_expires_at: expiresAt, last_error: null })
+      .eq("id", c.id);
+    if (error) {
+      console.error("[meta_connections] could not save a renewed token", c.id, error.message);
+      return c;
+    }
+    return { ...c, token: next.token, tokenExpiresAt: expiresAt };
+  } catch (err) {
+    if (err instanceof MetaAdsError && err.code === "token_invalid") await markConnectionFailed(c.id, "revoked", err.message);
+    else console.error("[meta_connections] token renewal failed", c.id, err instanceof Error ? err.message : "unknown error");
+    return c;
+  }
+}
+
+/** Renews every working connection (all companies) that is inside the refresh window. For the scheduled route. */
+export async function refreshDueConnections(): Promise<{ checked: number; refreshed: number }> {
+  const limit = new Date(Date.now() + REFRESH_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabaseAdmin()
+    .from("meta_connections")
+    .select("id, fb_user_name, token_expires_at, token_encrypted")
+    .eq("status", "connected")
+    .not("token_expires_at", "is", null)
+    .lte("token_expires_at", limit)
+    .limit(100);
+  if (error) throw new Error(`meta_connections read failed: ${error.message}`);
+
+  let refreshed = 0;
+  for (const row of data ?? []) {
+    let c: ConnectionWithToken;
+    try {
+      c = {
+        id: row.id as string,
+        fbUserName: (row.fb_user_name as string | null) ?? null,
+        tokenExpiresAt: (row.token_expires_at as string | null) ?? null,
+        token: decrypt(row.token_encrypted as string),
+      };
+    } catch {
+      console.error("[meta_connections] could not decrypt a connection", row.id);
+      continue;
+    }
+    const after = await refreshConnectionIfDue(c);
+    if (after.tokenExpiresAt !== c.tokenExpiresAt) refreshed++;
+  }
+  return { checked: data?.length ?? 0, refreshed };
 }

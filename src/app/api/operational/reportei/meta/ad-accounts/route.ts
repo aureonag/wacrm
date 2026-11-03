@@ -15,7 +15,7 @@ import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { diagnoseToken, listConnectionAdAccounts, MetaAdsError, mergeConnectionAccounts, type MetaAdAccount } from "@/lib/reportei/meta-ads";
 import { isMetaLoginConfigured } from "@/lib/reportei/meta-oauth";
-import { listCompanyConnections, markConnectionFailed } from "@/lib/reportei/meta-connection";
+import { listCompanyConnections, markConnectionFailed, refreshConnectionIfDue } from "@/lib/reportei/meta-connection";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,9 @@ export async function GET(req: Request) {
     const lists: { connectionId: string; accounts: MetaAdAccount[] }[] = [];
     const working: { name: string | null }[] = [];
     let lastError: MetaAdsError | null = null;
-    for (const c of connections) {
+    for (const stored of connections) {
+      // Renew a token that is close to its end while we have it in hand.
+      const c = await refreshConnectionIfDue(stored);
       try {
         lists.push({ connectionId: c.id, accounts: await listConnectionAdAccounts(c.token) });
         working.push({ name: c.fbUserName });

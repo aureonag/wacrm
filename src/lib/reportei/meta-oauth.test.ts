@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAuthUrl, needsLongLivedExchange, safeReturnTo, signState, verifyState, withMetaResult } from "./meta-oauth";
+import { buildAuthUrl, isRefreshDue, needsLongLivedExchange, safeReturnTo, signState, verifyState, withMetaResult } from "./meta-oauth";
 
 describe("needsLongLivedExchange", () => {
   it("trades a short-lived user token, but keeps a permanent system-user token", () => {
@@ -73,5 +73,22 @@ describe("buildAuthUrl", () => {
     expect(url.searchParams.get("response_type")).toBe("code");
     expect(url.searchParams.get("state")).toBe("s");
     expect(url.searchParams.get("client_id")).toBe("123");
+  });
+});
+
+describe("isRefreshDue", () => {
+  const now = Date.parse("2026-11-03T12:00:00Z");
+  const inDays = (d: number) => new Date(now + d * 24 * 60 * 60 * 1000).toISOString();
+
+  it("is due when 30 days or fewer are left, or already expired", () => {
+    expect(isRefreshDue(inDays(30), now)).toBe(true);
+    expect(isRefreshDue(inDays(5), now)).toBe(true);
+    expect(isRefreshDue(inDays(-1), now)).toBe(true);
+  });
+
+  it("is not due with more than 30 days left, with no expiry, or with an unreadable date", () => {
+    expect(isRefreshDue(inDays(31), now)).toBe(false);
+    expect(isRefreshDue(null, now)).toBe(false);
+    expect(isRefreshDue("not a date", now)).toBe(false);
   });
 });
