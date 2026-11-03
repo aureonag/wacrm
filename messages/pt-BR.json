@@ -454,6 +454,28 @@
         "metaResult_denied": "Você cancelou o login com o Facebook.",
         "metaResult_error": "Não foi possível concluir o login com o Facebook. Tente de novo.",
         "metaResult_not_configured": "O login com Facebook ainda não foi configurado no servidor."
+      },
+      "reports": {
+        "noIntegrationsTitle": "Nenhuma conta ligada a este cliente",
+        "noIntegrationsHint": "Ligue uma conta de anúncios na aba Integrações para ver os números aqui.",
+        "periodLabel": "Período",
+        "period_last_7d": "Últimos 7 dias",
+        "period_last_30d": "Últimos 30 dias",
+        "period_this_month": "Este mês",
+        "period_last_month": "Mês passado",
+        "range": "{since} a {until}",
+        "error": "Não foi possível carregar os números.",
+        "metric_spend": "Gasto",
+        "metric_impressions": "Impressões",
+        "metric_reach": "Alcance",
+        "metric_clicks": "Cliques",
+        "metric_ctr": "CTR",
+        "metric_cpc": "CPC",
+        "metric_cpm": "CPM",
+        "accountError_connection_unavailable": "A conexão desta conta não está disponível. Conecte o Facebook de novo em Integrações.",
+        "accountError_token_invalid": "O login do Facebook desta conta expirou. Conecte de novo em Integrações.",
+        "accountError_permission": "O Facebook não liberou a leitura desta conta.",
+        "accountError_request_failed": "Não foi possível ler esta conta agora."
       }
     },
     "affiliates": {

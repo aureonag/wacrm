@@ -454,6 +454,28 @@
         "metaResult_denied": "You cancelled the Facebook sign-in.",
         "metaResult_error": "Could not complete the Facebook sign-in. Try again.",
         "metaResult_not_configured": "Facebook sign-in is not configured on the server yet."
+      },
+      "reports": {
+        "noIntegrationsTitle": "No account linked to this client",
+        "noIntegrationsHint": "Link an ad account in the Integrations tab to see the numbers here.",
+        "periodLabel": "Period",
+        "period_last_7d": "Last 7 days",
+        "period_last_30d": "Last 30 days",
+        "period_this_month": "This month",
+        "period_last_month": "Last month",
+        "range": "{since} to {until}",
+        "error": "Could not load the numbers.",
+        "metric_spend": "Spend",
+        "metric_impressions": "Impressions",
+        "metric_reach": "Reach",
+        "metric_clicks": "Clicks",
+        "metric_ctr": "CTR",
+        "metric_cpc": "CPC",
+        "metric_cpm": "CPM",
+        "accountError_connection_unavailable": "This account's connection is not available. Connect Facebook again in Integrations.",
+        "accountError_token_invalid": "The Facebook sign-in for this account expired. Connect again in Integrations.",
+        "accountError_permission": "Facebook did not allow reading this account.",
+        "accountError_request_failed": "Could not read this account right now."
       }
     },
     "affiliates": {
