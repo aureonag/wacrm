@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeMetaError, mergeConnectionAccounts, parseAdAccounts } from "./meta-ads";
+import { describeMetaError, grantedAdAccountIds, mergeConnectionAccounts, parseAdAccounts } from "./meta-ads";
 
 describe("parseAdAccounts", () => {
   it("builds the act_ id from account_id and keeps currency and timezone", () => {
@@ -42,5 +42,26 @@ describe("describeMetaError", () => {
     expect(describeMetaError({ code: 200, message: "Requires ads_read permission" })).toBe("#200 Requires ads_read permission");
     expect(describeMetaError({ message: "x" })).toBe("x");
     expect(describeMetaError(undefined)).toBeUndefined();
+  });
+});
+
+describe("grantedAdAccountIds", () => {
+  it("collects the ad accounts granted under ads_read, as act_ ids, without duplicates", () => {
+    expect(
+      grantedAdAccountIds({
+        data: {
+          granular_scopes: [
+            { scope: "ads_read", target_ids: ["123", "act_456", 789] },
+            { scope: "ads_management", target_ids: ["123"] },
+            { scope: "business_management", target_ids: ["999"] },
+          ],
+        },
+      }),
+    ).toEqual(["act_123", "act_456", "act_789"]);
+  });
+
+  it("ignores ids that are not numeric and a missing granular_scopes", () => {
+    expect(grantedAdAccountIds({ data: { granular_scopes: [{ scope: "ads_read", target_ids: ["abc", "12x"] }] } })).toEqual([]);
+    expect(grantedAdAccountIds({})).toEqual([]);
   });
 });
