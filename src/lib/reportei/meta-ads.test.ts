@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeConnectionAccounts, parseAdAccounts } from "./meta-ads";
+import { describeMetaError, mergeConnectionAccounts, parseAdAccounts } from "./meta-ads";
 
 describe("parseAdAccounts", () => {
   it("builds the act_ id from account_id and keeps currency and timezone", () => {
@@ -34,5 +34,13 @@ describe("mergeConnectionAccounts", () => {
 
   it("returns an empty list when there are no connections", () => {
     expect(mergeConnectionAccounts([])).toEqual([]);
+  });
+});
+
+describe("describeMetaError", () => {
+  it("joins the code and the message, and tolerates a missing error", () => {
+    expect(describeMetaError({ code: 200, message: "Requires ads_read permission" })).toBe("#200 Requires ads_read permission");
+    expect(describeMetaError({ message: "x" })).toBe("x");
+    expect(describeMetaError(undefined)).toBeUndefined();
   });
 });
