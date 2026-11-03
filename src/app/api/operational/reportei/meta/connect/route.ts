@@ -19,7 +19,14 @@ export async function GET(req: Request) {
     if (!isMetaLoginConfigured()) return back("not_configured");
 
     const state = signState({ u: ctx.userId, a: ctx.accountId, r: returnTo }, process.env.META_ADS_APP_SECRET!);
-    return NextResponse.redirect(buildAuthUrl({ appId: process.env.META_ADS_APP_ID!, redirectUri: callbackUrl(req), state }));
+    return NextResponse.redirect(
+      buildAuthUrl({
+        appId: process.env.META_ADS_APP_ID!,
+        redirectUri: callbackUrl(req),
+        state,
+        configId: process.env.META_ADS_CONFIG_ID?.trim() || undefined,
+      }),
+    );
   } catch (err) {
     return toErrorResponse(err);
   }
