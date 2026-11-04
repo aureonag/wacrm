@@ -173,6 +173,8 @@ export const RATE_LIMITS = {
    *  capping a stampede; excess inbounds simply don't get an auto-reply
    *  (they still land in the inbox for a human). */
   aiAutoReplyAccount: { limit: 30, windowMs: 60_000 },
+  /** Reportei shared report (public, per-IP). */
+  reporteiPublic: { limit: 30, windowMs: 60_000 },
   /** Contract peek (public, per-IP) — same reasoning as invitationPeek. */
   contractPeek: { limit: 30, windowMs: 60_000 },
   /** Contract OTP send (public, per-IP). Deliberately tight — each

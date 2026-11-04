@@ -519,7 +519,19 @@
         "delete": "Excluir relatório",
         "deleteConfirm": "Excluir este relatório? Não dá para desfazer.",
         "deleted": "Relatório excluído.",
-        "deleteError": "Não foi possível excluir."
+        "deleteError": "Não foi possível excluir.",
+        "share": "Compartilhar",
+        "shareLink": "Link público",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "copyError": "Não consegui copiar. Selecione o link e copie.",
+        "shareOff": "Desativar link",
+        "shareOffConfirm": "Desativar o link? Quem tem o link antigo deixa de ver o relatório.",
+        "shareOffDone": "Link desativado.",
+        "shareError": "Não foi possível alterar o link.",
+        "publicNotFound": "Este relatório não está disponível. O link pode ter sido desativado.",
+        "publicError": "Não foi possível carregar o relatório.",
+        "publicPrint": "Imprimir / salvar PDF"
       }
     },
     "affiliates": {

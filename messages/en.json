@@ -519,7 +519,19 @@
         "delete": "Delete report",
         "deleteConfirm": "Delete this report? This cannot be undone.",
         "deleted": "Report deleted.",
-        "deleteError": "Could not delete."
+        "deleteError": "Could not delete.",
+        "share": "Share",
+        "shareLink": "Public link",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyError": "Could not copy. Select the link and copy it.",
+        "shareOff": "Disable link",
+        "shareOffConfirm": "Disable the link? Anyone with the old link will no longer see the report.",
+        "shareOffDone": "Link disabled.",
+        "shareError": "Could not change the link.",
+        "publicNotFound": "This report is not available. The link may have been disabled.",
+        "publicError": "Could not load the report.",
+        "publicPrint": "Print / save as PDF"
       }
     },
     "affiliates": {
