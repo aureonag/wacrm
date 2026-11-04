@@ -531,7 +531,11 @@
         "shareError": "Não foi possível alterar o link.",
         "publicNotFound": "Este relatório não está disponível. O link pode ter sido desativado.",
         "publicError": "Não foi possível carregar o relatório.",
-        "publicPrint": "Imprimir / salvar PDF"
+        "publicPrint": "Imprimir / salvar PDF",
+        "chartTitle": "Evolução diária",
+        "chartMetric": "Métrica do gráfico",
+        "chartPrevious": "Período anterior",
+        "chartLegend": "Linha tracejada: período anterior, dia a dia."
       }
     },
     "affiliates": {

@@ -531,7 +531,11 @@
         "shareError": "Could not change the link.",
         "publicNotFound": "This report is not available. The link may have been disabled.",
         "publicError": "Could not load the report.",
-        "publicPrint": "Print / save as PDF"
+        "publicPrint": "Print / save as PDF",
+        "chartTitle": "Daily trend",
+        "chartMetric": "Chart metric",
+        "chartPrevious": "Previous period",
+        "chartLegend": "Dashed line: previous period, day by day."
       }
     },
     "affiliates": {

@@ -3,9 +3,9 @@
 // live view (/insights) and by saved reports. Never returns a token.
 
 import type { AccountContext } from "@/lib/auth/account";
-import { fetchAccountInsights, MetaAdsError } from "@/lib/reportei/meta-ads";
+import { fetchAccountInsights, fetchDailyInsights, MetaAdsError } from "@/lib/reportei/meta-ads";
 import { getCompanyConnection } from "@/lib/reportei/meta-connection";
-import type { AccountSnapshot } from "@/lib/reportei/report";
+import { fillDays, type AccountSnapshot } from "@/lib/reportei/report";
 
 type Connection = Awaited<ReturnType<typeof getCompanyConnection>>;
 
@@ -13,7 +13,7 @@ type Connection = Awaited<ReturnType<typeof getCompanyConnection>>;
 export async function collectAccountSnapshots(
   ctx: Pick<AccountContext, "supabase" | "accountId">,
   clientId: string,
-  ranges: { since: string; until: string; compare?: { since: string; until: string } | null },
+  ranges: { since: string; until: string; compare?: { since: string; until: string } | null; daily?: boolean },
 ): Promise<AccountSnapshot[]> {
   const rows = await ctx.supabase
     .from("ad_integrations")
@@ -52,6 +52,18 @@ export async function collectAccountSnapshots(
         } catch (err) {
           // The main numbers are still good; only the comparison is missing.
           if (!(err instanceof MetaAdsError)) throw err;
+        }
+      }
+      if (ranges.daily) {
+        // Charts are a bonus: a failed daily read never costs the report its totals.
+        try {
+          entry.daily = fillDays(await fetchDailyInsights(connection.token, base.id, ranges.since, ranges.until), ranges.since, ranges.until);
+          if (ranges.compare) {
+            entry.dailyPrevious = fillDays(await fetchDailyInsights(connection.token, base.id, ranges.compare.since, ranges.compare.until), ranges.compare.since, ranges.compare.until);
+          }
+        } catch (err) {
+          if (!(err instanceof MetaAdsError)) throw err;
+          delete entry.dailyPrevious;
         }
       }
       accounts.push(entry);
