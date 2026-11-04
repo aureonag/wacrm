@@ -7,8 +7,8 @@ import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { isPeriod, resolvePeriod } from "@/lib/reportei/periods";
-import { isValidRange, previousRange, type ReportSnapshot } from "@/lib/reportei/report";
-import { collectAccountSnapshots } from "@/lib/reportei/report-data";
+import { isValidRange, previousRange } from "@/lib/reportei/report";
+import { createSavedReport } from "@/lib/reportei/report-create";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
     let q = ctx.supabase
       .from("reportei_reports")
-      .select("id, client_id, title, period_start, period_end, compare_start, created_at, ops_clients(name, code)")
+      .select("id, client_id, title, period_start, period_end, compare_start, auto, created_at, ops_clients(name, code)")
       .eq("account_id", ctx.accountId)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -43,6 +43,7 @@ export async function GET(req: Request) {
         periodStart: r.period_start,
         periodEnd: r.period_end,
         compared: r.compare_start !== null,
+        auto: r.auto === true,
         createdAt: r.created_at,
       };
     });
@@ -93,40 +94,22 @@ export async function POST(req: Request) {
     }
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const accounts = await collectAccountSnapshots(ctx, clientId, { ...range, compare, daily: true }).catch((err: unknown) => {
-      console.error("[POST reportei/reports] collect", err instanceof Error ? err.message : err);
-      return null;
-    });
-    if (!accounts) return NextResponse.json({ error: "Failed to read integrations" }, { status: 500 });
-    if (accounts.length === 0) return NextResponse.json({ error: "No integrations" }, { status: 422 });
-    if (accounts.every((a) => a.error)) return NextResponse.json({ error: "No account could be read", accounts }, { status: 502 });
-
-    const snapshot: ReportSnapshot = { period: range, compare, accounts };
     const title =
-      typeof body?.title === "string" && body.title.trim()
-        ? body.title.trim().slice(0, 200)
-        : `Relatório ${client.data.name}`;
-
-    const { data, error } = await ctx.supabase
-      .from("reportei_reports")
-      .insert({
-        account_id: ctx.accountId,
-        client_id: clientId,
-        title,
-        period_start: range.since,
-        period_end: range.until,
-        compare_start: compare?.since ?? null,
-        compare_end: compare?.until ?? null,
-        snapshot,
-        created_by: ctx.userId,
-      })
-      .select("id")
-      .single();
-    if (error || !data) {
-      console.error("[POST reportei/reports] insert", error?.message);
+      typeof body?.title === "string" && body.title.trim() ? body.title.trim().slice(0, 200) : `Relatório ${client.data.name}`;
+    const result = await createSavedReport(ctx.supabase, {
+      accountId: ctx.accountId,
+      clientId,
+      title,
+      range,
+      compare,
+      createdBy: ctx.userId,
+    });
+    if (!result.ok) {
+      if (result.reason === "no_integrations") return NextResponse.json({ error: "No integrations" }, { status: 422 });
+      if (result.reason === "unreadable") return NextResponse.json({ error: "No account could be read" }, { status: 502 });
       return NextResponse.json({ error: "Failed to save report" }, { status: 500 });
     }
-    return NextResponse.json({ id: data.id }, { status: 201 });
+    return NextResponse.json({ id: result.id }, { status: 201 });
   } catch (err) {
     return toErrorResponse(err);
   }
