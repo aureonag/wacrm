@@ -1,0 +1,55 @@
+import { describe, expect, it } from "vitest";
+import { isValidRange, isYmd, previousRange, rangeDays, toneFor, variation } from "./report";
+
+describe("ranges", () => {
+  it("counts both ends", () => {
+    expect(rangeDays("2026-11-01", "2026-11-01")).toBe(1);
+    expect(rangeDays("2026-10-05", "2026-11-03")).toBe(30);
+  });
+
+  it("previous range has the same length and ends the day before", () => {
+    expect(previousRange("2026-10-05", "2026-11-03")).toEqual({ since: "2026-09-05", until: "2026-10-04" });
+    expect(previousRange("2026-11-01", "2026-11-03")).toEqual({ since: "2026-10-29", until: "2026-10-31" });
+    expect(previousRange("2026-03-01", "2026-03-31")).toEqual({ since: "2026-01-29", until: "2026-02-28" });
+  });
+
+  it("validates dates", () => {
+    expect(isYmd("2026-02-30")).toBe(false);
+    expect(isYmd("2026-2-3")).toBe(false);
+    expect(isYmd("2026-11-03")).toBe(true);
+  });
+
+  it("rejects bad ranges", () => {
+    const today = "2026-11-03";
+    expect(isValidRange("2026-10-01", "2026-10-31", today)).toBe(true);
+    expect(isValidRange("2026-10-31", "2026-10-01", today)).toBe(false);
+    expect(isValidRange("2026-10-01", "2026-11-04", today)).toBe(false);
+    expect(isValidRange("2025-01-01", "2026-11-03", today)).toBe(false);
+    expect(isValidRange("nope", "2026-11-03", today)).toBe(false);
+  });
+});
+
+describe("variation", () => {
+  it("is the percent change", () => {
+    expect(variation(150, 100)).toBe(50);
+    expect(variation(50, 100)).toBe(-50);
+  });
+  it("is null without a base", () => {
+    expect(variation(10, 0)).toBeNull();
+    expect(variation(Number.NaN, 5)).toBeNull();
+  });
+});
+
+describe("toneFor", () => {
+  it("rewards growth in results and drops in cost", () => {
+    expect(toneFor("clicks", 10)).toBe("good");
+    expect(toneFor("clicks", -10)).toBe("bad");
+    expect(toneFor("cpc", -10)).toBe("good");
+    expect(toneFor("cpm", 10)).toBe("bad");
+  });
+  it("does not judge spend, flat or unknown changes", () => {
+    expect(toneFor("spend", 40)).toBe("neutral");
+    expect(toneFor("clicks", 0.01)).toBe("neutral");
+    expect(toneFor("reach", null)).toBe("neutral");
+  });
+});

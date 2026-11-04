@@ -149,7 +149,7 @@ export default function ReporteiClientPage({
       {tab === "integrations" ? (
         panel
       ) : tab === "reports" ? (
-        <ReportsPanel clientId={client.id} hasIntegrations={integrations.length > 0} />
+        <ReportsPanel clientId={client.id} clientName={client.name} hasIntegrations={integrations.length > 0} />
       ) : (
         <EmptyState title={t("comingSoonTitle")} hint={t("comingSoonHint")} className="min-h-48" />
       )}
