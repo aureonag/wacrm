@@ -168,6 +168,13 @@ function optText(v: unknown, max: number): string | null {
   return s === "" ? null : s;
 }
 
+/** The coupon code of a participant: 3–30 letters/digits, stored uppercase. Throws BadInput. */
+export function parseCouponCode(v: unknown): string {
+  const code = typeof v === "string" ? v.trim().toUpperCase() : "";
+  if (!/^[A-Z0-9]{3,30}$/.test(code)) throw new BadInput("O código do cupom deve ter de 3 a 30 letras ou números.");
+  return code;
+}
+
 /** Validates the manual "novo afiliado" body. Throws BadInput. */
 export function parseAffiliateInput(body: unknown): AffiliateInput {
   const b = (body ?? {}) as Record<string, unknown>;
@@ -175,8 +182,7 @@ export function parseAffiliateInput(body: unknown): AffiliateInput {
   const email = reqText(b.email, 200, "Informe o e-mail do afiliado.").toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadInput("E-mail inválido.");
   if (!isUuid(b.campaign_id)) throw new BadInput("Selecione a campanha.");
-  const code = typeof b.code === "string" ? b.code.trim().toUpperCase() : "";
-  if (!/^[A-Z0-9]{3,30}$/.test(code)) throw new BadInput("O código do cupom deve ter de 3 a 30 letras ou números.");
+  const code = parseCouponCode(b.code);
   const pix_key = optText(b.pix_key, 200);
   const pixType = optText(b.pix_key_type, 20);
   if (pixType && !(PIX_KEY_TYPES as readonly string[]).includes(pixType)) throw new BadInput("Tipo de chave Pix inválido.");

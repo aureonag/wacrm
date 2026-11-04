@@ -6,7 +6,7 @@ import { AffiliateProfileDialog } from "../../../_components/affiliate-profile-d
 import { AffiliatesTabs } from "../../../_components/affiliates-tabs";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Check, Loader2, Mail, Plus, Power, Search, X } from "lucide-react";
+import { Check, Loader2, Mail, Pencil, Plus, Power, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,8 @@ interface Membership {
   status: MembershipStatus;
   campaign_id: string;
   campaign_name: string;
+  /** The coupon in the connected store; null when no store is connected (or nothing was sent yet). */
+  coupon: { state: "synced" | "error" | "removed"; error: string | null } | null;
   affiliate: { id: string; name: string; email: string; phone: string | null; instagram: string | null; has_pix: boolean; has_login: boolean } | null;
 }
 
@@ -72,6 +74,10 @@ export default function AffiliateMembersPage() {
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  // "Editar cupom": the participant being edited and the code being typed.
+  const [editing, setEditing] = useState<Membership | null>(null);
+  const [newCode, setNewCode] = useState("");
+  const [savingCode, setSavingCode] = useState(false);
 
   const load = useCallback(async () => {
     const [m, c] = await Promise.all([
@@ -136,6 +142,29 @@ export default function AffiliateMembersPage() {
     if (res.ok) return toast.success(t("members.inviteSent"));
     const data = (await res.json().catch(() => null)) as { error?: string } | null;
     toast.error(res.status === 503 && data?.error === "portal_not_ready" ? t("members.inviteNotReady") : [429, 502, 503].includes(res.status) ? (data?.error ?? t("saveError")) : t("saveError"));
+  }
+
+  function openEditCoupon(m: Membership) {
+    setEditing(m);
+    setNewCode(m.code);
+  }
+
+  async function saveCoupon() {
+    if (!editing) return;
+    setSavingCode(true);
+    const res = await fetch(`${apiBase}/affiliates/${editing.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: newCode }),
+    });
+    setSavingCode(false);
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      return toast.error(res.status === 400 || res.status === 409 ? (data?.error ?? t("saveError")) : t("saveError"));
+    }
+    toast.success(t("members.couponSaved"));
+    setEditing(null);
+    await load();
   }
 
   async function setStatus(m: Membership, status: "approved" | "rejected" | "inactive") {
@@ -213,9 +242,21 @@ export default function AffiliateMembersPage() {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-0.5">
                   <code className="rounded bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">{m.code}</code>
-                  <span className="text-[11px] text-muted-foreground">{t("members.notSynced")}</span>
+                  {m.coupon?.state === "synced" ? (
+                    <span className="text-[11px] text-emerald-500">{t("members.couponInStore")}</span>
+                  ) : m.coupon?.state === "error" ? (
+                    <span className="max-w-56 truncate text-[11px] text-destructive" title={m.coupon.error ?? undefined}>
+                      {t("members.couponError")}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">{t("members.notSynced")}</span>
+                  )}
                 </div>
                 <div className={cn("flex shrink-0 gap-1", !canEdit && "hidden")}>
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => openEditCoupon(m)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    {t("members.editCoupon")}
+                  </Button>
                   {m.affiliate && !m.affiliate.has_login && m.status !== "rejected" && (
                     <Button variant="outline" size="sm" disabled={busy} onClick={() => invite(m)}>
                       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
@@ -254,6 +295,37 @@ export default function AffiliateMembersPage() {
       )}
 
       <AffiliateProfileDialog membershipId={profileId} onClose={() => setProfileId(null)} />
+
+      <Dialog open={editing !== null} onOpenChange={(o) => !o && !savingCode && setEditing(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("members.editCouponTitle")}</DialogTitle>
+            <DialogDescription>{t("members.editCouponHint", { name: editing?.affiliate?.name ?? "" })}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="coupon-code">{t("members.fieldCode")}</Label>
+            <Input
+              id="coupon-code"
+              value={newCode}
+              maxLength={30}
+              autoComplete="off"
+              onChange={(e) => setNewCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+              onKeyDown={(e) => e.key === "Enter" && newCode.length >= 3 && newCode !== editing?.code && !savingCode && void saveCoupon()}
+              className="font-mono"
+            />
+            <p className="text-xs text-muted-foreground">{t("members.editCouponRules")}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={savingCode} onClick={() => setEditing(null)}>
+              {t("members.editCouponCancel")}
+            </Button>
+            <Button disabled={savingCode || newCode.length < 3 || newCode === editing?.code} onClick={saveCoupon}>
+              {savingCode && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {t("members.editCouponSave")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={(o) => !o && !saving && setOpen(false)}>
         <DialogContent className="sm:max-w-lg">

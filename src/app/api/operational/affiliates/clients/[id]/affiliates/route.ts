@@ -28,6 +28,8 @@ interface MembershipRow {
   created_at: string;
   campaign_id: string;
   aff_campaigns: { name: string } | null;
+  // One row at most per participant (Nuvemshop); PostgREST may return it as an object or a one-item list.
+  aff_membership_coupons: { state: "synced" | "error" | "removed"; last_error: string | null } | { state: "synced" | "error" | "removed"; last_error: string | null }[] | null;
   aff_affiliates: {
     id: string;
     name: string;
@@ -45,13 +47,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const { admin } = await requireClientAccess(id, [["affiliates", "view"]]);
 
-    const { data, error } = await admin
+    const COLUMNS =
+      "id, code, status, accepted_revision, accepted_at, created_at, campaign_id, aff_campaigns(name), aff_affiliates(id, name, email, phone, instagram, pix_key, user_id)";
+    const withCoupons = await admin
       .from("aff_memberships")
-      .select(
-        "id, code, status, accepted_revision, accepted_at, created_at, campaign_id, aff_campaigns(name), aff_affiliates(id, name, email, phone, instagram, pix_key, user_id)",
-      )
+      .select(`${COLUMNS}, aff_membership_coupons(state, last_error)`)
       .eq("client_id", id)
       .order("created_at", { ascending: false });
+    // Migration 162 (Nuvemshop) not applied: the list still works, without the coupon state.
+    const result = withCoupons.error && isModuleNotReady(withCoupons.error)
+      ? await admin.from("aff_memberships").select(COLUMNS).eq("client_id", id).order("created_at", { ascending: false })
+      : withCoupons;
+    const data: unknown = result.data;
+    const error = result.error;
     if (error) {
       if (isModuleNotReady(error)) return moduleNotReadyResponse();
       console.error("[GET affiliates/affiliates]", error.message);
@@ -69,6 +77,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         created_at: m.created_at,
         campaign_id: m.campaign_id,
         campaign_name: m.aff_campaigns?.name ?? "",
+        coupon: (() => {
+          const c = Array.isArray(m.aff_membership_coupons) ? m.aff_membership_coupons[0] : m.aff_membership_coupons;
+          return c ? { state: c.state, error: c.state === "error" ? c.last_error : null } : null;
+        })(),
         affiliate: m.aff_affiliates
           ? {
               id: m.aff_affiliates.id,

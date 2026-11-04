@@ -226,6 +226,16 @@ describe("coupon sync", () => {
     expect(tables.aff_membership_coupons[0]).toMatchObject({ external_coupon_id: "888", state: "synced" });
   });
 
+  it("renames the coupon in the store when the participant gets a new code", async () => {
+    tables.aff_membership_coupons.push({ membership_id: "m-1", integration_id: "int-1", external_coupon_id: "777", state: "synced" });
+    tables.aff_memberships[0].code = "MARIA20";
+    request.mockResolvedValueOnce({ data: {}, next: null });
+    await syncMembershipCoupon("m-1", fakeAdmin(tables));
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledWith(expect.anything(), "PUT", "/coupons/777", expect.objectContaining({ code: "MARIA20" }));
+    expect(tables.aff_membership_coupons[0]).toMatchObject({ external_coupon_id: "777", state: "synced" });
+  });
+
   it("removes the coupon when the participant is switched off or the campaign deactivated", async () => {
     tables.aff_membership_coupons.push({ membership_id: "m-1", integration_id: "int-1", external_coupon_id: "777", state: "synced" });
     tables.aff_memberships[0].status = "inactive";

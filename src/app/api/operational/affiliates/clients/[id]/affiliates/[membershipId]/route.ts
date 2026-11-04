@@ -3,16 +3,18 @@
 //      in this client, sales and commissions. The Pix key is only returned to
 //      whoever may see payments (the Aureon team, finance, owner).
 // PATCH /api/operational/affiliates/clients/:id/affiliates/:membershipId
-//   body { status: 'approved' | 'rejected' | 'inactive' }
+//   body { status: 'approved' | 'rejected' | 'inactive' }  → decide on a sign-up / switch off and on
+//   body { code: 'NEWCODE' }                               → "Editar cupom": change the coupon code
 //
-// Approve / reject a sign-up, or switch an approved participant off (and back
-// on). Staff only — see src/lib/affiliates/admin.ts.
+// Aureon staff, or a store user who may edit affiliates — see src/lib/affiliates/admin.ts.
+// Changing the code also renames the coupon in the connected store (a coupon that
+// is not in the store yet just gets created with the new code).
 
 import { after, NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { syncMembershipCoupon } from "@/lib/affiliates/nuvemshop/coupons";
-import { isModuleNotReady, moduleNotReadyResponse, requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
-import { isUuid } from "@/lib/affiliates/campaigns";
+import { BadInput, isModuleNotReady, moduleNotReadyResponse, requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
+import { isUuid, parseCouponCode } from "@/lib/affiliates/campaigns";
 import { can } from "@/lib/affiliates/store-access";
 import { notifyAffiliate } from "@/lib/affiliates/notifications";
 
@@ -121,7 +123,42 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!isUuid(id) || !isUuid(membershipId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const { ctx, admin } = await requireClientAccess(id, [["affiliates", "edit"]]);
 
-    const body = (await req.json().catch(() => null)) as { status?: unknown } | null;
+    const body = (await req.json().catch(() => null)) as { status?: unknown; code?: unknown } | null;
+
+    // "Editar cupom": a new code for this participant.
+    if (body && body.code !== undefined && body.status === undefined) {
+      const code = parseCouponCode(body.code);
+      const current = await admin
+        .from("aff_memberships")
+        .select("code")
+        .eq("id", membershipId)
+        .eq("client_id", id)
+        .maybeSingle();
+      if (current.error) {
+        if (isModuleNotReady(current.error)) return moduleNotReadyResponse();
+        return NextResponse.json({ error: "Failed to update coupon" }, { status: 500 });
+      }
+      if (!current.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      if (current.data.code === code) return NextResponse.json({ ok: true, code });
+
+      const { error } = await admin.from("aff_memberships").update({ code }).eq("id", membershipId).eq("client_id", id);
+      if (error) {
+        // (client_id, code) is unique: two participants of one store never share a coupon.
+        if (error.code === "23505") return NextResponse.json({ error: "Este código já está em uso nesta loja." }, { status: 409 });
+        console.error("[PATCH affiliates/affiliates/:id] code", error.message);
+        return NextResponse.json({ error: "Failed to update coupon" }, { status: 500 });
+      }
+      await writeAudit(admin, ctx, {
+        clientId: id,
+        action: `Trocou o cupom ${current.data.code} por ${code}`,
+        objectType: "membership",
+        objectId: membershipId,
+      });
+      // Renames the coupon in the connected store too (no-op without one).
+      after(() => syncMembershipCoupon(membershipId));
+      return NextResponse.json({ ok: true, code });
+    }
+
     const status = body?.status;
     if (typeof status !== "string" || !(status in ACTION)) {
       return NextResponse.json({ error: "Status inválido." }, { status: 400 });
@@ -172,6 +209,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
+    if (err instanceof BadInput) return NextResponse.json({ error: err.message }, { status: 400 });
     return toErrorResponse(err);
   }
 }
