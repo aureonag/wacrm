@@ -62,6 +62,10 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/inscricao') ||
       pathname.startsWith('/api/portal') ||
       pathname.startsWith('/api/public') ||
+      // Where the Nuvemshop sends a store's own owner back after they connect it
+      // (the route checks the signed state itself) and the page that says so.
+      pathname === '/api/integrations/nuvemshop/callback' ||
+      pathname.startsWith('/integracoes/nuvemshop') ||
       /^\/api\/operational\/affiliates\/clients\/[0-9a-f-]{36}(\/|$)/i.test(pathname)
     if (!inPortalArea) {
       if (pathname.startsWith('/api/')) {

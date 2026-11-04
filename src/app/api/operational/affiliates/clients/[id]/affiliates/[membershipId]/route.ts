@@ -8,8 +8,9 @@
 // Approve / reject a sign-up, or switch an approved participant off (and back
 // on). Staff only — see src/lib/affiliates/admin.ts.
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
+import { syncMembershipCoupon } from "@/lib/affiliates/nuvemshop/coupons";
 import { isModuleNotReady, moduleNotReadyResponse, requireClientAccess, writeAudit } from "@/lib/affiliates/admin";
 import { isUuid } from "@/lib/affiliates/campaigns";
 import { can } from "@/lib/affiliates/store-access";
@@ -153,6 +154,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       objectType: "membership",
       objectId: membershipId,
     });
+
+    // Approved → coupon in the store; rejected / switched off → coupon removed (no-op without a connected store).
+    after(() => syncMembershipCoupon(membershipId));
 
     // Tell the affiliate only when the decision really changed.
     if (before.data && before.data.status !== status && (status === "approved" || status === "rejected")) {

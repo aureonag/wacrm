@@ -926,16 +926,50 @@
         "auditEmpty": "No action recorded yet."
       },
       "integrations": {
-        "noticeTitle": "Connectors not active yet",
-        "noticeBody": "This tool does not create coupons in the store or send any Pix yet. Affiliate codes are only reserved here.",
+        "noticeTitle": "Store integrations",
+        "noticeBody": "With Nuvemshop connected, each approved affiliate's coupon is created in the store and orders paid with that coupon arrive here on their own. This tool does not send any Pix yet: payment is recorded as external, with a receipt.",
+        "withError": "With error",
         "clientPlatform": "Platform registered for this client: {platform}.",
         "connected": "Connected",
         "notConnected": "Not connected",
         "viewStatus": "View status",
         "nuvemshop": {
           "name": "Nuvemshop",
-          "description": "Coupon creation and order lookup.",
-          "status": "Nuvemshop: not connected. Per-store connection is a next step."
+          "description": "Creates the affiliates' coupons in the store and receives the orders paid with them.",
+          "status": "Nuvemshop: not connected.",
+          "notConfigured": "The Nuvemshop app is not configured on this server yet (NUVEMSHOP_APP_ID and NUVEMSHOP_APP_SECRET are missing).",
+          "notConfiguredStore": "The Nuvemshop connection is not available yet. Talk to the Aureon team.",
+          "connect": "Connect Nuvemshop",
+          "reconnect": "Reconnect",
+          "opening": "Opening Nuvemshop…",
+          "openError": "Could not open Nuvemshop.",
+          "storeLabel": "Store",
+          "installedOn": "Connected on {date}",
+          "webhooksWarn": "Not every order notice was enabled in the store. Use \"Sync now\" or reconnect.",
+          "couponsLine": "{synced} of {approved} coupons active in the store",
+          "couponsFailed": "{count, plural, one {# coupon with an error} other {# coupons with errors}}",
+          "ordersLine": "Orders received: {total} · paid: {paid}",
+          "syncNow": "Sync now",
+          "syncing": "Syncing…",
+          "syncDone": "Synced: {created} coupons created, {removed} removed and {orders} new orders.",
+          "syncError": "Could not sync right now.",
+          "disconnect": "Disconnect",
+          "disconnectConfirm": "This deletes the affiliates' coupons in the store and stops receiving orders. Orders already recorded stay here. Disconnect?",
+          "disconnectYes": "Yes, disconnect",
+          "disconnectNo": "Cancel",
+          "disconnected": "Nuvemshop disconnected.",
+          "disconnectError": "Could not disconnect.",
+          "pendingTitle": "Stores waiting to be linked",
+          "pendingHint": "These stores installed the app from Nuvemshop itself and do not belong to any client yet.",
+          "link": "Link to this client",
+          "linked": "Store linked. The coupons are being created.",
+          "linkError": "Could not link the store.",
+          "result_connected": "Nuvemshop connected. The coupons of approved affiliates are being created in the store.",
+          "result_denied": "The connection was cancelled on Nuvemshop.",
+          "result_error": "Could not finish the connection. Try again.",
+          "result_other_store": "This client already has another Nuvemshop store connected.",
+          "result_not_configured": "The Nuvemshop app is not configured on this server.",
+          "loadError": "Could not load the Nuvemshop status."
         },
         "tray": {
           "name": "Tray",
@@ -4185,6 +4219,16 @@
       "fileTooLarge": "파일이 너무 큽니다 (최대 16MB).",
       "uploadError": "업로드에 실패했습니다."
     }
+  },
+  "NuvemshopInstall": {
+    "installed": "App installed",
+    "installedBody": "The Aureon app was installed on your store. The Aureon team will finish the activation and get in touch.",
+    "connectedBody": "Your store was connected. You can close this page.",
+    "problem": "Could not install",
+    "deniedBody": "The installation was cancelled. If that was by mistake, install the app again from Nuvemshop.",
+    "errorBody": "Something went wrong during the installation. Try again from Nuvemshop or talk to the Aureon team.",
+    "notConfiguredBody": "The app is not ready at this address yet. Talk to the Aureon team.",
+    "otherStoreBody": "This client already has another Nuvemshop store connected. Talk to the Aureon team."
   },
   "Portal": {
     "login": {

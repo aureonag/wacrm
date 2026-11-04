@@ -7,8 +7,9 @@
 // The portal login for the affiliate does not exist yet (migration 101); this
 // only creates the record. Staff only — see src/lib/affiliates/admin.ts.
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
+import { syncMembershipCoupon } from "@/lib/affiliates/nuvemshop/coupons";
 import {
   BadInput,
   isModuleNotReady,
@@ -167,6 +168,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       objectType: "membership",
       objectId: membership.data.id,
     });
+    // Approved right away: the coupon goes to the store (if one is connected) after the answer.
+    const membershipId = membership.data.id as string;
+    after(() => syncMembershipCoupon(membershipId));
     return NextResponse.json({ id: membership.data.id }, { status: 201 });
   } catch (err) {
     if (err instanceof BadInput) return NextResponse.json({ error: err.message }, { status: 400 });

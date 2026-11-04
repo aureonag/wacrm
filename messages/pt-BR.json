@@ -926,16 +926,50 @@
         "auditEmpty": "Nenhuma ação registrada ainda."
       },
       "integrations": {
-        "noticeTitle": "Conectores ainda não ativados",
-        "noticeBody": "Nenhum cupom é criado na loja e nenhum Pix é enviado por esta ferramenta ainda. Os códigos dos afiliados ficam reservados só aqui.",
+        "noticeTitle": "Integrações da loja",
+        "noticeBody": "Com a Nuvemshop conectada, o cupom de cada afiliado aprovado é criado na loja e os pedidos pagos com esse cupom entram aqui sozinhos. Nenhum Pix é enviado por esta ferramenta ainda: o pagamento é registrado como externo, com comprovante.",
+        "withError": "Com erro",
         "clientPlatform": "Plataforma cadastrada para este cliente: {platform}.",
         "connected": "Conectado",
         "notConnected": "Não conectado",
         "viewStatus": "Ver situação",
         "nuvemshop": {
           "name": "Nuvemshop",
-          "description": "Criação de cupons e consulta de pedidos.",
-          "status": "Nuvemshop: não conectado. A conexão por loja é uma próxima etapa."
+          "description": "Cria os cupons dos afiliados na loja e recebe os pedidos pagos com eles.",
+          "status": "Nuvemshop: não conectado.",
+          "notConfigured": "O app da Nuvemshop ainda não está configurado neste servidor (faltam NUVEMSHOP_APP_ID e NUVEMSHOP_APP_SECRET).",
+          "notConfiguredStore": "A conexão com a Nuvemshop ainda não está disponível. Fale com a equipe Aureon.",
+          "connect": "Conectar Nuvemshop",
+          "reconnect": "Reconectar",
+          "opening": "Abrindo a Nuvemshop…",
+          "openError": "Não foi possível abrir a Nuvemshop.",
+          "storeLabel": "Loja",
+          "installedOn": "Conectada em {date}",
+          "webhooksWarn": "Nem todos os avisos de pedido foram ativados na loja. Use \"Sincronizar agora\" ou reconecte.",
+          "couponsLine": "{synced} de {approved} cupons ativos na loja",
+          "couponsFailed": "{count, plural, one {# cupom com erro} other {# cupons com erro}}",
+          "ordersLine": "Pedidos recebidos: {total} · pagos: {paid}",
+          "syncNow": "Sincronizar agora",
+          "syncing": "Sincronizando…",
+          "syncDone": "Sincronizado: {created} cupons criados, {removed} removidos e {orders} pedidos novos.",
+          "syncError": "Não foi possível sincronizar agora.",
+          "disconnect": "Desconectar",
+          "disconnectConfirm": "Isso apaga na loja os cupons criados para os afiliados e para de receber pedidos. Os pedidos já registrados continuam aqui. Desconectar?",
+          "disconnectYes": "Sim, desconectar",
+          "disconnectNo": "Cancelar",
+          "disconnected": "Nuvemshop desconectada.",
+          "disconnectError": "Não foi possível desconectar.",
+          "pendingTitle": "Lojas aguardando vínculo",
+          "pendingHint": "Estas lojas instalaram o app pela própria Nuvemshop e ainda não pertencem a nenhum cliente.",
+          "link": "Vincular a este cliente",
+          "linked": "Loja vinculada. Os cupons estão sendo criados.",
+          "linkError": "Não foi possível vincular a loja.",
+          "result_connected": "Nuvemshop conectada. Os cupons dos afiliados aprovados estão sendo criados na loja.",
+          "result_denied": "A conexão foi cancelada na Nuvemshop.",
+          "result_error": "Não foi possível concluir a conexão. Tente de novo.",
+          "result_other_store": "Este cliente já tem outra loja Nuvemshop conectada.",
+          "result_not_configured": "O app da Nuvemshop não está configurado neste servidor.",
+          "loadError": "Não foi possível carregar a situação da Nuvemshop."
         },
         "tray": {
           "name": "Tray",
@@ -4185,6 +4219,16 @@
       "fileTooLarge": "Arquivo muito grande (máx. 16 MB).",
       "uploadError": "Falha ao enviar o arquivo."
     }
+  },
+  "NuvemshopInstall": {
+    "installed": "App instalado",
+    "installedBody": "O app da Aureon foi instalado na sua loja. A equipe da Aureon vai concluir a ativação e entra em contato.",
+    "connectedBody": "Sua loja foi conectada. Pode fechar esta página.",
+    "problem": "Não foi possível instalar",
+    "deniedBody": "A instalação foi cancelada. Se foi sem querer, instale o app de novo pela Nuvemshop.",
+    "errorBody": "Algo deu errado na instalação. Tente de novo pela Nuvemshop ou fale com a equipe da Aureon.",
+    "notConfiguredBody": "O app ainda não está pronto neste endereço. Fale com a equipe da Aureon.",
+    "otherStoreBody": "Este cliente já tem outra loja Nuvemshop conectada. Fale com a equipe da Aureon."
   },
   "Portal": {
     "login": {

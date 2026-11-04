@@ -6,12 +6,12 @@ import { toast } from "sonner";
 import { Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "../../../_components/metric";
+import { NuvemshopCard } from "../../../_components/nuvemshop-card";
 import { useWorkspace } from "../../../_components/workspace";
 
-// The store / payment connectors are not built yet: every card says so
-// honestly. "CRM Aureon" is the one that is real — the team is using it now.
-const CONNECTORS = [
-  { key: "nuvemshop", connected: false },
+// Nuvemshop is real (see nuvemshop-card.tsx). Tray and Asaas are not built yet,
+// and say so honestly. "CRM Aureon" is the other real one: the team is using it now.
+const OTHER_CONNECTORS = [
   { key: "tray", connected: false },
   { key: "asaas", connected: false },
   { key: "crm", connected: true },
@@ -49,7 +49,8 @@ export default function AffiliateIntegrationsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {CONNECTORS.map(({ key, connected }) => (
+        <NuvemshopCard />
+        {OTHER_CONNECTORS.map(({ key, connected }) => (
           <section key={key} className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-start justify-between">
               <Plug className="h-6 w-6 text-primary" />

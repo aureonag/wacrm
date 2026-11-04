@@ -8,8 +8,9 @@
 //
 // Aureon staff, or a store user with the right permission — see requireClientAccess in src/lib/affiliates/admin.ts.
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
+import { syncCampaignCoupons } from "@/lib/affiliates/nuvemshop/coupons";
 import {
   BadInput,
   isModuleNotReady,
@@ -139,6 +140,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
     }
 
     await writeAudit(admin, ctx, { clientId: id, action, objectType: "campaign", objectId: campaignId });
+    // Activating / deactivating or changing the discount reaches every coupon in the store (no-op without a connected store).
+    after(() => syncCampaignCoupons(id, campaignId));
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof BadInput) return NextResponse.json({ error: err.message }, { status: 400 });
