@@ -116,7 +116,14 @@ export async function importRecentOrders(
   let path: string | null = `/orders?created_at_min=${encodeURIComponent(since)}&per_page=200`;
   const out = { read: 0, stored: 0, updated: 0 };
   for (let page = 0; path && page < IMPORT_MAX_PAGES; page++) {
-    const res: { data: unknown[]; next: string | null } = await nuvemshopRequest<unknown[]>(auth, "GET", path);
+    let res: { data: unknown[]; next: string | null };
+    try {
+      res = await nuvemshopRequest<unknown[]>(auth, "GET", path);
+    } catch (err) {
+      // A list with no orders is answered with "404 Last page is 0", not with an empty list.
+      if (err instanceof NuvemshopError && err.status === 404) break;
+      throw err;
+    }
     for (const raw of res.data ?? []) {
       out.read++;
       const r = await ingestOrder(admin, integration, raw);

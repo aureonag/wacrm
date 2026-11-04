@@ -13,7 +13,7 @@ vi.mock("./store", () => ({
 
 import { NuvemshopError } from "./api";
 import { syncCampaignCoupons, syncClientCoupons, syncMembershipCoupon } from "./coupons";
-import { ingestOrder } from "./orders-sync";
+import { importRecentOrders, ingestOrder } from "./orders-sync";
 import type { Integration } from "./store";
 
 type Row = Record<string, unknown>;
@@ -152,6 +152,36 @@ describe("ingestOrder", () => {
     expect(await ingestOrder(admin, { ...integration, client_id: null }, order())).toBe("ignored");
     expect(await ingestOrder(admin, integration, { nope: true })).toBe("ignored");
     expect(tables.aff_orders).toHaveLength(0);
+  });
+});
+
+describe("importRecentOrders", () => {
+  const integ = { ...integration };
+
+  beforeEach(() => request.mockReset());
+
+  it("treats the store's '404 Last page is 0' (no orders at all) as an empty list", async () => {
+    request.mockRejectedValueOnce(new NuvemshopError("Last page is 0", 404));
+    await expect(importRecentOrders(integ, 30, fakeAdmin({ aff_orders: [], aff_memberships: [] }))).resolves.toEqual({ read: 0, stored: 0, updated: 0 });
+  });
+
+  it("records the orders of every page and stops when there is no next page", async () => {
+    const tables = {
+      aff_orders: [] as Row[],
+      aff_memberships: [{ id: "m-1", client_id: "client-1", affiliate_id: "a-1", code: "MARIA10", status: "approved" }] as Row[],
+    };
+    request
+      .mockResolvedValueOnce({ data: [order({ id: 1 }), order({ id: 2, coupon: [] })], next: "https://api.example/next" })
+      .mockResolvedValueOnce({ data: [order({ id: 3 })], next: null });
+    const r = await importRecentOrders(integ, 30, fakeAdmin(tables));
+    expect(r).toEqual({ read: 3, stored: 2, updated: 0 });
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(tables.aff_orders.map((o) => o.external_id)).toEqual(["1", "3"]);
+  });
+
+  it("still fails on a real error", async () => {
+    request.mockRejectedValueOnce(new NuvemshopError("boom", 500));
+    await expect(importRecentOrders(integ, 30, fakeAdmin({}))).rejects.toThrow("boom");
   });
 });
 
