@@ -125,18 +125,30 @@ export function parseRegisterInput(body: unknown): RegisterInput {
   };
 }
 
-/** Coupon code candidate from the person's name: letters + random digits. */
-export function couponCandidate(name: string, attempt: number): string {
-  const letters = name
+const lettersOf = (s: string) =>
+  s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toUpperCase()
-    .replace(/[^A-Z]/g, "")
-    .slice(0, 6);
-  const base = letters.length >= 3 ? letters : (letters + "AFF").slice(0, 3);
-  const digits = attempt < 4 ? 2 : attempt < 8 ? 3 : 4;
-  const n = Math.floor(Math.random() * 10 ** digits);
-  return `${base}${String(n).padStart(digits, "0")}`;
+    .replace(/[^A-Z]/g, "");
+
+/**
+ * The coupon code an affiliate gets: FIRST NAME + the campaign's discount, e.g.
+ * "Mauro Henrique" in a 10% campaign → MAURO10. When that code is taken, the next
+ * attempts add letters of the surname before the discount (MAUROH10, MAUROHE10, …)
+ * and finally a counter (MAURO710), so the code always ends with the discount.
+ * `attempt` starts at 0.
+ */
+export function couponCandidate(name: string, attempt: number, discount: number | string): string {
+  const [firstWord = "", ...others] = name.trim().split(/\s+/);
+  const first = lettersOf(firstWord).slice(0, 20) || "AFF";
+  const surname = lettersOf(others.join("")).slice(0, 6);
+  const n = Number(discount);
+  const suffix = Number.isFinite(n) && n > 0 ? String(Number.isInteger(n) ? n : Math.round(n)) : "";
+
+  if (attempt <= 0) return `${first}${suffix}`;
+  if (attempt <= surname.length) return `${first}${surname.slice(0, attempt)}${suffix}`;
+  return `${first}${attempt - surname.length}${suffix}`;
 }
 
 export interface ProfileInput {

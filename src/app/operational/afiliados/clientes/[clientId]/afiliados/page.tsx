@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import { cn } from "@/lib/utils";
 import type { Campaign } from "@/lib/affiliates/campaigns";
+import { couponCandidate } from "@/lib/affiliates/registration";
 
 type MembershipStatus = "pending" | "approved" | "rejected" | "inactive";
 
@@ -336,7 +337,17 @@ export default function AffiliateMembersPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="m-name">{t("members.fieldName")}</Label>
-              <Input id="m-name" value={form.name} onChange={set("name")} maxLength={200} />
+              <Input
+                id="m-name"
+                value={form.name}
+                onChange={set("name")}
+                // Suggests the usual code (first name + the campaign discount) while the field is still empty.
+                onBlur={() => {
+                  const camp = activeCampaigns.find((c) => c.id === form.campaign_id);
+                  if (camp && !form.code.trim() && form.name.trim()) setForm((f) => ({ ...f, code: couponCandidate(f.name, 0, camp.discount) }));
+                }}
+                maxLength={200}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="m-email">{t("members.fieldEmail")}</Label>

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     const found = await ctx.admin
       .from("aff_campaigns")
-      .select("id, client_id, policy, status, revision, end_date, aff_clients(status)")
+      .select("id, client_id, policy, status, revision, discount, end_date, aff_clients(status)")
       .eq("id", b.campaign_id)
       .maybeSingle();
     if (found.error) return NextResponse.json({ error: "Failed to join" }, { status: 500 });
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       policy: string;
       status: string;
       revision: number;
+      discount: number | string;
       end_date: string | null;
       aff_clients: { status: string } | null;
     } | null;
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
           client_id: c.client_id,
           campaign_id: c.id,
           affiliate_id: ctx.affiliate.id,
-          code: couponCandidate(ctx.affiliate.name, attempt),
+          code: couponCandidate(ctx.affiliate.name, attempt, c.discount),
           status: "pending",
           accepted_revision: c.revision,
           accepted_policy: c.policy,
