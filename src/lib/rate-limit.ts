@@ -203,6 +203,10 @@ export const RATE_LIMITS = {
    *  real inbox, so — like contractSendCode — 3 per 10 minutes, applied both
    *  per IP and per e-mail address. */
   affiliateSendCode: { limit: 3, windowMs: 600_000 },
+  /** Same endpoint, counted per IP only: an office or a school shares one IP, so
+   *  a whole team signing up (or testing) at once must not lock each other out.
+   *  The per-address limit above is what protects each inbox. */
+  affiliateSendCodeIp: { limit: 15, windowMs: 600_000 },
   /** Portal: "esqueci minha senha" / convite (public). Each success mails a real
    *  inbox: 3 per 10 minutes, applied per IP and per address. */
   portalAccessCode: { limit: 3, windowMs: 600_000 },

@@ -22,7 +22,7 @@ import { newSignupCode, storeSignupCode } from "@/lib/affiliates/signup-codes";
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
 export async function POST(request: Request) {
-  const ipLimit = checkRateLimit(`aff-code-ip:${clientIp(request)}`, RATE_LIMITS.affiliateSendCode);
+  const ipLimit = checkRateLimit(`aff-code-ip:${clientIp(request)}`, RATE_LIMITS.affiliateSendCodeIp);
   if (!ipLimit.success) return rateLimitResponse(ipLimit);
 
   try {

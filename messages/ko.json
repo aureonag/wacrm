@@ -4331,6 +4331,7 @@
       "codeSent": "We sent a 6-digit code to {email}. Enter it below to finish signing up.",
       "codeLabel": "Confirmation code",
       "codeHint": "The code is valid for 10 minutes. Check your spam folder too.",
+      "codeExisting": "Already signed up with this e-mail? In that case no code is sent: sign in to the portal and join the campaign from there.",
       "finish": "Finish sign-up",
       "resend": "Resend code",
       "resendIn": "Resend in {s}s",

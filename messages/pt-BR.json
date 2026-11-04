@@ -4331,6 +4331,7 @@
       "codeSent": "Enviamos um código de 6 dígitos para {email}. Digite-o abaixo para concluir a inscrição.",
       "codeLabel": "Código de confirmação",
       "codeHint": "O código vale por 10 minutos. Olhe também a caixa de spam.",
+      "codeExisting": "Já se cadastrou antes com este e-mail? Nesse caso nenhum código é enviado: entre no portal e participe da campanha por lá.",
       "finish": "Concluir inscrição",
       "resend": "Reenviar código",
       "resendIn": "Reenviar em {s}s",

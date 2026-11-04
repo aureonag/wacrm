@@ -237,6 +237,12 @@ export default function CampaignSignupPage() {
                   onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
                 />
                 <p className="text-xs text-muted-foreground">{t("codeHint")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("codeExisting")}{" "}
+                  <Link href="/portal/entrar" className="font-medium text-primary hover:underline">
+                    {t("goPortal")}
+                  </Link>
+                </p>
               </div>
               {error && (
                 <p role="alert" className="text-sm text-destructive">
