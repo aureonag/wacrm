@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: Ctx) {
 
     const { data, error } = await ctx.supabase
       .from("reportei_reports")
-      .select("id, client_id, title, notes, snapshot, created_at, ops_clients(name, code)")
+      .select("id, client_id, title, notes, snapshot, share_token, created_at, ops_clients(name, code)")
       .eq("id", id)
       .eq("account_id", ctx.accountId)
       .maybeSingle();
@@ -39,6 +39,7 @@ export async function GET(_req: Request, { params }: Ctx) {
         title: data.title,
         notes: data.notes ?? "",
         snapshot: data.snapshot,
+        shareToken: data.share_token ?? null,
         createdAt: data.created_at,
       },
     });
