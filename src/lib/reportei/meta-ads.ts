@@ -3,6 +3,7 @@
 // encrypted and only ever used here, on the server, to read the ad accounts that
 // person can already see. Nothing here returns, logs or exposes a token.
 
+import type { DailyPoint } from "@/lib/reportei/report";
 export const META_API_VERSION = "v21.0";
 export const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 const MAX_ACCOUNTS = 500;
@@ -294,4 +295,33 @@ export async function fetchAccountInsights(token: string, accountId: string, sin
     throw new MetaAdsError(`Meta insights failed (${res.status}${body.error?.code ? `/${body.error.code}` : ""})`, metaErrorKind(body.error?.code), describeMetaError(body.error));
   }
   return parseInsights(body.data?.[0]);
+}
+
+/** Insights rows broken down by day (`time_increment=1`) to points. Rows without a valid date are dropped. Pure. */
+export function parseDaily(rows: Record<string, unknown>[] | undefined): DailyPoint[] {
+  const out: DailyPoint[] = [];
+  for (const row of rows ?? []) {
+    const date = row.date_start;
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const { spend, impressions, reach, clicks } = parseInsights(row);
+    out.push({ date, spend, impressions, reach, clicks });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Account-level numbers day by day for a period (at most 366 rows, so one page). */
+export async function fetchDailyInsights(token: string, accountId: string, since: string, until: string): Promise<DailyPoint[]> {
+  if (!/^act_\d+$/.test(accountId)) throw new MetaAdsError("Invalid ad account id", "request_failed");
+  const url = new URL(`${META_API_BASE}/${accountId}/insights`);
+  url.searchParams.set("fields", "spend,impressions,reach,clicks");
+  url.searchParams.set("time_range", JSON.stringify({ since, until }));
+  url.searchParams.set("time_increment", "1");
+  url.searchParams.set("level", "account");
+  url.searchParams.set("limit", "400");
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  const body = (await res.json().catch(() => ({}))) as { data?: Record<string, unknown>[]; error?: { code?: number; message?: string } };
+  if (!res.ok || body.error) {
+    throw new MetaAdsError(`Meta daily insights failed (${res.status}${body.error?.code ? `/${body.error.code}` : ""})`, metaErrorKind(body.error?.code), describeMetaError(body.error));
+  }
+  return parseDaily(body.data);
 }

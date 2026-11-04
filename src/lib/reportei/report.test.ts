@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidRange, isYmd, previousRange, rangeDays, toneFor, variation } from "./report";
+import { fillDays, isValidRange, isYmd, previousRange, rangeDays, toneFor, variation } from "./report";
 
 describe("ranges", () => {
   it("counts both ends", () => {
@@ -51,5 +51,20 @@ describe("toneFor", () => {
     expect(toneFor("spend", 40)).toBe("neutral");
     expect(toneFor("clicks", 0.01)).toBe("neutral");
     expect(toneFor("reach", null)).toBe("neutral");
+  });
+});
+
+describe("fillDays", () => {
+  const day = (date: string, spend = 0) => ({ date, spend, impressions: 0, reach: 0, clicks: 0 });
+
+  it("returns one point per day, zero-filling the days Meta skipped", () => {
+    const out = fillDays([day("2026-10-01", 5), day("2026-10-03", 7)], "2026-10-01", "2026-10-04");
+    expect(out.map((p) => p.date)).toEqual(["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"]);
+    expect(out.map((p) => p.spend)).toEqual([5, 0, 7, 0]);
+  });
+
+  it("ignores days outside the range and keeps the total", () => {
+    const out = fillDays([day("2026-09-30", 99), day("2026-10-01", 3), day("2026-10-02", 4)], "2026-10-01", "2026-10-02");
+    expect(out.reduce((s, p) => s + p.spend, 0)).toBe(7);
   });
 });

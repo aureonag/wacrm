@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     }
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const accounts = await collectAccountSnapshots(ctx, clientId, { ...range, compare }).catch((err: unknown) => {
+    const accounts = await collectAccountSnapshots(ctx, clientId, { ...range, compare, daily: true }).catch((err: unknown) => {
       console.error("[POST reportei/reports] collect", err instanceof Error ? err.message : err);
       return null;
     });

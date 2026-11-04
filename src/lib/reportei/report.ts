@@ -11,6 +11,17 @@ export type MetricKey = (typeof METRICS)[number];
 const LOWER_IS_BETTER: ReadonlySet<MetricKey> = new Set(["cpc", "cpm"]);
 const NEUTRAL: ReadonlySet<MetricKey> = new Set(["spend"]);
 
+/** One day of an ad account, as saved in a report for the charts. */
+export interface DailyPoint {
+  date: string;
+  spend: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+}
+export const DAILY_METRICS = ["spend", "clicks", "impressions", "reach"] as const;
+export type DailyMetric = (typeof DAILY_METRICS)[number];
+
 export type AccountError = "connection_unavailable" | "token_invalid" | "permission" | "request_failed";
 
 export interface AccountSnapshot {
@@ -20,6 +31,9 @@ export interface AccountSnapshot {
   insights?: AccountInsights;
   /** The comparison period for the same account; absent when comparison is off or it failed. */
   previous?: AccountInsights;
+  /** Per-day series for the period and, when comparing, the previous one. Absent in reports saved before charts existed. */
+  daily?: DailyPoint[];
+  dailyPrevious?: DailyPoint[];
   error?: AccountError;
   detail?: string;
 }
@@ -76,4 +90,16 @@ export function toneFor(metric: MetricKey, change: number | null): Tone {
   if (change === null || Math.abs(change) < 0.05 || NEUTRAL.has(metric)) return "neutral";
   const up = change > 0;
   return LOWER_IS_BETTER.has(metric) ? (up ? "bad" : "good") : up ? "good" : "bad";
+}
+
+/** One point per day from `since` to `until`, in order; days Meta did not report are zeros. Extra or duplicate days are ignored. */
+export function fillDays(points: readonly DailyPoint[], since: string, until: string): DailyPoint[] {
+  const byDate = new Map(points.map((p) => [p.date, p]));
+  const out: DailyPoint[] = [];
+  const total = rangeDays(since, until);
+  for (let i = 0; i < total; i++) {
+    const date = toYmd(new Date(toDate(since).getTime() + i * DAY));
+    out.push(byDate.get(date) ?? { date, spend: 0, impressions: 0, reach: 0, clicks: 0 });
+  }
+  return out;
 }
