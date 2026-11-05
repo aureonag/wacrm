@@ -360,7 +360,8 @@
         "integrations": "Integrações",
         "reports": "Relatórios",
         "automations": "Automações",
-        "templates": "Templates"
+        "templates": "Templates",
+        "dashboards": "Dashboards"
       },
       "clientsPage": {
         "title": "Clientes",
@@ -612,6 +613,31 @@
         "deleteConfirm": "Apagar o template \"{name}\"? Relatórios já gerados não mudam; automações que usavam ele voltam ao padrão.",
         "deleted": "Template apagado.",
         "deleteError": "Não foi possível apagar o template."
+      },
+      "dashboardsPage": {
+        "title": "Dashboards",
+        "description": "Os números ao vivo de cada cliente com conta de anúncios, no período escolhido e contra o anterior.",
+        "refresh": "Atualizar",
+        "sortLabel": "Ordenar por",
+        "colClient": "Cliente",
+        "back": "Voltar aos dashboards",
+        "error": "Não foi possível carregar os dashboards.",
+        "emptyTitle": "Nenhum cliente com conta de anúncios",
+        "emptyHint": "Ligue uma conta Meta a um cliente na tela Clientes para ele aparecer aqui.",
+        "accountsLine": "{readable} de {count} contas lidas",
+        "noData": "Sem dados no período",
+        "mixedCurrency": "Contas em moedas diferentes: o valor não é somado.",
+        "loaded": "{count} de {total} clientes",
+        "loadMore": "Carregar mais",
+        "error_connection_unavailable": "Conexão com a Meta indisponível",
+        "error_token_invalid": "Conexão com a Meta expirada, reconecte",
+        "error_permission": "Sem permissão na conta de anúncios",
+        "error_request_failed": "Falha ao ler a Meta",
+        "notFound": "Cliente não encontrado.",
+        "panelError": "Não foi possível carregar o painel do cliente.",
+        "noAccounts": "Este cliente não tem conta de anúncios ligada.",
+        "generateFromHere": "Gerar relatório a partir daqui",
+        "liveSubtitle": "Painel ao vivo, ainda não salvo"
       }
     },
     "affiliates": {
