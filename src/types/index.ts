@@ -275,7 +275,9 @@ export type NotificationType =
   | 'approval_rejected'
   | 'deal_won'
   | 'kickoff_task_created'
-  | 'task_updated';
+  | 'task_updated'
+  | 'report_ready'
+  | 'report_failed';
 
 export interface Notification {
   id: string;
@@ -291,6 +293,8 @@ export interface Notification {
   /** Set for task/board-related types (migration 067). */
   task_id?: string;
   board_id?: string;
+  /** Set for `report_ready` (migration 164). */
+  report_id?: string;
   /** Who triggered it. Null when an automation/system assigned it. */
   actor_user_id?: string;
   title: string;

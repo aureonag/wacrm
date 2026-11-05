@@ -40,7 +40,7 @@ describe("groups", () => {
   it("list every notification type exactly once", () => {
     const all = NOTIFICATION_GROUPS.flatMap((g) => g.types);
     expect(new Set(all).size).toBe(all.length);
-    expect(all).toHaveLength(26);
+    expect(all).toHaveLength(28);
   });
   it("every default type belongs to a group", () => {
     const all = new Set(NOTIFICATION_GROUPS.flatMap((g) => g.types));

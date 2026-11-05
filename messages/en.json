@@ -2747,7 +2747,9 @@
       "contract_signed": "Contract signed",
       "deal_won": "Deal won",
       "kickoff_task_created": "Kickoff task created",
-      "conversation_assigned": "Conversation assigned to you"
+      "conversation_assigned": "Conversation assigned to you",
+      "report_ready": "Automatic report ready",
+      "report_failed": "Automatic report failed"
     },
     "bellLabel": "Notifications",
     "bellUnread": "Notifications: {count} unread",

@@ -8,6 +8,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { automationCompare, automationRange, automationTitle, dueDay, isFrequency } from "@/lib/reportei/automation";
+import { failedNotification, notifyAutomation, readyNotification } from "@/lib/reportei/automation-notify";
 import { refreshDueConnections } from "@/lib/reportei/meta-connection";
 import { resolvePeriod } from "@/lib/reportei/periods";
 import { createSavedReport, type CreateReportResult } from "@/lib/reportei/report-create";
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
 
   const { data: rows, error } = await db
     .from("reportei_automations")
-    .select("id, account_id, client_id, frequency, last_run_on, created_at, ops_clients(name)")
+    .select("id, account_id, client_id, frequency, last_run_on, last_error, created_by, created_at, ops_clients(name)")
     .eq("active", true);
   if (error) {
     console.error("[reportei automations/run] list", error.message);
@@ -76,10 +77,14 @@ export async function GET(request: Request) {
     if (result.ok) {
       summary.generated++;
       await db.from("reportei_automations").update({ last_report_id: result.id, last_error: null }).eq("id", row.id);
+      await notifyAutomation(db, { accountId: row.account_id as string, userId: row.created_by as string | null, reportId: result.id, notice: readyNotification(row.frequency, client?.name ?? "", range) });
     } else {
       summary.failed++;
       // Give the day back so the next ping tries again, and show why on the screen.
-      await db.from("reportei_automations").update({ last_run_on: previousRun, last_error: ERROR_CODE[result.reason] }).eq("id", row.id);
+      const code = ERROR_CODE[result.reason];
+      await db.from("reportei_automations").update({ last_run_on: previousRun, last_error: code }).eq("id", row.id);
+      // It retries every day: warn once per kind of failure, not on every retry.
+      if (row.last_error !== code) await notifyAutomation(db, { accountId: row.account_id as string, userId: row.created_by as string | null, notice: failedNotification(client?.name ?? "", code) });
     }
   }
 

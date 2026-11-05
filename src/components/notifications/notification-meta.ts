@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   FileCheck,
+  FileText,
   ListPlus,
   MessageSquare,
   Paperclip,
@@ -52,11 +53,15 @@ export const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
   deal_won: Trophy,
   kickoff_task_created: Rocket,
   task_updated: Pencil,
+  report_ready: FileText,
+  report_failed: AlertCircle,
 };
 
 /** Where clicking a notification leads (null: nothing to open). */
 export function notificationHref(n: Notification): string | null {
   if (n.conversation_id) return `/inbox?c=${n.conversation_id}`;
+  if (n.report_id) return `/operational/reportei/relatorios/${n.report_id}`;
+  if (n.type === "report_failed") return "/operational/reportei/automacoes";
   if (n.deal_id) return `/pipelines/deals/${n.deal_id}`;
   if (n.board_id && n.task_id) return `/operational/boards/${n.board_id}?task=${n.task_id}`;
   return null;
