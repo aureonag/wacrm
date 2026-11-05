@@ -360,7 +360,8 @@
         "integrations": "Integrations",
         "reports": "Reports",
         "automations": "Automations",
-        "templates": "Templates"
+        "templates": "Templates",
+        "dashboards": "Dashboards"
       },
       "clientsPage": {
         "title": "Clients",
@@ -612,6 +613,31 @@
         "deleteConfirm": "Delete the template \"{name}\"? Reports already generated do not change; automations that used it go back to the default.",
         "deleted": "Template deleted.",
         "deleteError": "Could not delete the template."
+      },
+      "dashboardsPage": {
+        "title": "Dashboards",
+        "description": "Live numbers for every client with an ad account, for the chosen period and against the previous one.",
+        "refresh": "Refresh",
+        "sortLabel": "Sort by",
+        "colClient": "Client",
+        "back": "Back to dashboards",
+        "error": "Could not load the dashboards.",
+        "emptyTitle": "No client with an ad account",
+        "emptyHint": "Link a Meta account to a client on the Clients screen to see it here.",
+        "accountsLine": "{readable} of {count} accounts read",
+        "noData": "No data in the period",
+        "mixedCurrency": "Accounts in different currencies: the amount is not summed.",
+        "loaded": "{count} of {total} clients",
+        "loadMore": "Load more",
+        "error_connection_unavailable": "Meta connection unavailable",
+        "error_token_invalid": "Meta connection expired, reconnect",
+        "error_permission": "No permission on the ad account",
+        "error_request_failed": "Could not read Meta",
+        "notFound": "Client not found.",
+        "panelError": "Could not load the client panel.",
+        "noAccounts": "This client has no ad account linked.",
+        "generateFromHere": "Generate report from here",
+        "liveSubtitle": "Live panel, not saved yet"
       }
     },
     "affiliates": {

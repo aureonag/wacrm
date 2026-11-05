@@ -9,6 +9,7 @@ import {
   ChevronDown,
   FileBarChart,
   FileText,
+  LayoutDashboard,
   LayoutTemplate,
   Plug,
   Repeat,
@@ -31,6 +32,7 @@ const ADMIN_SECTIONS = [
 ] as const;
 
 const OPERATION_SECTIONS = [
+  { slug: "dashboards", key: "dashboards", icon: LayoutDashboard },
   { slug: "relatorios", key: "reports", icon: FileText },
   { slug: "automacoes", key: "automations", icon: Repeat },
   { slug: "templates", key: "templates", icon: LayoutTemplate },

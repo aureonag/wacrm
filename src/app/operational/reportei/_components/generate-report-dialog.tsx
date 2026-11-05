@@ -23,16 +23,19 @@ export function GenerateReportDialog({
   onOpenChange,
   clientId,
   clientName,
+  initialPeriod = "last_30d",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clientId: string;
   clientName: string;
+  /** The period the dialog opens with (the dashboard passes the one on screen). */
+  initialPeriod?: Period;
 }) {
   const t = useTranslations("Operational.reportei.reports");
   const router = useRouter();
   const [title, setTitle] = useState("");
-  const [choice, setChoice] = useState<Choice>("last_30d");
+  const [choice, setChoice] = useState<Choice>(initialPeriod);
   const [since, setSince] = useState("");
   const [until, setUntil] = useState("");
   const [compare, setCompare] = useState(true);
