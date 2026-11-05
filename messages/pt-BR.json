@@ -491,7 +491,8 @@
         "createError": "Não foi possível gerar o relatório. Tente de novo.",
         "createNoAccount": "Nenhuma conta pôde ser lida agora. Confira as integrações.",
         "savedTitle": "Relatórios salvos",
-        "savedEmpty": "Nenhum relatório salvo ainda."
+        "savedEmpty": "Nenhum relatório salvo ainda.",
+        "autoBadge": "Automático"
       },
       "reportsPage": {
         "title": "Relatórios",
@@ -536,6 +537,43 @@
         "chartMetric": "Métrica do gráfico",
         "chartPrevious": "Período anterior",
         "chartLegend": "Linha tracejada: período anterior, dia a dia."
+      },
+      "automationsPanel": {
+        "intro": "Gera o relatório sozinho, com comparação e gráficos, e deixa o link público pronto para você copiar e mandar. Nada é enviado ao cliente.",
+        "frequencyLabel": "Frequência",
+        "freq_weekly": "Semanal",
+        "freqHint_weekly": "Toda segunda, últimos 7 dias",
+        "freq_monthly": "Mensal",
+        "freqHint_monthly": "Todo dia 1, mês anterior",
+        "activate": "Ativar automação",
+        "pause": "Pausar",
+        "resume": "Retomar",
+        "statusOn": "Ativa",
+        "statusOff": "Pausada",
+        "saved": "Automação salva.",
+        "saveError": "Não foi possível salvar.",
+        "error": "Não foi possível carregar a automação.",
+        "noIntegrations": "Ligue uma conta de anúncios a este cliente para ativar a automação.",
+        "lastTitle": "Último relatório gerado",
+        "neverRan": "Ainda não gerou nenhum. O primeiro sai no próximo dia agendado.",
+        "lastRunNoReport": "Última tentativa em {date}, sem relatório.",
+        "linkLabel": "Link público",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "copyError": "Não consegui copiar. Selecione o link e copie.",
+        "linkOff": "O link público deste relatório está desativado.",
+        "error_no_integrations": "Este cliente não tem conta de anúncios ligada.",
+        "error_unreadable": "Não consegui ler nenhuma conta na Meta. Confira a conexão.",
+        "error_request_failed": "Falha ao gerar. Tenta de novo no próximo dia."
+      },
+      "automationsPage": {
+        "title": "Automações",
+        "description": "Clientes com relatório gerado sozinho, semanal ou mensal.",
+        "error": "Não foi possível carregar as automações.",
+        "emptyTitle": "Nenhuma automação ainda",
+        "emptyHint": "Abra um cliente, vá na aba Automações e ative uma.",
+        "lastRun": "última em {date}",
+        "neverRan": "ainda não rodou"
       }
     },
     "affiliates": {

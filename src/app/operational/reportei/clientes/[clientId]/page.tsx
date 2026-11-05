@@ -15,6 +15,7 @@ import { ClientCode } from "@/components/operational/client-code";
 import { cn } from "@/lib/utils";
 import type { ClientStatus } from "@/lib/operational/clients-projects";
 import { IntegrationsPanel, type Integration } from "../../_components/integrations-panel";
+import { AutomationPanel } from "../../_components/automation-panel";
 import { ReportsPanel } from "../../_components/reports-panel";
 import { WizardProgress } from "../../_components/wizard-progress";
 
@@ -151,7 +152,7 @@ export default function ReporteiClientPage({
       ) : tab === "reports" ? (
         <ReportsPanel clientId={client.id} clientName={client.name} hasIntegrations={integrations.length > 0} />
       ) : (
-        <EmptyState title={t("comingSoonTitle")} hint={t("comingSoonHint")} className="min-h-48" />
+        <AutomationPanel clientId={client.id} hasIntegrations={integrations.length > 0} />
       )}
     </>
   );

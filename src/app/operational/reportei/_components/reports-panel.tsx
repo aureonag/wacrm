@@ -29,6 +29,7 @@ interface SavedReport {
   periodStart: string;
   periodEnd: string;
   compared: boolean;
+  auto: boolean;
   createdAt: string;
 }
 
@@ -156,7 +157,10 @@ export function ReportsPanel({ clientId, clientName, hasIntegrations }: { client
                 <Link href={`/operational/reportei/relatorios/${r.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
                   <FileText className="h-4 w-4 shrink-0 text-primary" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{r.title}</p>
+                    <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <span className="truncate">{r.title}</span>
+                      {r.auto && <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">{t("autoBadge")}</span>}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {t("range", { since: showDate(r.periodStart), until: showDate(r.periodEnd) })} · {showDateTime(r.createdAt)}
                     </p>
