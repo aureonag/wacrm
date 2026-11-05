@@ -10,7 +10,7 @@ export const NOTIFICATION_GROUPS: { key: string; types: NotificationType[] }[] =
   { key: "status", types: ["task_moved", "task_transferred", "task_completed", "task_reopened", "task_urgent", "task_updated", "task_file_added"] },
   { key: "dates", types: ["due_date_set", "due_date_changed", "due_date_approaching", "task_overdue"] },
   { key: "subtasks", types: ["subtask_created", "subtask_completed", "approval_requested", "approval_approved", "approval_rejected"] },
-  { key: "business", types: ["contract_signed", "deal_won", "kickoff_task_created", "conversation_assigned"] },
+  { key: "business", types: ["contract_signed", "deal_won", "kickoff_task_created", "conversation_assigned", "report_ready", "report_failed"] },
 ];
 
 /** On from the start: everything that happens on a task or deal. The person can switch types off in the bell. */

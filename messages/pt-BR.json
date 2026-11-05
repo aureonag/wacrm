@@ -2747,7 +2747,9 @@
       "contract_signed": "Contrato assinado",
       "deal_won": "Negócio ganho",
       "kickoff_task_created": "Tarefa de kickoff criada",
-      "conversation_assigned": "Conversa atribuída a você"
+      "conversation_assigned": "Conversa atribuída a você",
+      "report_ready": "Relatório automático pronto",
+      "report_failed": "Falha ao gerar relatório automático"
     },
     "bellLabel": "Notificações",
     "bellUnread": "Notificações: {count} não lidas",
