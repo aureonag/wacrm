@@ -11,6 +11,8 @@ import { automationCompare, automationRange, automationTitle, dueDay, isFrequenc
 import { failedNotification, notifyAutomation, readyNotification } from "@/lib/reportei/automation-notify";
 import { refreshDueConnections } from "@/lib/reportei/meta-connection";
 import { resolvePeriod } from "@/lib/reportei/periods";
+import { optionsOf } from "@/lib/reportei/template";
+import { loadTemplate } from "@/lib/reportei/template-store";
 import { createSavedReport, type CreateReportResult } from "@/lib/reportei/report-create";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
 
   const { data: rows, error } = await db
     .from("reportei_automations")
-    .select("id, account_id, client_id, frequency, last_run_on, last_error, created_by, created_at, ops_clients(name)")
+    .select("id, account_id, client_id, frequency, last_run_on, last_error, created_by, template_id, created_at, ops_clients(name)")
     .eq("active", true);
   if (error) {
     console.error("[reportei automations/run] list", error.message);
@@ -61,14 +63,17 @@ export async function GET(request: Request) {
 
     const client = Array.isArray(row.ops_clients) ? row.ops_clients[0] : row.ops_clients;
     const range = automationRange(row.frequency, day);
+    // A template that was deleted since is simply gone: the report falls back to the default.
+    const template = row.template_id ? await loadTemplate(db, row.account_id as string, row.template_id as string) : null;
     const result: CreateReportResult = await createSavedReport(db, {
       accountId: row.account_id as string,
       clientId: row.client_id as string,
       title: automationTitle(row.frequency, client?.name ?? "", range),
       range,
-      compare: automationCompare(row.frequency, range),
+      compare: template?.compare === false ? null : automationCompare(row.frequency, range),
       createdBy: null,
       auto: true,
+      options: template ? optionsOf(template) : undefined,
     }).catch((err: unknown) => {
       console.error("[reportei automations/run] generate", err instanceof Error ? err.message : err);
       return { ok: false, reason: "db_error" } as const;

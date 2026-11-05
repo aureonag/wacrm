@@ -492,7 +492,9 @@
         "createNoAccount": "Nenhuma conta pôde ser lida agora. Confira as integrações.",
         "savedTitle": "Relatórios salvos",
         "savedEmpty": "Nenhum relatório salvo ainda.",
-        "autoBadge": "Automático"
+        "autoBadge": "Automático",
+        "templateLabel": "Template",
+        "templateDefault": "Padrão (tudo)"
       },
       "reportsPage": {
         "title": "Relatórios",
@@ -564,7 +566,9 @@
         "linkOff": "O link público deste relatório está desativado.",
         "error_no_integrations": "Este cliente não tem conta de anúncios ligada.",
         "error_unreadable": "Não consegui ler nenhuma conta na Meta. Confira a conexão.",
-        "error_request_failed": "Falha ao gerar. Tenta de novo no próximo dia."
+        "error_request_failed": "Falha ao gerar. Tenta de novo no próximo dia.",
+        "templateLabel": "Template do relatório",
+        "templateDefault": "Padrão (tudo)"
       },
       "automationsPage": {
         "title": "Automações",
@@ -574,6 +578,40 @@
         "emptyHint": "Abra um cliente, vá na aba Automações e ative uma.",
         "lastRun": "última em {date}",
         "neverRan": "ainda não rodou"
+      },
+      "templatesPage": {
+        "title": "Templates",
+        "description": "Modelos que decidem o que aparece no relatório: métricas, gráfico, comparação e um texto de abertura.",
+        "defaultNote": "Sem template, o relatório sai no padrão: todas as métricas e o gráfico diário. Editar um template não muda relatórios já gerados.",
+        "new": "Novo template",
+        "edit": "Editar",
+        "delete": "Apagar",
+        "error": "Não foi possível carregar os templates.",
+        "emptyTitle": "Nenhum template ainda",
+        "emptyHint": "Crie um para gerar relatórios mais enxutos, como um resumo só com gasto e cliques.",
+        "withChart": "com gráfico",
+        "noChart": "sem gráfico",
+        "withCompare": "com comparação",
+        "noCompare": "sem comparação",
+        "newTitle": "Novo template",
+        "editTitle": "Editar template",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Ex.: Resumo para o cliente",
+        "metricsLabel": "Métricas no relatório",
+        "metricsRequired": "Escolha ao menos uma métrica.",
+        "chartLabel": "Mostrar gráfico diário",
+        "chartMetricsLabel": "Métricas do gráfico",
+        "chartMetricsRequired": "Escolha ao menos uma métrica para o gráfico.",
+        "compareLabel": "Comparar com o período anterior por padrão",
+        "introLabel": "Texto de abertura (opcional)",
+        "introPlaceholder": "Aparece no topo do relatório, antes dos números.",
+        "cancel": "Cancelar",
+        "save": "Salvar",
+        "saved": "Template salvo.",
+        "saveError": "Não foi possível salvar o template.",
+        "deleteConfirm": "Apagar o template \"{name}\"? Relatórios já gerados não mudam; automações que usavam ele voltam ao padrão.",
+        "deleted": "Template apagado.",
+        "deleteError": "Não foi possível apagar o template."
       }
     },
     "affiliates": {

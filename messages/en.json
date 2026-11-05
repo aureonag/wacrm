@@ -492,7 +492,9 @@
         "createNoAccount": "No account could be read right now. Check the integrations.",
         "savedTitle": "Saved reports",
         "savedEmpty": "No saved reports yet.",
-        "autoBadge": "Automatic"
+        "autoBadge": "Automatic",
+        "templateLabel": "Template",
+        "templateDefault": "Default (everything)"
       },
       "reportsPage": {
         "title": "Reports",
@@ -564,7 +566,9 @@
         "linkOff": "The public link of this report is turned off.",
         "error_no_integrations": "This client has no ad account linked.",
         "error_unreadable": "Could not read any account on Meta. Check the connection.",
-        "error_request_failed": "Could not generate. It will retry on the next run."
+        "error_request_failed": "Could not generate. It will retry on the next run.",
+        "templateLabel": "Report template",
+        "templateDefault": "Default (everything)"
       },
       "automationsPage": {
         "title": "Automations",
@@ -574,6 +578,40 @@
         "emptyHint": "Open a client, go to the Automations tab and turn one on.",
         "lastRun": "last on {date}",
         "neverRan": "has not run yet"
+      },
+      "templatesPage": {
+        "title": "Templates",
+        "description": "Models that decide what a report shows: metrics, chart, comparison and an opening text.",
+        "defaultNote": "Without a template the report comes out in the default way: every metric and the daily chart. Editing a template does not change reports already generated.",
+        "new": "New template",
+        "edit": "Edit",
+        "delete": "Delete",
+        "error": "Could not load the templates.",
+        "emptyTitle": "No templates yet",
+        "emptyHint": "Create one for leaner reports, like a summary with only spend and clicks.",
+        "withChart": "with chart",
+        "noChart": "no chart",
+        "withCompare": "with comparison",
+        "noCompare": "no comparison",
+        "newTitle": "New template",
+        "editTitle": "Edit template",
+        "nameLabel": "Name",
+        "namePlaceholder": "E.g. Client summary",
+        "metricsLabel": "Metrics in the report",
+        "metricsRequired": "Pick at least one metric.",
+        "chartLabel": "Show the daily chart",
+        "chartMetricsLabel": "Chart metrics",
+        "chartMetricsRequired": "Pick at least one chart metric.",
+        "compareLabel": "Compare with the previous period by default",
+        "introLabel": "Opening text (optional)",
+        "introPlaceholder": "Shown at the top of the report, before the numbers.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saved": "Template saved.",
+        "saveError": "Could not save the template.",
+        "deleteConfirm": "Delete the template \"{name}\"? Reports already generated do not change; automations that used it go back to the default.",
+        "deleted": "Template deleted.",
+        "deleteError": "Could not delete the template."
       }
     },
     "affiliates": {

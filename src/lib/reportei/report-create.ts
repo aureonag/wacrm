@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { collectAccountSnapshots } from "@/lib/reportei/report-data";
 import type { ReportSnapshot } from "@/lib/reportei/report";
+import type { ReportOptions } from "@/lib/reportei/template";
 
 export type CreateReportResult =
   | { ok: true; id: string }
@@ -21,11 +22,13 @@ export async function createSavedReport(
     createdBy: string | null;
     /** Automations save the report already shared, with the link ready to copy. */
     auto?: boolean;
+    /** From a template; absent means the default (everything). */
+    options?: ReportOptions;
   },
 ): Promise<CreateReportResult> {
   let accounts;
   try {
-    accounts = await collectAccountSnapshots({ supabase: db, accountId: input.accountId }, input.clientId, { ...input.range, compare: input.compare, daily: true });
+    accounts = await collectAccountSnapshots({ supabase: db, accountId: input.accountId }, input.clientId, { ...input.range, compare: input.compare, daily: input.options?.chart !== false });
   } catch (err) {
     console.error("[reportei createSavedReport] collect", err instanceof Error ? err.message : err);
     return { ok: false, reason: "db_error" };
@@ -33,7 +36,7 @@ export async function createSavedReport(
   if (accounts.length === 0) return { ok: false, reason: "no_integrations" };
   if (accounts.every((a) => a.error)) return { ok: false, reason: "unreadable" };
 
-  const snapshot: ReportSnapshot = { period: input.range, compare: input.compare, accounts };
+  const snapshot: ReportSnapshot = { period: input.range, compare: input.compare, accounts, ...(input.options ? { options: input.options } : {}) };
   const { data, error } = await db
     .from("reportei_reports")
     .insert({

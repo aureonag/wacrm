@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { ArrowDownRight, ArrowUpRight, Megaphone } from 'lucide-react';
 import { ClientCode } from '@/components/operational/client-code';
 import { formatMetric, showDate, showDateTime } from '@/lib/reportei/format';
+import { effectiveOptions } from '@/lib/reportei/template';
 import {
-  METRICS,
   toneFor,
   variation,
   type ReportSnapshot,
@@ -46,6 +46,7 @@ export function ReportView({
 }) {
   const t = useTranslations('Operational.reportei.reports');
   const tp = useTranslations('Operational.reportei.reportPage');
+  const options = effectiveOptions(snapshot.options);
 
   return (
     <>
@@ -74,6 +75,10 @@ export function ReportView({
         </p>
       </header>
 
+      {options.intro && (
+        <p className="text-foreground whitespace-pre-line text-sm">{options.intro}</p>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         {snapshot.accounts.map((a) => (
           <section
@@ -94,7 +99,7 @@ export function ReportView({
             {a.insights ? (
               <>
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3">
-                  {METRICS.map((key) => {
+                  {options.metrics.map((key) => {
                     const current = a.insights![key];
                     const change = a.previous
                       ? variation(current, a.previous[key])
@@ -133,10 +138,11 @@ export function ReportView({
                     );
                   })}
                 </dl>
-                {a.daily && a.daily.length > 1 && (
+                {options.chart && a.daily && a.daily.length > 1 && (
                   <ReportChart
                     daily={a.daily}
                     previous={a.dailyPrevious}
+                    metrics={options.chartMetrics}
                     currency={a.currency}
                   />
                 )}

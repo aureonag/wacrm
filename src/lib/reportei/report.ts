@@ -3,6 +3,7 @@
 // Pure helpers only; the data comes from Meta (meta-ads.ts) and is stored as-is.
 
 import type { AccountInsights } from "@/lib/reportei/meta-ads";
+import type { ReportOptions } from "@/lib/reportei/template";
 
 export const METRICS = ["spend", "impressions", "reach", "clicks", "ctr", "cpc", "cpm"] as const;
 export type MetricKey = (typeof METRICS)[number];
@@ -42,6 +43,8 @@ export interface ReportSnapshot {
   period: { since: string; until: string };
   compare: { since: string; until: string } | null;
   accounts: AccountSnapshot[];
+  /** What the template chose to show. Absent in reports saved before templates: show everything. */
+  options?: ReportOptions;
 }
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
