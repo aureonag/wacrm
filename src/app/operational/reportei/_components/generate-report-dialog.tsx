@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { PERIODS, resolvePeriod, type Period } from "@/lib/reportei/periods";
 import { isValidRange } from "@/lib/reportei/report";
 import { cn } from "@/lib/utils";
+import { useTemplates } from "./use-templates";
 
 type Choice = Period | "custom";
 
@@ -36,6 +37,8 @@ export function GenerateReportDialog({
   const [until, setUntil] = useState("");
   const [compare, setCompare] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [templateId, setTemplateId] = useState("");
+  const { templates } = useTemplates();
 
   const today = resolvePeriod("last_7d").until;
   const customOk = choice !== "custom" || isValidRange(since, until, today);
@@ -51,6 +54,7 @@ export function GenerateReportDialog({
           period: choice === "custom" ? { since, until } : choice,
           compare,
           title: title.trim() || undefined,
+          templateId: templateId || undefined,
         }),
       });
       if (res.status === 502) return toast.error(t("createNoAccount"));
@@ -110,6 +114,29 @@ export function GenerateReportDialog({
               </label>
               {since && until && !customOk && <p className="col-span-2 text-xs text-red-500">{t("invalidRange")}</p>}
             </div>
+          )}
+
+          {templates && templates.length > 0 && (
+            <label className="block space-y-1.5 text-sm">
+              <span className="font-medium text-foreground">{t("templateLabel")}</span>
+              <select
+                value={templateId}
+                className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                onChange={(e) => {
+                  setTemplateId(e.target.value);
+                  // The template brings its own comparison default; the box below can still change it.
+                  const picked = templates.find((x) => x.id === e.target.value);
+                  setCompare(picked ? picked.compare : true);
+                }}
+              >
+                <option value="">{t("templateDefault")}</option>
+                {templates.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
 
           <label className="flex items-center gap-2 text-sm text-foreground">

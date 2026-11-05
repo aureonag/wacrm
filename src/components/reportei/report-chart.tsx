@@ -10,10 +10,10 @@ import { formatInt, formatMetric, showDate } from "@/lib/reportei/format";
 import { DAILY_METRICS, type DailyMetric, type DailyPoint } from "@/lib/reportei/report";
 import { cn } from "@/lib/utils";
 
-export function ReportChart({ daily, previous, currency }: { daily: DailyPoint[]; previous?: DailyPoint[]; currency: string | null }) {
+export function ReportChart({ daily, previous, currency, metrics = DAILY_METRICS }: { daily: DailyPoint[]; previous?: DailyPoint[]; currency: string | null; metrics?: readonly DailyMetric[] }) {
   const t = useTranslations("Operational.reportei.reports");
   const tp = useTranslations("Operational.reportei.reportPage");
-  const [metric, setMetric] = useState<DailyMetric>("spend");
+  const [metric, setMetric] = useState<DailyMetric>(metrics[0] ?? "spend");
 
   const fmt = (v: number) => (metric === "spend" ? formatMetric("spend", v, currency) : formatInt(v));
   // Align the previous period by day number, since its dates are different.
@@ -27,7 +27,7 @@ export function ReportChart({ daily, previous, currency }: { daily: DailyPoint[]
   return (
     <div className="mt-4 border-t border-border pt-3">
       <div className="no-print mb-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label={tp("chartMetric")}>
-        {DAILY_METRICS.map((m) => (
+        {metrics.map((m) => (
           <button
             key={m}
             type="button"

@@ -9,6 +9,8 @@ import { requirePermission } from "@/lib/auth/require-permission";
 import { isPeriod, resolvePeriod } from "@/lib/reportei/periods";
 import { isValidRange, previousRange } from "@/lib/reportei/report";
 import { createSavedReport } from "@/lib/reportei/report-create";
+import { isUuid, loadTemplate } from "@/lib/reportei/template-store";
+import { optionsOf } from "@/lib/reportei/template";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
       period?: unknown;
       compare?: unknown;
       title?: unknown;
+      templateId?: unknown;
     } | null;
 
     const clientId = typeof body?.clientId === "string" ? body.clientId : "";
@@ -94,6 +97,15 @@ export async function POST(req: Request) {
     }
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    // The template only decides what the report shows; period and comparison come from the dialog.
+    let options;
+    if (body?.templateId !== undefined && body.templateId !== null) {
+      if (!isUuid(body.templateId)) return NextResponse.json({ error: "Invalid templateId" }, { status: 400 });
+      const template = await loadTemplate(ctx.supabase, ctx.accountId, body.templateId);
+      if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      options = optionsOf(template);
+    }
+
     const title =
       typeof body?.title === "string" && body.title.trim() ? body.title.trim().slice(0, 200) : `Relatório ${client.data.name}`;
     const result = await createSavedReport(ctx.supabase, {
@@ -103,6 +115,7 @@ export async function POST(req: Request) {
       range,
       compare,
       createdBy: ctx.userId,
+      options,
     });
     if (!result.ok) {
       if (result.reason === "no_integrations") return NextResponse.json({ error: "No integrations" }, { status: 422 });

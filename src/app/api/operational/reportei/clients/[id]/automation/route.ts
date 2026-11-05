@@ -1,20 +1,22 @@
 // /api/operational/reportei/clients/:id/automation
 //   GET → the client's automation (or null) and the last report it generated
-//   PUT { frequency, active } → create or change it (edit_boards)
+//   PUT { frequency, active, templateId? } → create or change it (edit_boards).
+//        templateId: omitted keeps the current one, null goes back to the default.
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { isFrequency } from "@/lib/reportei/automation";
+import { isUuid, loadTemplate } from "@/lib/reportei/template-store";
 
 export const dynamic = "force-dynamic";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 type Ctx = { params: Promise<{ id: string }> };
 
-const COLUMNS = "id, frequency, active, last_run_on, last_error, last_report_id, created_at";
+const COLUMNS = "id, frequency, active, last_run_on, last_error, last_report_id, template_id, created_at";
 
-type Row = { id: string; frequency: string; active: boolean; last_run_on: string | null; last_error: string | null; last_report_id: string | null };
+type Row = { id: string; frequency: string; active: boolean; last_run_on: string | null; last_error: string | null; last_report_id: string | null; template_id: string | null };
 
 async function shape(supabase: Awaited<ReturnType<typeof requirePermission>>["supabase"], accountId: string, row: Row) {
   let lastReport: { id: string; title: string; shareToken: string | null; createdAt: string } | null = null;
@@ -27,7 +29,7 @@ async function shape(supabase: Awaited<ReturnType<typeof requirePermission>>["su
       .maybeSingle();
     if (data) lastReport = { id: data.id, title: data.title, shareToken: data.share_token ?? null, createdAt: data.created_at };
   }
-  return { id: row.id, frequency: row.frequency, active: row.active, lastRunOn: row.last_run_on, lastError: row.last_error, lastReport };
+  return { id: row.id, frequency: row.frequency, active: row.active, lastRunOn: row.last_run_on, lastError: row.last_error, templateId: row.template_id, lastReport };
 }
 
 export async function GET(_req: Request, { params }: Ctx) {
@@ -51,18 +53,27 @@ export async function PUT(req: Request, { params }: Ctx) {
     const ctx = await requirePermission("operational", "tasks", "edit_boards");
     const { id } = await params;
     if (!UUID.test(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    const body = (await req.json().catch(() => null)) as { frequency?: unknown; active?: unknown } | null;
+    const body = (await req.json().catch(() => null)) as { frequency?: unknown; active?: unknown; templateId?: unknown } | null;
     if (!isFrequency(body?.frequency) || typeof body?.active !== "boolean") return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
     const client = await ctx.supabase.from("ops_clients").select("id").eq("id", id).eq("account_id", ctx.accountId).maybeSingle();
     if (client.error) return NextResponse.json({ error: "Failed to load client" }, { status: 500 });
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    let templateId: string | null | undefined;
+    if (body.templateId === null) templateId = null;
+    else if (body.templateId !== undefined) {
+      if (!isUuid(body.templateId) || !(await loadTemplate(ctx.supabase, ctx.accountId, body.templateId))) {
+        return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      }
+      templateId = body.templateId;
+    }
+
     // Changing only the frequency or the switch keeps the run history.
     const { data, error } = await ctx.supabase
       .from("reportei_automations")
       .upsert(
-        { account_id: ctx.accountId, client_id: id, frequency: body.frequency, active: body.active, created_by: ctx.userId },
+        { account_id: ctx.accountId, client_id: id, frequency: body.frequency, active: body.active, created_by: ctx.userId, ...(templateId !== undefined ? { template_id: templateId } : {}) },
         { onConflict: "client_id" },
       )
       .select(COLUMNS)

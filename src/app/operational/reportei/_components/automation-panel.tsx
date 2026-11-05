@@ -15,11 +15,13 @@ import { useHasPermission } from "@/hooks/use-permissions";
 import { FREQUENCIES, isFrequency, type Frequency } from "@/lib/reportei/automation";
 import { showDate, showDateTime } from "@/lib/reportei/format";
 import { cn } from "@/lib/utils";
+import { useTemplates } from "./use-templates";
 
 interface Automation {
   id: string;
   frequency: Frequency;
   active: boolean;
+  templateId: string | null;
   lastRunOn: string | null;
   lastError: string | null;
   lastReport: { id: string; title: string; shareToken: string | null; createdAt: string } | null;
@@ -34,12 +36,15 @@ export function AutomationPanel({ clientId, hasIntegrations }: { clientId: strin
   const [frequency, setFrequency] = useState<Frequency>("weekly");
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const { templates } = useTemplates();
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/operational/reportei/clients/${clientId}/automation`);
     if (!res.ok) return setState({ kind: "error" });
     const { automation } = (await res.json()) as { automation: Automation | null };
     if (automation && isFrequency(automation.frequency)) setFrequency(automation.frequency);
+    if (automation) setTemplateId(automation.templateId);
     setState({ kind: "ready", automation });
   }, [clientId]);
 
@@ -48,7 +53,7 @@ export function AutomationPanel({ clientId, hasIntegrations }: { clientId: strin
     void load();
   }, [load]);
 
-  async function save(next: { frequency: Frequency; active: boolean }) {
+  async function save(next: { frequency: Frequency; active: boolean; templateId?: string | null }) {
     setSaving(true);
     try {
       const res = await fetch(`/api/operational/reportei/clients/${clientId}/automation`, {
@@ -59,6 +64,7 @@ export function AutomationPanel({ clientId, hasIntegrations }: { clientId: strin
       if (!res.ok) return toast.error(t("saveError"));
       const { automation } = (await res.json()) as { automation: Automation };
       setFrequency(next.frequency);
+      setTemplateId(automation.templateId);
       setState({ kind: "ready", automation });
       toast.success(t("saved"));
     } catch {
@@ -99,7 +105,7 @@ export function AutomationPanel({ clientId, hasIntegrations }: { clientId: strin
               role="radio"
               aria-checked={frequency === f}
               disabled={!canEdit || saving}
-              onClick={() => (automation ? void save({ frequency: f, active: automation.active }) : setFrequency(f))}
+              onClick={() => (automation ? void save({ frequency: f, active: automation.active, templateId }) : setFrequency(f))}
               className={cn(
                 "rounded-xl border px-4 py-2.5 text-left text-sm transition-colors disabled:opacity-60",
                 frequency === f ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50",
@@ -112,14 +118,37 @@ export function AutomationPanel({ clientId, hasIntegrations }: { clientId: strin
         </div>
       </div>
 
+      {templates && templates.length > 0 && (
+        <label className="block max-w-sm space-y-1.5 text-sm">
+          <span className="font-medium text-foreground">{t("templateLabel")}</span>
+          <select
+            value={templateId ?? ""}
+            disabled={!canEdit || saving}
+            className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 disabled:opacity-60"
+            onChange={(e) => {
+              const next = e.target.value || null;
+              if (automation) void save({ frequency: automation.frequency, active: automation.active, templateId: next });
+              else setTemplateId(next);
+            }}
+          >
+            <option value="">{t("templateDefault")}</option>
+            {templates.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       {canEdit && (
         <div className="flex items-center gap-3">
           {!automation ? (
-            <Button size="sm" disabled={saving} onClick={() => save({ frequency, active: true })}>
+            <Button size="sm" disabled={saving} onClick={() => save({ frequency, active: true, templateId })}>
               {t("activate")}
             </Button>
           ) : (
-            <Button size="sm" variant={automation.active ? "outline" : "default"} disabled={saving} onClick={() => save({ frequency: automation.frequency, active: !automation.active })}>
+            <Button size="sm" variant={automation.active ? "outline" : "default"} disabled={saving} onClick={() => save({ frequency: automation.frequency, active: !automation.active, templateId })}>
               {automation.active ? t("pause") : t("resume")}
             </Button>
           )}
