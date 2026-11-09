@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import { cn } from "@/lib/utils";
+import { SegmentSelect } from "./segment-select";
 
 interface AdAccount {
   id: string;
@@ -59,6 +60,7 @@ export function MetaAccountsDialog({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [savingType, setSavingType] = useState(false);
   const [canAuthorize, setCanAuthorize] = useState(false);
   const [connections, setConnections] = useState<ConnectionSummary[]>([]);
   const [retry, setRetry] = useState(0);
@@ -159,12 +161,14 @@ export function MetaAccountsDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={(o) => !saving && !savingType && onOpenChange(o)}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("foundTitle")}</DialogTitle>
           <DialogDescription>{t("foundHint", { name: clientName })}</DialogDescription>
         </DialogHeader>
+
+        <SegmentSelect clientId={clientId} compact onBusyChange={setSavingType} />
 
         {state.kind === "loading" && (
           <div className="space-y-2">
@@ -265,10 +269,10 @@ export function MetaAccountsDialog({
         <DialogFooter className="items-center sm:justify-between">
           <span className="text-xs text-muted-foreground">{t("selectedCount", { count: selected.size })}</span>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || savingType}>
               {t("cancel")}
             </Button>
-            <Button onClick={link} disabled={saving || state.kind !== "ready" || selected.size === 0}>
+            <Button onClick={link} disabled={saving || savingType || state.kind !== "ready" || selected.size === 0}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("integrateSelected")}
             </Button>

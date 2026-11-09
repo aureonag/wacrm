@@ -20,13 +20,14 @@ export async function GET(req: Request) {
 
     let q = ctx.supabase.from("ops_clients").select("id, name, code, status").eq("account_id", ctx.accountId).order("name", { ascending: true });
     if (status === "active" || status === "inactive") q = q.eq("status", status);
-    const [clients, logos, reports, integrations] = await Promise.all([
+    const [clients, logos, reports, integrations, settings] = await Promise.all([
       q,
       ctx.supabase.from("reportei_client_logos").select("client_id, logo_url").eq("account_id", ctx.accountId),
       ctx.supabase.from("reportei_reports").select("client_id, created_at").eq("account_id", ctx.accountId).order("created_at", { ascending: false }).limit(10000),
       ctx.supabase.from("ad_integrations").select("client_id, provider, status").eq("account_id", ctx.accountId).limit(10000),
+      ctx.supabase.from("reportei_client_settings").select("client_id, segment").eq("account_id", ctx.accountId),
     ]);
-    for (const r of [clients, logos, reports, integrations]) {
+    for (const r of [clients, logos, reports, integrations, settings]) {
       if (r.error) {
         console.error("[GET reportei/clients]", r.error.message);
         return NextResponse.json({ error: "Failed to load clients" }, { status: 500 });
@@ -34,6 +35,7 @@ export async function GET(req: Request) {
     }
 
     const logoOf = new Map((logos.data ?? []).map((l) => [l.client_id as string, l.logo_url as string]));
+    const segmentOf = new Map((settings.data ?? []).map((s) => [s.client_id as string, s.segment]));
     const stats = reportStatsByClient((reports.data ?? []).map((r) => ({ client_id: r.client_id as string, created_at: r.created_at as string })));
     const linked = new Map<string, { providers: string[]; statuses: string[] }>();
     for (const i of integrations.data ?? []) {
@@ -49,6 +51,7 @@ export async function GET(req: Request) {
       return {
         id: c.id as string,
         name: c.name as string,
+        segment: segmentOf.get(c.id as string) ?? null,
         code: (c.code as string | null) ?? null,
         status: c.status as "active" | "inactive",
         logoUrl: logoOf.get(c.id as string) ?? null,
