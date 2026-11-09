@@ -9,3 +9,7 @@ O salvamento mostra falha e permite tentar novamente; a ficha não desaparece se
 Validação: lint dos cinco arquivos, testes de cartões e compilação webpack/TypeScript passaram. Navegação local com banco fictício comprovou leads → e-commerce, persistência após recarregar, Misto no seletor Meta sincronizado com a ficha e selo na lista. Ao final, o cliente fictício foi devolvido a leads. Nenhuma conta Meta real foi conectada ou removida durante esse teste.
 
 Sem migração, dependência, credencial ou permissão nova. Backup e prova de reversão ficam em `E:/Claude/Backups/CRM-Aureon-Tipo-Cliente-2026-11-09`; anexos e configuração já preservados no backup completo anterior, sem alterações nesta entrega. A.N. PETS deve continuar como leads em produção.
+
+## Correção visual dos eventos
+
+O print de Allan mostrou opções nativas brancas com texto sem contraste no tema escuro. Os menus de evento de lead e compra agora reutilizam Select/SelectContent do CRM, com as cores do tema e opções legíveis. O tipo do cliente permanece nos três controles destacados. Teste no Chrome local confirmou os dois menus abertos, seleção de lead persistida após recarregar e restauração ao padrão. Nenhum evento de cliente real foi alterado. Lint e compilação passaram.
