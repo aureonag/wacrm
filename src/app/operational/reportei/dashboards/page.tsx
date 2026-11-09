@@ -375,11 +375,13 @@ export default function ReporteiDashboardsPage() {
         {data && data.readings.length === 0 && <EmptyState title="Nenhum cliente ativo ainda" hint="Cadastre clientes em Reportei → Clientes." className="min-h-40" />}
         {data && data.readings.length > 0 && (
           <>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <TotalCard r={data.totals.leads} covered={data.totals.coverage.leads} total={data.totals.coverage.total} />
+              <TotalCard r={data.totals.conversations} covered={data.totals.coverage.conversations} total={data.totals.coverage.total} />
               <TotalCard r={data.totals.roas} covered={data.totals.coverage.revenue} total={data.totals.coverage.total} />
               <TotalCard r={data.totals.cpl} covered={data.totals.coverage.leads} total={data.totals.coverage.total} />
             </div>
+            <p className="text-xs text-muted-foreground">Leads e CPL usam a fonte de leads escolhida na ficha de cada cliente. Conversas são exibidas separadamente e não são somadas novamente aos leads.</p>
 
             <div className="space-y-5">
               <MonthChart title="Investimento" line={data.month.spend} month={data.month.month} before={data.month.before} format="money" />

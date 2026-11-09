@@ -13,7 +13,7 @@ import { goalsFromRow } from "@/lib/reportei/goals";
 import { TtlCache, mapLimit, summarizeClient, type ClientSummary } from "@/lib/reportei/dashboard";
 import { isPeriod, resolvePeriod } from "@/lib/reportei/periods";
 import { previousRange } from "@/lib/reportei/report";
-import { collectAccountSnapshots } from "@/lib/reportei/report-data";
+import { collectAccountSnapshots, loadClientEvents } from "@/lib/reportei/report-data";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -61,7 +61,8 @@ export async function GET(req: Request) {
 
     const summaries = await mapLimit(page, PARALLEL, async (c): Promise<ClientSummary> => {
       const who = { clientId: c.id as string, name: c.name as string, code: (c.code as string | null) ?? null };
-      const key = `${ctx.accountId}:${who.clientId}:${wanted}:${period.until}`;
+      const events = await loadClientEvents(ctx, who.clientId);
+      const key = `${ctx.accountId}:${who.clientId}:${wanted}:${period.until}:${JSON.stringify(events)}`;
       const hit = refresh ? undefined : cache.get(key);
       if (hit) return hit;
       try {

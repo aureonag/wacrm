@@ -32,6 +32,7 @@ function allUnavailable(why: Why): Reading[] {
     un("spend", "Investimento", "money", true, true),
     un("revenue", "Faturamento", "money", true),
     un("leads", "Leads", "number", true),
+    un("conversations", "Conversas por mensagem iniciadas", "number", true),
     un("purchases", "Compras", "number", true),
     un("roas", "ROAS", "ratio", true),
     un("cpl", "CPL", "money", false),
@@ -75,6 +76,8 @@ export function readingsOf(accounts: readonly AccountSnapshot[]): ClientRead {
   const imprBefore = before ? before.reduce((a, x) => a + x.impressions, 0) : null;
   const leadsNow = mixedLeadEvents || now.some((x) => x.leads === undefined) ? null : now.reduce((a, x) => a + (x.leads ?? 0), 0);
   const leadsBefore = mixedLeadEvents || !before || before.some((x) => x.leads === undefined) ? null : before.reduce((a, x) => a + (x.leads ?? 0), 0);
+  const conversationsNow = now.some((x) => x.conversations === undefined) ? null : now.reduce((a, x) => a + (x.conversations ?? 0), 0);
+  const conversationsBefore = !before || before.some((x) => x.conversations === undefined) ? null : before.reduce((a, x) => a + (x.conversations ?? 0), 0);
   const purchasesNow = mixedPurchaseEvents ? null : sumOptional(now.map((x) => x.purchases));
   const purchasesBefore = mixedPurchaseEvents || !before ? null : sumOptional(before.map((x) => x.purchases));
   const valueNow = mixedPurchaseEvents ? null : sumOptional(now.map((x) => x.purchaseValue));
@@ -91,6 +94,7 @@ export function readingsOf(accounts: readonly AccountSnapshot[]): ClientRead {
     reading("spend", "Investimento", "money", true, spendM.value, spendBM.value, { neutral: true, why: spendM.why }),
     reading("revenue", "Faturamento", "money", true, revM.value, revBM.value, { why: revM.value === null && !mixed ? eventWhy("no_events") : revM.why }),
     reading("leads", "Leads", "number", true, leadsNow, leadsBefore, { why: "mixed_events" }),
+    reading("conversations", "Conversas por mensagem iniciadas", "number", true, conversationsNow, conversationsBefore, { why: "not_collected" }),
     reading("purchases", "Compras", "number", true, purchasesNow, purchasesBefore, { why: eventWhy("no_events") }),
     reading("roas", "ROAS", "ratio", true, mixed ? null : div(valueNow, spendNow), mixed ? null : div(valueBefore, spendBefore), { why: mixed ? "mixed_currency" : valueNow === null ? eventWhy("no_events") : "no_base" }),
     reading("cpl", "CPL", "money", false, mixed || leadsNow === null ? null : cplOf(spendNow, leadsNow), mixed || spendBefore === null || leadsBefore === null ? null : cplOf(spendBefore, leadsBefore), { why: mixed ? "mixed_currency" : mixedLeadEvents ? "mixed_events" : "no_base" }),

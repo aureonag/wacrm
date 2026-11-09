@@ -11,7 +11,7 @@ import type { Block, IdMaker, MetricWidget, ReportDoc, Widget } from "./doc";
 import { catalogEntry, defaultKeys, NETWORK_LABEL, type Range } from "./doc-catalog";
 import type { TemplateLayout } from "./doc-templates";
 import { attributionLabel } from "./event-config";
-import { cplOf } from "./meta-ads";
+import { CONVERSATION_ACTION, cplOf } from "./meta-ads";
 import type { AccountSnapshot, DailyPoint } from "./report";
 
 const dmy = (ymd: string) => `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}/${ymd.slice(0, 4)}`;
@@ -79,6 +79,10 @@ function pickMetric(key: string, now: Insights, before: Insights | undefined): P
       return both((i) => (i.reach > 0 ? Math.round((i.impressions / i.reach) * 100) / 100 : null), "Sem alcance no período.");
     case "leads":
       return both((i) => i.leads);
+    case "conversations":
+      return both((i) => i.conversations);
+    case "cost_per_conversation":
+      return both((i) => cplOf(i.spend, i.conversations), "Sem conversas no período para dividir o investimento.");
     case "cost_per_lead":
       return both((i) => cplOf(i.spend, i.leads), NO_LEADS);
     case "purchases":
@@ -104,7 +108,7 @@ const PURCHASE_KEYS = new Set(["purchases", "purchase_value", "roas", "cost_per_
 
 /** Says in the indicator's own description which event counted it, so the choice is visible and kept. */
 function withEvent(w: Widget, key: string, i: Insights): Widget {
-  const event = LEAD_KEYS.has(key) ? i.leadEvent : PURCHASE_KEYS.has(key) ? i.purchaseEvent : null;
+  const event = LEAD_KEYS.has(key) ? i.leadEvent : PURCHASE_KEYS.has(key) ? i.purchaseEvent : key === "conversations" || key === "cost_per_conversation" ? CONVERSATION_ACTION : null;
   return event && !w.unavailable ? { ...w, description: `${w.description} [Evento contado: ${event}. ${attributionLabel(i.attribution)}]` } : w;
 }
 

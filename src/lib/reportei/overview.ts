@@ -13,7 +13,7 @@ import { rng } from "./doc-catalog";
 export type ReadingFormat = "money" | "percent" | "number" | "ratio";
 
 /** Why a number is not there. None of these is a zero. */
-export type Why = "no_integration" | "partial" | "failed" | "mixed_currency" | "mixed_events" | "no_events" | "no_base" | "not_configured";
+export type Why = "no_integration" | "partial" | "failed" | "mixed_currency" | "mixed_events" | "no_events" | "no_base" | "not_configured" | "not_collected";
 
 export const WHY_TEXT: Record<Why, string> = {
   no_integration: "Sem integração ligada",
@@ -24,6 +24,7 @@ export const WHY_TEXT: Record<Why, string> = {
   no_events: "A conta não registrou esse evento",
   no_base: "Sem base de comparação",
   not_configured: "Tipo do cliente não configurado",
+  not_collected: "Este indicador não está disponível nesta leitura",
 };
 
 export interface Reading {
@@ -221,10 +222,11 @@ export interface Totals {
   spend: Reading;
   revenue: Reading;
   leads: Reading;
+  conversations: Reading;
   roas: Reading;
   cpl: Reading;
   /** How many clients each number covers, so a partial sum is never passed off as the whole. */
-  coverage: { spend: number; revenue: number; leads: number; total: number };
+  coverage: { spend: number; revenue: number; leads: number; conversations: number; total: number };
 }
 
 const unavailable = (key: string, label: string, format: ReadingFormat, upIsGood: boolean, why: Why, neutral = false): Reading => ({ key, label, value: null, previous: null, format, upIsGood, why, ...(neutral ? { neutral: true } : {}) });
@@ -272,6 +274,11 @@ export function totals(clients: readonly ClientReadings[]): Totals {
   // Leads and CPL: lead-generation clients only, same population for both.
   const leadRowsOk = ok.filter((c) => c.segment === "leads" || c.segment === "mixed").map((c) => ({ c, l: find(c, "leads"), sp: find(c, "spend") })).filter((x) => has(x.l) && has(x.sp));
   const leadMixed = new Set(leadRowsOk.map((x) => x.c.currency ?? "?")).size > 1 || leadRowsOk.some((x) => x.c.currency === null);
+  // Informational metric, separate from the configured lead result: never add the two.
+  const conversationRows = ok.map((c) => find(c, "conversations")).filter(has);
+  const conversations: Reading = conversationRows.length === 0
+    ? unavailable("conversations", "Conversas por mensagem iniciadas", "number", true, "not_collected")
+    : { key: "conversations", label: "Conversas por mensagem iniciadas", value: sumField(conversationRows, "value"), previous: conversationRows.some((r) => r.previous === null) ? null : sumField(conversationRows, "previous"), format: "number", upIsGood: true };
   const leads: Reading =
     leadRowsOk.length === 0 ? unavailable("leads", "Leads gerados", "number", true, "not_configured") : { key: "leads", label: "Leads gerados", value: sumField(leadRowsOk.map((x) => x.l!), "value"), previous: sumField(leadRowsOk.map((x) => x.l!), "previous"), format: "number", upIsGood: true };
   let cpl = unavailable("cpl", "CPL médio", "money", false, leadRowsOk.length === 0 ? "not_configured" : "mixed_currency");
@@ -293,7 +300,7 @@ export function totals(clients: readonly ClientReadings[]): Totals {
     leads.previous = null;
     cpl.previous = null;
   }
-  return { spend, revenue, leads, roas, cpl, coverage: { spend: spendRows.length, revenue: revRows.length, leads: leadRowsOk.length, total } };
+  return { spend, revenue, leads, conversations, roas, cpl, coverage: { spend: spendRows.length, revenue: revRows.length, leads: leadRowsOk.length, conversations: conversationRows.length, total } };
 }
 
 // ---- the daily series of the month -----------------------------------------------------

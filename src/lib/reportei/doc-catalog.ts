@@ -373,6 +373,8 @@ const META_ADS: CatalogEntry[] = [
   metric(AD("cpc", "CPC", "Custo médio por clique."), { value: [0.6, 2.2], decimals: 2, format: "money", upIsGood: false, swing: 0.3 }),
   metric(AD("frequency", "Frequência", "Quantas vezes, em média, cada pessoa viu os anúncios."), { value: [1.4, 3.2], decimals: 2, upIsGood: false, swing: 0.2 }),
   metric(AD("leads", "Leads", "Contatos gerados pelos anúncios."), { value: [20, 160], swing: 0.5 }),
+  metric(AD("conversations", "Conversas por mensagem iniciadas", "Conversas iniciadas atribuídas aos anúncios pela Meta. Não representa quantidade de mensagens nem pessoas únicas."), { value: [20, 160], swing: 0.5 }),
+  metric(AD("cost_per_conversation", "Custo por conversa", "Investimento dividido pelas conversas por mensagem iniciadas."), { value: [12, 60], decimals: 2, format: "money", upIsGood: false, swing: 0.4 }),
   metric(AD("cost_per_lead", "Custo por lead", "Valor gasto dividido pelos leads."), { value: [12, 60], decimals: 2, format: "money", upIsGood: false, swing: 0.4 }),
   metric(AD("purchases", "Compras", "Compras atribuídas aos anúncios."), { value: [30, 260], swing: 0.5 }),
   metric(AD("purchase_value", "Valor de conversão das compras", "Receita das compras atribuídas aos anúncios."), { value: [6000, 42000], decimals: 2, format: "money", swing: 0.5 }),
@@ -556,7 +558,7 @@ export const demoSource: DataSource = {
 const DEFAULT_KEYS: Record<string, string[]> = {
   instagram_business: ["followers", "paid_reach", "views_total", "reach_total", "followers_growth", "reach_daily", "audience", "gender", "cities", "likes_posts", "reach_posts", "organic_posts", "best_day", "best_hour", "stories_count", "stories_views", "stories_reach", "stories"],
   facebook: ["page_followers", "page_reach", "page_views", "post_engagement", "page_reach_daily", "followers_growth_fb", "link_clicks", "top_posts"],
-  meta_ads: ["spend", "impressions", "reach", "clicks", "ctr", "cpc", "leads", "cost_per_lead", "spend_daily", "clicks_daily"],
+  meta_ads: ["spend", "impressions", "reach", "clicks", "ctr", "cpc", "leads", "cost_per_lead", "conversations", "cost_per_conversation", "spend_daily", "clicks_daily"],
   google_ads: ["g_clicks", "g_impressions", "g_cost", "g_cpc", "g_conversions", "g_clicks_daily"],
   tiktok_ads: ["t_spend", "t_impressions", "t_clicks", "t_ctr", "t_cpc", "t_conversions", "t_spend_daily"],
   google_analytics_4: ["ga_sessions", "ga_users", "ga_new_users", "ga_engagement_rate", "ga_conversions", "ga_sessions_daily", "ga_channels", "ga_landing_pages"],
