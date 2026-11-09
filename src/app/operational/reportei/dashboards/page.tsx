@@ -184,8 +184,7 @@ function LeadsSection({ rows }: { rows: LeadRow[] }) {
                     <span className="truncate text-sm font-semibold text-foreground">{row.name}</span>
                   </span>
                   <span className="flex items-center justify-end gap-2 text-sm font-semibold text-foreground">
-                    <Value r={row.leads} v={row.leads.value} />
-                    <Delta r={row.leads} />
+                    {row.leads.value !== null && row.leads.value > 0 ? <><Value r={row.leads} v={row.leads.value} /><Delta r={row.leads} /></> : "—"}
                   </span>
                   <span className="flex items-center justify-end gap-2 text-sm font-semibold text-foreground">
                     {row.cpl ? <Value r={row.cpl} v={row.cpl.value} /> : "—"}
