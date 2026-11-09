@@ -10,3 +10,8 @@
 Validação: 338 testes do módulo aprovados, incluindo seleção exata do evento, ausência de duplicação, CPL, leitura e comparação reais dos widgets, falta de base e snapshots antigos. Build e navegador registrados no backup da entrega.
 
 A API já coletava o campo antes desta mudança. A documentação de referência autenticada da Meta exigiu login na consulta externa; a entrega não assume equivalência com mensagens recebidas ou pessoas únicas. A conciliação com a coluna específica do Gerenciador de Anúncios de cada cliente permanece uma validação operacional separada.
+
+## Inserção em dashboard real
+Na validação online, foi identificado bloqueio preexistente: AddPanel desabilitava todas as métricas em documentos reais. A correção libera a inserção somente no bloco Meta Ads de dashboards editáveis. Relatórios congelados mantêm o comportamento anterior.
+
+Ao inserir, o servidor recebe o novo indicador sem números fictícios e relê o período selecionado. A tela só apresenta o documento retornado com valores reais ou indisponibilidade; falha de leitura não insere números de demonstração. O layout existente é preservado, e a comparação do novo indicador segue a escolha global. Teste de regressão valida a gravação do valor e comparação reais na rota de atualização.
