@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { LEAD_EVENT_OPTIONS, PURCHASE_EVENT_OPTIONS } from "@/lib/reportei/event-config";
 import { SEGMENT_LABEL, type Segment } from "@/lib/reportei/overview";
@@ -71,10 +72,13 @@ export function SegmentSelect({ clientId, compact = false, onBusyChange }: { cli
   const eventSelect = (label: string, value: string, options: readonly string[], onPick: (v: string) => void) => (
     <label className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
       {label}
-      <select value={value} disabled={!canEdit || saving || !available} onChange={(e) => onPick(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground disabled:opacity-60">
-        <option value="">Padrão ({options[0]})</option>
-        {(value && !options.includes(value) ? [...options, value] : options).map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+      <Select value={value || "__default__"} disabled={!canEdit || saving || !available} onValueChange={(next) => { if (next) onPick(next === "__default__" ? "" : String(next)); }}>
+        <SelectTrigger aria-label={label} className="w-full"><SelectValue>{value || `Padrão (${options[0]})`}</SelectValue></SelectTrigger>
+        <SelectContent><SelectGroup>
+          <SelectItem value="__default__">Padrão ({options[0]})</SelectItem>
+          {(value && !options.includes(value) ? [...options, value] : options).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+        </SelectGroup></SelectContent>
+      </Select>
     </label>
   );
 
