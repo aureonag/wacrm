@@ -1,10 +1,11 @@
 // The Meta events a client counts its leads and purchases with, and the attribution windows of
 // a link. Chosen by a person; checked here. Pure.
 
-import { ATTRIBUTION_WINDOWS } from "./meta-ads";
+import { ATTRIBUTION_WINDOWS, CONVERSATION_ACTION } from "./meta-ads";
 
 /** Suggested events for the pickers (any other well-formed event type is accepted too: accounts differ). */
-export const LEAD_EVENT_OPTIONS = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"] as const;
+export const LEAD_EVENT_OPTIONS = ["lead", CONVERSATION_ACTION, "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"] as const;
+export const eventLabel = (event: string): string => event === CONVERSATION_ACTION ? "Conversas por mensagem iniciadas" : event;
 export const PURCHASE_EVENT_OPTIONS = ["purchase", "omni_purchase", "offsite_conversion.fb_pixel_purchase"] as const;
 
 /** An event type from untrusted input: undefined = invalid, null = the canonical events, otherwise the exact type. */

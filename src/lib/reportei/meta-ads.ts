@@ -330,7 +330,7 @@ export interface AccountInsights {
 const ZERO_INSIGHTS: AccountInsights = { spend: 0, impressions: 0, reach: 0, clicks: 0, ctr: 0, cpc: 0, cpm: 0, leads: 0, conversations: 0, costPerLead: 0 };
 
 const LEAD_ACTION = "lead";
-const CONVERSATION_ACTION = "onsite_conversion.messaging_conversation_started_7d";
+export const CONVERSATION_ACTION = "onsite_conversion.messaging_conversation_started_7d";
 
 /** Sum of the values of one action type in Meta's `actions` list. Pure. */
 export function actionTotal(actions: unknown, type: string): number {
@@ -440,7 +440,7 @@ export function parseInsightsStrict(row: Record<string, unknown> | undefined, op
     cpc: numbers.cpc,
     cpm: numbers.cpm,
     leads,
-    conversations: eventTotal(actions, CONVERSATION_ACTION) ?? 0,
+    conversations: actions === null ? undefined : eventTotal(actions, CONVERSATION_ACTION) ?? 0,
     costPerLead: leads > 0 ? Math.round((numbers.spend / leads) * 100) / 100 : 0,
     delivered: true,
     leadEvent,

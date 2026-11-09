@@ -158,12 +158,13 @@ const cache = new TtlCache<OverviewPayload>(60_000, 50);
  * Cached for a minute per company and period; `refresh` skips the cache.
  */
 export async function buildOverview(ctx: Ctx, input: { clientIds: readonly string[]; range: Span; before: Span | null; month: Span; monthBefore: Span; refresh?: boolean }): Promise<OverviewPayload> {
-  const key = [ctx.accountId, input.range.since, input.range.until, input.before?.since ?? "-", input.before?.until ?? "-", input.month.since, input.month.until, [...input.clientIds].sort().join(",")].join("|");
+  const [links, settings] = await Promise.all([loadLinks(ctx), loadSettings(ctx)]);
+  const settingsKey = JSON.stringify([...settings].filter(([id]) => input.clientIds.includes(id)).sort(([a], [b]) => a.localeCompare(b)));
+  const key = [ctx.accountId, input.range.since, input.range.until, input.before?.since ?? "-", input.before?.until ?? "-", input.month.since, input.month.until, [...input.clientIds].sort().join(","), settingsKey].join("|");
   if (!input.refresh) {
     const hit = cache.get(key);
     if (hit) return hit;
   }
-  const [links, settings] = await Promise.all([loadLinks(ctx), loadSettings(ctx)]);
   const linked = new Set(links.map((l) => l.clientId));
 
   const rows = await mapLimit(input.clientIds, 3, async (clientId): Promise<ClientOverviewRow> => {
