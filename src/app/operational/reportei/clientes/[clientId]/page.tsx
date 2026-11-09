@@ -42,7 +42,7 @@ export default function ReporteiClientPage({
   const { novo, meta } = use(searchParams);
   const isWizard = novo === "1";
   // Back from "Entrar com Facebook": reopen the picker on success, explain otherwise.
-  const openPicker = meta === "connected";
+  const [openPicker, setOpenPicker] = useState(() => meta === "connected");
   const t = useTranslations("Operational.reportei");
   const tc = useTranslations("Operational.reportei.clientPage");
   const tw = useTranslations("Operational.reportei.wizard");
@@ -65,8 +65,17 @@ export default function ReporteiClientPage({
   }, [load]);
 
   useEffect(() => {
-    if (meta === "denied" || meta === "error" || meta === "not_configured") toast.error(ti(`metaResult_${meta}`));
+    if (meta === "denied" || meta === "error" || meta === "not_configured" || meta === "identity_conflict" || meta === "identity_mismatch") toast.error(ti(`metaResult_${meta}`));
   }, [meta, ti]);
+
+  const consumeMetaResult = useCallback(() => {
+    setOpenPicker(false);
+    const current = new URL(window.location.href);
+    if (current.searchParams.has("meta")) {
+      current.searchParams.delete("meta");
+      window.history.replaceState(window.history.state, "", current.pathname + current.search + current.hash);
+    }
+  }, []);
 
   const back = (
     <Link href="/operational/reportei/clientes" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -95,7 +104,7 @@ export default function ReporteiClientPage({
 
   const { client, integrations } = state;
   const panel = (
-    <IntegrationsPanel clientId={client.id} clientName={client.name} integrations={integrations} onChanged={load} openPicker={openPicker} />
+    <IntegrationsPanel clientId={client.id} clientName={client.name} integrations={integrations} onChanged={load} openPicker={openPicker} onPickerClosed={consumeMetaResult} />
   );
 
   if (isWizard) {

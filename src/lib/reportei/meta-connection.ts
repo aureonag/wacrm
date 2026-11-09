@@ -14,6 +14,23 @@ export interface MetaConnection {
   status: "connected" | "error" | "revoked";
 }
 
+export interface CompanyConnectionSummary {
+  id: string;
+  name: string | null;
+  status: MetaConnection["status"];
+}
+
+/** Includes broken logins so the picker can reconnect the intended identity. No credentials. */
+export async function listCompanyConnectionSummaries(accountId: string): Promise<CompanyConnectionSummary[]> {
+  const { data, error } = await supabaseAdmin()
+    .from("meta_connections")
+    .select("id, fb_user_name, status")
+    .eq("account_id", accountId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`meta_connections read failed: ${error.message}`);
+  return (data ?? []).map((r) => ({ id: r.id as string, name: (r.fb_user_name as string | null) ?? null, status: r.status as MetaConnection["status"] }));
+}
+
 /** Base URL the Facebook sign-in returns to: explicit config first, then the proxy's host headers. */
 export function siteOrigin(request: Request): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -88,6 +105,43 @@ export async function saveConnection(input: {
     .single();
   if (error) throw new Error(`meta_connections save failed: ${error.message}`);
   return data.id as string;
+}
+
+export type SaveResult = { kind: "created" | "refreshed"; id: string } | { kind: "identity_conflict" };
+
+/**
+ * Stores a Meta sign-in without ever replacing another person's authorization:
+ *  - the same Meta identity already stored for the company: that connection gets the
+ *    new token (a reconnect), its id and the links through it stay;
+ *  - a new identity: added next to the others. If the schema still allows only one
+ *    connection per CRM user (migration 159) and this user already has a different
+ *    one, nothing is saved and the caller is told, instead of overwriting it.
+ */
+export async function saveConnectionSafe(input: { accountId: string; userId: string; fbUserId: string; fbUserName: string | null; token: string; expiresAt: Date | null }): Promise<SaveResult> {
+  const admin = supabaseAdmin();
+  const fresh = { token_encrypted: encrypt(input.token), token_expires_at: input.expiresAt?.toISOString() ?? null, status: "connected", last_error: null, fb_user_name: input.fbUserName };
+
+  const same = await admin.from("meta_connections").select("id").eq("account_id", input.accountId).eq("fb_user_id", input.fbUserId).maybeSingle();
+  if (same.error) throw new Error(`meta_connections read failed: ${same.error.message}`);
+  if (same.data) {
+    const upd = await admin.from("meta_connections").update(fresh).eq("id", same.data.id as string);
+    if (upd.error) throw new Error(`meta_connections save failed: ${upd.error.message}`);
+    return { kind: "refreshed", id: same.data.id as string };
+  }
+
+  const ins = await admin.from("meta_connections").insert({ account_id: input.accountId, user_id: input.userId, fb_user_id: input.fbUserId, ...fresh }).select("id").single();
+  if (ins.error) {
+    if (ins.error.code === "23505") return { kind: "identity_conflict" };
+    throw new Error(`meta_connections save failed: ${ins.error.message}`);
+  }
+  return { kind: "created", id: ins.data.id as string };
+}
+
+/** The Meta identity behind a connection of this company (to insist on it when reconnecting), or null. */
+export async function getConnectionIdentity(accountId: string, connectionId: string): Promise<{ id: string; fbUserId: string } | null> {
+  const { data, error } = await supabaseAdmin().from("meta_connections").select("id, fb_user_id").eq("id", connectionId).eq("account_id", accountId).maybeSingle();
+  if (error) throw new Error(`meta_connections read failed: ${error.message}`);
+  return data ? { id: data.id as string, fbUserId: data.fb_user_id as string } : null;
 }
 
 /** Marks the connection (and the ad accounts linked through it) so the team sees it needs a new sign-in. */
