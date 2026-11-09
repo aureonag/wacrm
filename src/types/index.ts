@@ -277,7 +277,9 @@ export type NotificationType =
   | 'kickoff_task_created'
   | 'task_updated'
   | 'report_ready'
-  | 'report_failed';
+  | 'report_failed'
+  | 'goal_alert'
+  | 'integration_down';
 
 export interface Notification {
   id: string;
@@ -295,6 +297,8 @@ export interface Notification {
   board_id?: string;
   /** Set for `report_ready` (migration 164). */
   report_id?: string;
+  /** Set for `goal_alert` (migration 167). */
+  client_id?: string;
   /** Who triggered it. Null when an automation/system assigned it. */
   actor_user_id?: string;
   title: string;

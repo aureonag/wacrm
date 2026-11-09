@@ -8,12 +8,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowLeft, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, LayoutTemplate, Printer, SlidersHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { ReportDocEditor } from "../../_components/report-doc-editor";
+import { ReportEditDialog } from "../../_components/report-edit-dialog";
 import { ShareReport } from "../../_components/share-report";
+import { TemplateDialog } from "../../_components/template-dialog";
+import { effectiveOptions } from "@/lib/reportei/template";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { PRINT_CSS, ReportView } from "@/components/reportei/report-view";
 import type { ReportSnapshot } from "@/lib/reportei/report";
@@ -24,9 +28,12 @@ interface ReportData {
   clientName: string;
   clientCode: string | null;
   title: string;
+  subtitle: string;
   notes: string;
   snapshot: ReportSnapshot;
   shareToken: string | null;
+  shareExpiresAt: string | null;
+  logoUrl?: string | null;
   createdAt: string;
 }
 
@@ -40,6 +47,8 @@ export default function ReporteiReportPage({ params }: { params: Promise<{ repor
   const [state, setState] = useState<State>({ kind: "loading" });
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/operational/reportei/reports/${reportId}`);
@@ -83,6 +92,26 @@ export default function ReporteiReportPage({ params }: { params: Promise<{ repor
   const { report } = state;
   const { snapshot } = report;
 
+  // Reports made as a document (blocks and indicators) open in the editor.
+  if (snapshot.doc) {
+    return (
+      <ReportDocEditor
+        canEdit={canEdit}
+        report={{
+          id: report.id,
+          clientId: report.clientId,
+          clientName: report.clientName,
+          logoUrl: report.logoUrl ?? null,
+          title: report.title,
+          snapshot: { ...snapshot, doc: snapshot.doc },
+          shareToken: report.shareToken,
+          shareExpiresAt: report.shareExpiresAt,
+          createdAt: report.createdAt,
+        }}
+      />
+    );
+  }
+
   async function saveNotes() {
     setSaving(true);
     try {
@@ -115,6 +144,7 @@ export default function ReporteiReportPage({ params }: { params: Promise<{ repor
       <div id="report-print" className="space-y-6">
         <ReportView
           title={report.title}
+          subtitle={report.subtitle}
           clientName={report.clientName}
           clientCode={report.clientCode}
           createdAt={report.createdAt}
@@ -157,13 +187,49 @@ export default function ReporteiReportPage({ params }: { params: Promise<{ repor
           <span />
         )}
         <div className="flex flex-wrap items-center gap-2">
-          {canEdit && <ShareReport reportId={reportId} initialToken={report.shareToken} />}
+          {canEdit && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <SlidersHorizontal className="mr-1.5 h-4 w-4" />
+                {tp("customize")}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setSavingTemplate(true)}>
+                <LayoutTemplate className="mr-1.5 h-4 w-4" />
+                {tp("saveAsTemplate")}
+              </Button>
+            </>
+          )}
+          {canEdit && <ShareReport reportId={reportId} initialToken={report.shareToken} initialExpiresAt={report.shareExpiresAt} />}
           <Button size="sm" onClick={() => window.print()}>
             <Printer className="mr-1.5 h-4 w-4" />
             {tp("print")}
           </Button>
         </div>
       </div>
+      {editing && (
+        <ReportEditDialog
+          reportId={reportId}
+          title={report.title}
+          subtitle={report.subtitle}
+          snapshot={snapshot}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            void load();
+          }}
+        />
+      )}
+      {savingTemplate && (
+        <TemplateDialog
+          template={null}
+          prefill={{ ...effectiveOptions(snapshot.options), name: report.title, compare: snapshot.compare !== null }}
+          onClose={() => setSavingTemplate(false)}
+          onSaved={() => {
+            setSavingTemplate(false);
+            toast.success(tp("templateSaved"));
+          }}
+        />
+      )}
     </>
   );
 }

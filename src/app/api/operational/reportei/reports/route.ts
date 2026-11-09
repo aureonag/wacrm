@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
     let q = ctx.supabase
       .from("reportei_reports")
-      .select("id, client_id, title, period_start, period_end, compare_start, auto, created_at, ops_clients(name, code)")
+      .select("id, client_id, title, period_start, period_end, compare_start, auto, networks, created_at, ops_clients(name, code)")
       .eq("account_id", ctx.accountId)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -46,6 +46,7 @@ export async function GET(req: Request) {
         periodEnd: r.period_end,
         compared: r.compare_start !== null,
         auto: r.auto === true,
+        networks: (r.networks as string[] | null) ?? ["meta_ads"],
         createdAt: r.created_at,
       };
     });

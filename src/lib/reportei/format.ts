@@ -1,5 +1,7 @@
 // Number and date formatting for Reportei screens (pt-BR, like the rest of the CRM).
 
+import type { MetricKey } from "@/lib/reportei/report";
+
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 const dateTimeFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 const intFmt = new Intl.NumberFormat("pt-BR");
@@ -20,11 +22,13 @@ export function formatMoney(value: number, currency: string | null): string {
 }
 
 /** The value of one metric as the screens show it. */
-export function formatMetric(key: "spend" | "impressions" | "reach" | "clicks" | "ctr" | "cpc" | "cpm", value: number, currency: string | null): string {
+export function formatMetric(key: MetricKey, value: number | undefined, currency: string | null): string {
+  if (value === undefined || !Number.isFinite(value)) return "—";
   switch (key) {
     case "spend":
     case "cpc":
     case "cpm":
+    case "costPerLead":
       return formatMoney(value, currency);
     case "ctr":
       return `${decFmt.format(value)}%`;

@@ -20,4 +20,5 @@ export const INTEGRATION_CATALOG: readonly CatalogEntry[] = [
   { key: "youtube", name: "YouTube", available: false },
   { key: "linkedin", name: "LinkedIn", available: false },
   { key: "tiktok", name: "TikTok", available: false },
+  { key: "tiktok_ads", name: "TikTok Ads", available: false },
 ];

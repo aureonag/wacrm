@@ -4,12 +4,14 @@
 
 import type { AccountInsights } from "@/lib/reportei/meta-ads";
 import type { ReportOptions } from "@/lib/reportei/template";
+import type { ReportDoc } from "@/lib/reportei/doc";
+import type { TimelineEvent } from "@/lib/reportei/timeline";
 
-export const METRICS = ["spend", "impressions", "reach", "clicks", "ctr", "cpc", "cpm"] as const;
+export const METRICS = ["spend", "impressions", "reach", "clicks", "ctr", "cpc", "cpm", "leads", "conversations", "costPerLead"] as const;
 export type MetricKey = (typeof METRICS)[number];
 
 /** Metrics where a drop is the good direction. Spend has no good direction. */
-const LOWER_IS_BETTER: ReadonlySet<MetricKey> = new Set(["cpc", "cpm"]);
+const LOWER_IS_BETTER: ReadonlySet<MetricKey> = new Set(["cpc", "cpm", "costPerLead"]);
 const NEUTRAL: ReadonlySet<MetricKey> = new Set(["spend"]);
 
 /** One day of an ad account, as saved in a report for the charts. */
@@ -29,6 +31,14 @@ export interface AccountSnapshot {
   id: string;
   name: string;
   currency: string | null;
+  /** The account's own time zone (from Meta). Dates are read in it; null = unknown. */
+  timezone?: string | null;
+  /** The range actually read, in that zone (the requested one, or cut at the account's today). */
+  range?: { since: string; until: string };
+  /** The comparison range actually read. */
+  compareRange?: { since: string; until: string };
+  /** How many campaigns the numbers are limited to; absent means the whole account. */
+  campaigns?: number;
   insights?: AccountInsights;
   /** The comparison period for the same account; absent when comparison is off or it failed. */
   previous?: AccountInsights;
@@ -45,6 +55,28 @@ export interface ReportSnapshot {
   accounts: AccountSnapshot[];
   /** What the template chose to show. Absent in reports saved before templates: show everything. */
   options?: ReportOptions;
+  /** Milestones of the client's marketing timeline that fall inside the period, when it was generated. */
+  timeline?: TimelineEvent[];
+  /** The report as a document of blocks and indicators (reports made in the editor). */
+  doc?: ReportDoc;
+}
+
+/** Result metrics only make sense for accounts that run lead or messaging campaigns. */
+const RESULT_METRICS: ReadonlySet<MetricKey> = new Set(["leads", "conversations", "costPerLead"]);
+
+/**
+ * The metrics a report shows for one account, in the template's order. A metric the
+ * report does not have (saved before it existed) is skipped, and so are result
+ * metrics that are zero in both periods (no leads or conversations to talk about).
+ */
+export function visibleMetrics(wanted: readonly MetricKey[], insights: AccountInsights, previous?: AccountInsights): MetricKey[] {
+  return wanted.filter((key) => {
+    const current = insights[key];
+    if (typeof current !== "number") return false;
+    if (!RESULT_METRICS.has(key)) return true;
+    const before = previous?.[key];
+    return current > 0 || (typeof before === "number" && before > 0);
+  });
 }
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
@@ -81,8 +113,8 @@ export function previousRange(since: string, until: string): { since: string; un
 }
 
 /** Percent change from `previous` to `current`; null when there is no base to compare to. */
-export function variation(current: number, previous: number): number | null {
-  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
+export function variation(current: number | undefined, previous: number | undefined): number | null {
+  if (current === undefined || previous === undefined || !Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 

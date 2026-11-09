@@ -68,3 +68,24 @@ describe("fillDays", () => {
     expect(out.reduce((s, p) => s + p.spend, 0)).toBe(7);
   });
 });
+
+import { visibleMetrics } from "./report";
+
+describe("visibleMetrics", () => {
+  const base = { spend: 10, impressions: 100, reach: 80, clicks: 5, ctr: 5, cpc: 2, cpm: 100, leads: 0, conversations: 0, costPerLead: 0 };
+  const wanted = ["spend", "leads", "conversations", "costPerLead"] as const;
+
+  it("hides result metrics that are zero in both periods", () => {
+    expect(visibleMetrics(wanted, base, base)).toEqual(["spend"]);
+  });
+
+  it("shows them when this period or the previous one had results", () => {
+    expect(visibleMetrics(wanted, { ...base, leads: 3, costPerLead: 3.33 })).toEqual(["spend", "leads", "costPerLead"]);
+    expect(visibleMetrics(wanted, base, { ...base, conversations: 2 })).toEqual(["spend", "conversations"]);
+  });
+
+  it("skips metrics a report saved before they existed does not have", () => {
+    const old = { spend: 10, impressions: 100, reach: 80, clicks: 5, ctr: 5, cpc: 2, cpm: 100 } as unknown as typeof base;
+    expect(visibleMetrics(wanted, old)).toEqual(["spend"]);
+  });
+});

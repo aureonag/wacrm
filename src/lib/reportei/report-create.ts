@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { collectAccountSnapshots } from "@/lib/reportei/report-data";
 import type { ReportSnapshot } from "@/lib/reportei/report";
 import type { ReportOptions } from "@/lib/reportei/template";
+import { eventFromRow, eventsInRange } from "@/lib/reportei/timeline";
 
 export type CreateReportResult =
   | { ok: true; id: string }
@@ -36,7 +37,25 @@ export async function createSavedReport(
   if (accounts.length === 0) return { ok: false, reason: "no_integrations" };
   if (accounts.every((a) => a.error)) return { ok: false, reason: "unreadable" };
 
-  const snapshot: ReportSnapshot = { period: input.range, compare: input.compare, accounts, ...(input.options ? { options: input.options } : {}) };
+  // The client's milestones inside the period. A failed read never costs the report.
+  const milestones = await db
+    .from("reportei_timeline_events")
+    .select("id, event_date, title, description")
+    .eq("client_id", input.clientId)
+    .eq("account_id", input.accountId)
+    .gte("event_date", input.range.since)
+    .lte("event_date", input.range.until)
+    .limit(200);
+  if (milestones.error) console.error("[reportei createSavedReport] timeline", milestones.error.message);
+  const timeline = eventsInRange((milestones.data ?? []).map(eventFromRow), input.range.since, input.range.until);
+
+  const snapshot: ReportSnapshot = {
+    period: input.range,
+    compare: input.compare,
+    accounts,
+    ...(input.options ? { options: input.options } : {}),
+    ...(timeline.length > 0 ? { timeline } : {}),
+  };
   const { data, error } = await db
     .from("reportei_reports")
     .insert({

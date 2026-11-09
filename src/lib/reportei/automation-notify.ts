@@ -2,7 +2,10 @@
 // Rows are inserted by the server (service role), like every other notification.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Frequency } from "@/lib/reportei/automation";
 import { showDate } from "@/lib/reportei/format";
+
+const KIND: Record<Frequency, string> = { daily: "diário", weekly: "semanal", biweekly: "quinzenal", monthly: "mensal" };
 
 export type AutomationFailure = "no_integrations" | "unreadable" | "request_failed";
 
@@ -12,10 +15,10 @@ const FAILURE_TEXT: Record<AutomationFailure, string> = {
   request_failed: "falha ao gerar, tento de novo no próximo dia",
 };
 
-export function readyNotification(frequency: "weekly" | "monthly", clientName: string, range: { since: string; until: string }) {
+export function readyNotification(frequency: Frequency, clientName: string, range: { since: string; until: string }) {
   return {
     type: "report_ready" as const,
-    title: `Relatório ${frequency === "weekly" ? "semanal" : "mensal"} de ${clientName} pronto`,
+    title: `Relatório ${KIND[frequency]} de ${clientName} pronto`,
     body: `${showDate(range.since)} a ${showDate(range.until)}. O link público já está pronto para copiar.`,
   };
 }

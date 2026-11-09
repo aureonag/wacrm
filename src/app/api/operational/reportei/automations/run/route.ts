@@ -2,13 +2,17 @@
 // the reports that are due. Needs the shared secret in the `x-cron-secret`
 // header (AUTOMATION_CRON_SECRET), like automations/cron. Safe to call many
 // times a day: each automation is claimed for its scheduled day before it runs.
-// Also renews the Meta tokens close to expiring, so one ping covers both.
+// Also renews the Meta tokens close to expiring, checks that each Meta login still
+// works (a bell notice when one goes down) and the client goals (budget / CPC alerts),
+// so one ping covers all of it.
 
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
-import { automationCompare, automationRange, automationTitle, dueDay, isFrequency } from "@/lib/reportei/automation";
+import { automationCompare, automationRange, automationTitle, dueDay, isAnalysisPeriod, isFrequency } from "@/lib/reportei/automation";
 import { failedNotification, notifyAutomation, readyNotification } from "@/lib/reportei/automation-notify";
+import { checkConnectionsHealth } from "@/lib/reportei/connection-health";
+import { runGoalAlerts } from "@/lib/reportei/goal-alerts-run";
 import { refreshDueConnections } from "@/lib/reportei/meta-connection";
 import { resolvePeriod } from "@/lib/reportei/periods";
 import { optionsOf } from "@/lib/reportei/template";
@@ -35,7 +39,7 @@ export async function GET(request: Request) {
 
   const { data: rows, error } = await db
     .from("reportei_automations")
-    .select("id, account_id, client_id, frequency, last_run_on, last_error, created_by, template_id, created_at, ops_clients(name)")
+    .select("id, account_id, client_id, frequency, last_run_on, last_error, created_by, template_id, analysis_period, compare_period, report_title, created_at, ops_clients(name)")
     .eq("active", true);
   if (error) {
     console.error("[reportei automations/run] list", error.message);
@@ -62,15 +66,17 @@ export async function GET(request: Request) {
     }
 
     const client = Array.isArray(row.ops_clients) ? row.ops_clients[0] : row.ops_clients;
-    const range = automationRange(row.frequency, day);
+    const analysisPeriod = isAnalysisPeriod(row.analysis_period) ? row.analysis_period : null;
+    const range = automationRange(row.frequency, day, analysisPeriod);
     // A template that was deleted since is simply gone: the report falls back to the default.
     const template = row.template_id ? await loadTemplate(db, row.account_id as string, row.template_id as string) : null;
     const result: CreateReportResult = await createSavedReport(db, {
       accountId: row.account_id as string,
       clientId: row.client_id as string,
-      title: automationTitle(row.frequency, client?.name ?? "", range),
+      title: automationTitle(row.frequency, client?.name ?? "", range, (row.report_title as string | null) ?? null),
       range,
-      compare: template?.compare === false ? null : automationCompare(row.frequency, range),
+      // The automation's own choice wins; without one, the template's default (on if none).
+      compare: (row.compare_period === "none" || (row.compare_period !== "previous" && template?.compare === false)) ? null : automationCompare(range),
       createdBy: null,
       auto: true,
       options: template ? optionsOf(template) : undefined,
@@ -93,6 +99,9 @@ export async function GET(request: Request) {
     }
   }
 
+  // Renew tokens first, then ask Meta whether each login still works.
   const refresh = await refreshDueConnections().catch(() => null);
-  return NextResponse.json({ ...summary, refresh });
+  const connections = await checkConnectionsHealth();
+  const goals = await runGoalAlerts(db, today);
+  return NextResponse.json({ ...summary, goals, connections, refresh });
 }

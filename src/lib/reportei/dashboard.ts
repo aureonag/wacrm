@@ -117,3 +117,29 @@ export class TtlCache<V> {
     this.entries.set(key, { value, at: now });
   }
 }
+
+export interface OverallTotals {
+  totals: Totals | null;
+  /** Clients that had data and were added up. */
+  clients: number;
+  /** Money is only added up when every added client reports in the same currency. */
+  currency: string | null;
+  mixedCurrency: boolean;
+}
+
+/** The sum of the clients on screen (the "Total" row): clicks and impressions always, money only in a single currency. */
+export function overallTotals(rows: readonly ClientSummary[]): OverallTotals {
+  const withData = rows.filter((r) => r.totals);
+  if (withData.length === 0) return { totals: null, clients: 0, currency: null, mixedCurrency: false };
+  const currencies = new Set(withData.map((r) => (r.mixedCurrency ? "*mixed*" : (r.currency ?? ""))));
+  const mixedCurrency = currencies.size > 1 || currencies.has("*mixed*");
+  return {
+    totals: sum(
+      withData.map((r) => r.totals!),
+      mixedCurrency,
+    ),
+    clients: withData.length,
+    currency: mixedCurrency ? null : (withData[0].currency ?? null),
+    mixedCurrency,
+  };
+}

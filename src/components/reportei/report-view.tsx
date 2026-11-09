@@ -9,6 +9,7 @@ import { formatMetric, showDate, showDateTime } from '@/lib/reportei/format';
 import { effectiveOptions } from '@/lib/reportei/template';
 import {
   toneFor,
+  visibleMetrics,
   variation,
   type ReportSnapshot,
 } from '@/lib/reportei/report';
@@ -33,12 +34,14 @@ export const PRINT_CSS = `@media print {
 
 export function ReportView({
   title,
+  subtitle,
   clientName,
   clientCode,
   createdAt,
   snapshot,
 }: {
   title: string;
+  subtitle?: string | null;
   clientName: string;
   clientCode?: string | null;
   createdAt: string;
@@ -56,6 +59,7 @@ export function ReportView({
           <p className="text-muted-foreground text-sm">{clientName}</p>
         </div>
         <h1 className="text-foreground text-2xl font-bold">{title}</h1>
+        {subtitle && <p className="text-muted-foreground text-base">{subtitle}</p>}
         <p className="text-muted-foreground text-sm">
           {t('range', {
             since: showDate(snapshot.period.since),
@@ -79,6 +83,23 @@ export function ReportView({
         <p className="text-foreground whitespace-pre-line text-sm">{options.intro}</p>
       )}
 
+      {snapshot.timeline && snapshot.timeline.length > 0 && (
+        <section className="border-border bg-card break-inside-avoid space-y-2 rounded-xl border p-4">
+          <h2 className="text-foreground text-sm font-semibold">{tp('milestones')}</h2>
+          <ul className="space-y-1.5">
+            {snapshot.timeline.map((e) => (
+              <li key={e.id} className="text-sm">
+                <span className="text-muted-foreground mr-2 text-xs">{showDate(e.date)}</span>
+                <span className="text-foreground font-medium">{e.title}</span>
+                {e.description && (
+                  <span className="text-muted-foreground block whitespace-pre-line text-xs">{e.description}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         {snapshot.accounts.map((a) => (
           <section
@@ -93,13 +114,16 @@ export function ReportView({
                 </h2>
                 <p className="text-muted-foreground truncate text-xs">
                   Meta Ads · {a.id}
+                  {a.campaigns
+                    ? ` · ${t('campaignsCount', { count: a.campaigns })}`
+                    : ''}
                 </p>
               </div>
             </header>
             {a.insights ? (
               <>
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3">
-                  {options.metrics.map((key) => {
+                  {visibleMetrics(options.metrics, a.insights, a.previous).map((key) => {
                     const current = a.insights![key];
                     const change = a.previous
                       ? variation(current, a.previous[key])

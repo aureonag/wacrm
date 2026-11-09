@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     if (!UUID.test(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const [client, settings, integrations] = await Promise.all([
+    const [client, settings, integrations, logo] = await Promise.all([
       ctx.supabase.from("ops_clients").select("id, name, code, status").eq("id", id).eq("account_id", ctx.accountId).maybeSingle(),
       ctx.supabase
         .from("reportei_client_settings")
@@ -23,12 +23,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         .maybeSingle(),
       ctx.supabase
         .from("ad_integrations")
-        .select("id, provider, external_account_id, external_account_name, status, last_error, last_synced_at, created_at")
+        .select("id, provider, external_account_id, external_account_name, status, last_error, last_synced_at, created_at, campaign_ids")
         .eq("client_id", id)
         .eq("account_id", ctx.accountId)
         .order("created_at", { ascending: true }),
+      ctx.supabase.from("reportei_client_logos").select("logo_url").eq("client_id", id).eq("account_id", ctx.accountId).maybeSingle(),
     ]);
-    for (const r of [client, settings, integrations]) {
+    for (const r of [client, settings, integrations, logo]) {
       if (r.error) {
         console.error("[GET reportei/clients/:id]", r.error.message);
         return NextResponse.json({ error: "Failed to load client" }, { status: 500 });
@@ -37,7 +38,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     return NextResponse.json({
-      client: client.data,
+      client: { ...client.data, logoUrl: (logo.data?.logo_url as string | undefined) ?? null },
       settings: settings.data ?? { locale: "pt-BR", date_format: "DD/MM/YYYY", decimal_format: "comma" },
       integrations: integrations.data ?? [],
     });

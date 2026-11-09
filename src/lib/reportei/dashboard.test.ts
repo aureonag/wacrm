@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AccountSnapshot } from "./report";
-import { TtlCache, change, mapLimit, sortSummaries, summarizeClient } from "./dashboard";
+import { TtlCache, change, mapLimit, overallTotals, sortSummaries, summarizeClient } from "./dashboard";
 
-const ins = (spend: number, impressions: number, clicks: number) => ({ spend, impressions, reach: 0, clicks, ctr: 0, cpc: 0, cpm: 0 });
+const ins = (spend: number, impressions: number, clicks: number) => ({ spend, impressions, reach: 0, clicks, ctr: 0, cpc: 0, cpm: 0, leads: 0, conversations: 0, costPerLead: 0 });
 const acc = (over: Partial<AccountSnapshot>): AccountSnapshot => ({ id: "act_1", name: "A", currency: "BRL", ...over });
 const who = { clientId: "c1", name: "Aureon", code: "AU" };
 
@@ -97,5 +97,29 @@ describe("TtlCache", () => {
     c.set("c", 3, 0);
     expect(c.get("a", 1)).toBeUndefined();
     expect(c.get("c", 1)).toBe(3);
+  });
+});
+
+describe("overallTotals", () => {
+  const client = (id: string, currency: string, spend: number, impressions: number, clicks: number) =>
+    summarizeClient({ clientId: id, name: id, code: null }, [acc({ currency, insights: ins(spend, impressions, clicks) })]);
+
+  it("adds up the clients and derives the rates from the sums", () => {
+    const all = overallTotals([client("a", "BRL", 100, 1000, 50), client("b", "BRL", 50, 1000, 25)]);
+    expect(all.totals).toEqual({ spend: 150, impressions: 2000, clicks: 75, ctr: 3.75, cpc: 2 });
+    expect(all.clients).toBe(2);
+    expect(all.currency).toBe("BRL");
+  });
+
+  it("does not add money across currencies", () => {
+    const all = overallTotals([client("a", "BRL", 100, 1000, 50), client("b", "USD", 50, 1000, 25)]);
+    expect(all.mixedCurrency).toBe(true);
+    expect(all.totals).toMatchObject({ spend: 0, cpc: 0, clicks: 75 });
+  });
+
+  it("skips clients without data and is empty when none has any", () => {
+    const none = summarizeClient({ clientId: "n", name: "n", code: null }, [acc({ error: "permission" })]);
+    expect(overallTotals([none, client("a", "BRL", 10, 100, 5)]).clients).toBe(1);
+    expect(overallTotals([none]).totals).toBeNull();
   });
 });

@@ -7,12 +7,16 @@ import { useTranslations } from "next-intl";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { DocBody } from "@/components/reportei/report-doc-view";
 import { PRINT_CSS, ReportView } from "@/components/reportei/report-view";
+import { showDate } from "@/lib/reportei/format";
 import type { ReportSnapshot } from "@/lib/reportei/report";
 
 interface SharedReport {
   clientName: string;
+  logoUrl?: string | null;
   title: string;
+  subtitle?: string;
   notes: string;
   createdAt: string;
   snapshot: ReportSnapshot;
@@ -50,7 +54,19 @@ export default function SharedReportPage({ params }: { params: Promise<{ token: 
     <>
       <style>{PRINT_CSS}</style>
       <div id="report-print" className="space-y-6">
-        <ReportView title={report.title} clientName={report.clientName} createdAt={report.createdAt} snapshot={report.snapshot} />
+        {report.snapshot.doc?.demo && <p className="rounded-lg border border-dashed border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700 dark:text-amber-300">MODELO COM NÚMEROS FICTÍCIOS: não é um resultado real.</p>}
+        {report.snapshot.doc ? (
+          <DocBody
+            doc={report.snapshot.doc}
+            title={report.title}
+            clientName={report.clientName}
+            logoUrl={report.logoUrl ?? null}
+            generatedText={`Relatório gerado dos dados analisados entre ${showDate(report.snapshot.period.since)} e ${showDate(report.snapshot.period.until)}${report.snapshot.compare ? ` comparado com os dados coletados entre ${showDate(report.snapshot.compare.since)} e ${showDate(report.snapshot.compare.until)}` : ""}.`}
+            editable={false}
+          />
+        ) : (
+        <ReportView title={report.title} subtitle={report.subtitle} clientName={report.clientName} createdAt={report.createdAt} snapshot={report.snapshot} />
+        )}
         {report.notes && (
           <section className="space-y-2">
             <h2 className="text-sm font-semibold text-foreground">{tp("notesTitle")}</h2>

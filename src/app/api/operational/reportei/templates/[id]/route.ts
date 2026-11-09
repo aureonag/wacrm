@@ -6,7 +6,8 @@
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
-import { parseName, parseOptions, templateFromRow } from "@/lib/reportei/template";
+import { parseLayout } from "@/lib/reportei/doc-templates";
+import { DEFAULT_OPTIONS, parseName, parseOptions, templateFromRow } from "@/lib/reportei/template";
 import { TEMPLATE_COLUMNS, isUuid } from "@/lib/reportei/template-store";
 
 export const dynamic = "force-dynamic";
@@ -20,18 +21,23 @@ export async function PUT(req: Request, { params }: Ctx) {
     if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     const name = parseName(body?.name);
-    const options = parseOptions(body);
-    if (!name || !options) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    const layout = body?.layout !== undefined ? parseLayout(body.layout) : undefined;
+    if (layout === null) return NextResponse.json({ error: "Invalid layout" }, { status: 400 });
+    const description = typeof body?.description === "string" ? body.description.trim().slice(0, 500) : undefined;
+    // Just a new name and description (no layout, no metrics): the rest stays as it is.
+    const renameOnly = body !== null && body.layout === undefined && body.metrics === undefined;
+    const options = renameOnly ? null : layout ? DEFAULT_OPTIONS : parseOptions(body);
+    if (!name || (!renameOnly && !options)) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
     const { data, error } = await ctx.supabase
       .from("reportei_templates")
       .update({
         name,
-        metrics: options.metrics,
-        chart: options.chart,
-        chart_metrics: options.chartMetrics,
-        compare: body?.compare !== false,
-        intro: options.intro || null,
+        ...(options
+          ? { metrics: options.metrics, chart: options.chart, chart_metrics: options.chartMetrics, compare: body?.compare !== false, intro: options.intro || null }
+          : {}),
+        ...(description !== undefined ? { description: description || null } : {}),
+        ...(layout ? { layout } : {}),
       })
       .eq("id", id)
       .eq("account_id", ctx.accountId)

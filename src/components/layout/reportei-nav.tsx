@@ -8,11 +8,7 @@ import {
   Building2,
   ChevronDown,
   FileBarChart,
-  FileText,
   LayoutDashboard,
-  LayoutTemplate,
-  Plug,
-  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,14 +24,10 @@ const BASE = "/operational/reportei";
 
 const ADMIN_SECTIONS = [
   { slug: "clientes", key: "clients", icon: Building2 },
-  { slug: "integracoes", key: "integrations", icon: Plug },
 ] as const;
 
 const OPERATION_SECTIONS = [
   { slug: "dashboards", key: "dashboards", icon: LayoutDashboard },
-  { slug: "relatorios", key: "reports", icon: FileText },
-  { slug: "automacoes", key: "automations", icon: Repeat },
-  { slug: "templates", key: "templates", icon: LayoutTemplate },
 ] as const;
 
 export function ReporteiNav() {
@@ -49,10 +41,6 @@ export function ReporteiNav() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (inModule) setOpen(true);
   }, [inModule]);
-
-  const label = (text: string) => (
-    <li className="px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">{text}</li>
-  );
 
   const link = ({ slug, key, icon: Icon }: { slug: string; key: string; icon: typeof Building2 }) => (
     <li key={slug}>
@@ -82,9 +70,7 @@ export function ReporteiNav() {
 
       {open && (
         <ul className="mt-1 ml-2 flex flex-col gap-0.5 border-l border-border pl-2">
-          {label(t("nav.administration"))}
           {ADMIN_SECTIONS.map(link)}
-          {label(t("nav.operation"))}
           {OPERATION_SECTIONS.map(link)}
         </ul>
       )}

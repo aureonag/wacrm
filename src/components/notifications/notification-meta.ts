@@ -17,6 +17,7 @@ import {
   Paperclip,
   Pencil,
   Rocket,
+  Target,
   RotateCcw,
   ShieldCheck,
   ShieldQuestion,
@@ -55,13 +56,17 @@ export const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
   task_updated: Pencil,
   report_ready: FileText,
   report_failed: AlertCircle,
+  goal_alert: Target,
+  integration_down: AlertTriangle,
 };
 
 /** Where clicking a notification leads (null: nothing to open). */
 export function notificationHref(n: Notification): string | null {
   if (n.conversation_id) return `/inbox?c=${n.conversation_id}`;
+  if (n.client_id) return `/operational/reportei/dashboards/${n.client_id}`;
   if (n.report_id) return `/operational/reportei/relatorios/${n.report_id}`;
-  if (n.type === "report_failed") return "/operational/reportei/automacoes";
+  if (n.type === "integration_down") return "/operational/reportei/clientes";
+  if (n.type === "report_failed") return "/operational/reportei/clientes";
   if (n.deal_id) return `/pipelines/deals/${n.deal_id}`;
   if (n.board_id && n.task_id) return `/operational/boards/${n.board_id}?task=${n.task_id}`;
   return null;
