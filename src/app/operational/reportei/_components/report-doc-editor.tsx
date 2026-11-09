@@ -133,7 +133,7 @@ export function WidgetPanel({ w, doc, onChange, onClose, periodKey }: { w: Widge
   );
 }
 
-export function AddPanel({ block, onAdd, onClose, demo }: { block: Block; onAdd: (key: string) => void; onClose: () => void; demo: boolean }) {
+export function AddPanel({ block, onAdd, onClose, demo, allowReal = false }: { block: Block; onAdd: (key: string) => void; onClose: () => void; demo: boolean; allowReal?: boolean }) {
   const [tab, setTab] = useState<"preset" | "custom">("preset");
   const [query, setQuery] = useState("");
   const entries = (block.network ? NETWORK_CATALOG[block.network] : undefined) ?? [];
@@ -158,13 +158,13 @@ export function AddPanel({ block, onAdd, onClose, demo }: { block: Block; onAdd:
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar..." className="h-9 pl-8 text-sm" />
           </div>
-          {!demo && <p className="mt-3 text-xs text-muted-foreground">Os números desta rede entram quando a integração estiver ligada.</p>}
+          {!demo && <p className="mt-3 text-xs text-muted-foreground">{allowReal ? "O indicador será lido da conta conectada para o período selecionado." : "Os números desta rede entram quando a integração estiver ligada."}</p>}
           <ul className="mt-2 divide-y divide-border">
             {shown.map((e) => {
               const Icon = KIND_ICON[e.kind];
               return (
                 <li key={e.key}>
-                  <button type="button" disabled={!demo} onClick={() => onAdd(e.key)} className="flex w-full items-center gap-2.5 px-1 py-2.5 text-left text-xs text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50">
+                  <button type="button" disabled={!demo && !allowReal} onClick={() => onAdd(e.key)} className="flex w-full items-center gap-2.5 px-1 py-2.5 text-left text-xs text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50">
                     <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                     {e.title}
                   </button>

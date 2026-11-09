@@ -442,16 +442,41 @@ export function DashboardDocEditor({ dashboard, canEdit }: { dashboard: EditorDa
           <AddPanel
             block={addTarget}
             demo={doc.demo}
+            allowReal={editable && addTarget.network === "meta_ads"}
             onClose={() => setPanel(null)}
-            onAdd={(key) => {
+            onAdd={async (key) => {
+              if (!editable) return;
               const entry = addTarget.network ? NETWORK_CATALOG[addTarget.network]?.find((e) => e.key === key) : null;
               if (!entry) return;
-              {
-                const made = entry.make({ id: makeId("w"), range: period, seed: `${dashboard.id}:${Date.now()}` });
-                // A real document never gets made-up numbers: the new indicator waits, empty, for the next refresh of real data.
-                setDoc(addWidgets(doc, addTarget.id, [doc.demo ? made : unavailableWidget(made, "Indicador novo: o número chega quando o período for atualizado.")]));
+              const made = entry.make({ id: makeId("w"), range: period, seed: `${dashboard.id}:${Date.now()}` });
+              if (doc.demo) {
+                setDoc(addWidgets(doc, addTarget.id, [made]));
+                toast.success("Métrica adicionada ao final do bloco.");
+                return;
               }
-              toast.success("Métrica adicionada ao final do bloco.");
+              // A real indicator is empty until the server reads it for the displayed period.
+              const blank = unavailableWidget(made, "Aguardando leitura da Meta.");
+              const next = addWidgets(doc, addTarget.id, [blank.kind === "metric" ? { ...blank, comparison: compare } : blank]);
+              if (timer.current) clearTimeout(timer.current);
+              setPanel(null);
+              setLoadingPeriod(true);
+              setSave("saving");
+              try {
+                const res = await patchApi(dashboard.id, { doc: next, period, compare });
+                if (!res.ok) throw new Error("metric");
+                const { doc: fresh, unreadable } = await res.json() as { doc: ReportDoc | null; unreadable?: string[] };
+                if (!fresh) throw new Error("metric");
+                skipSave.current = true;
+                setDoc(fresh);
+                setSave("saved");
+                toast.success("Métrica adicionada e lida para o período selecionado.");
+                if (unreadable?.length) toast.warning(`Não foi possível ler: ${unreadable.join(", ")}.`);
+              } catch {
+                setSave("error");
+                toast.error("Não foi possível adicionar a métrica com os dados da Meta. Tente novamente.");
+              } finally {
+                setLoadingPeriod(false);
+              }
             }}
           />
         )}
