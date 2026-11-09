@@ -109,7 +109,7 @@ export function SegmentSelect({ clientId, compact = false, onBusyChange }: { cli
           {saving && <p role="status" className="text-xs text-muted-foreground">Salvando…</p>}
           <div className="space-y-1.5">
             {eventSelect("Fonte dos leads", leadEvent, LEAD_EVENT_OPTIONS, (v) => void save({ leadEvent: v || null }, () => setLeadEvent(v), "o evento de lead"))}
-            <p className="text-xs text-muted-foreground">Para campanhas de mensagens, escolha Conversas por mensagem iniciadas. Esse resultado será usado nos leads e no CPL deste cliente e do dashboard geral, sem somar os dois eventos.</p>
+            <p className="text-xs text-muted-foreground">Para campanhas de mensagens, escolha Conversas por mensagem iniciadas. A escolha define o resultado nos dashboards deste cliente. No dashboard geral, leads e conversas aparecem separados, cada um com seu custo.</p>
           </div>
           {!compact && <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">Configurações avançadas dos eventos da Meta</summary><div className="mt-3 grid gap-3 sm:grid-cols-2">
             {eventSelect("Evento de compra", purchaseEvent, PURCHASE_EVENT_OPTIONS, (v) => void save({ purchaseEvent: v || null }, () => setPurchaseEvent(v), "o evento de compra"))}

@@ -148,7 +148,7 @@ function Section({ title, hint, icon: Icon, tone, items, empty }: { title: strin
   );
 }
 
-const LEADS_GRID = "grid-cols-[minmax(0,1fr)_9rem_10rem_12rem] sm:grid-cols-[minmax(0,1fr)_11rem_11rem_15rem]";
+const LEADS_GRID = "grid-cols-[minmax(14rem,1fr)_8rem_7rem_9rem_10rem_9rem]";
 
 function LeadsSection({ rows }: { rows: LeadRow[] }) {
   return (
@@ -159,17 +159,20 @@ function LeadsSection({ rows }: { rows: LeadRow[] }) {
         </span>
         <div>
           <h2 className="text-base font-semibold text-foreground">Geração de leads</h2>
-          <p className="text-xs text-muted-foreground">Clientes de captação: leads gerados, custo por lead e faturamento atribuído no período</p>
+          <p className="text-xs text-muted-foreground">Leads e conversas separados, com o custo de cada resultado e o faturamento atribuído no período</p>
         </div>
       </header>
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">Nenhum cliente de geração de leads configurado e lido. Defina o tipo do cliente na página dele.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card" role="region" aria-label="Leads e conversas por cliente" tabIndex={0}>
+          <div className="min-w-[64rem]">
           <div className={cn("grid gap-3 border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground", LEADS_GRID)}>
             <span>Cliente</span>
             <span className="text-right">Leads gerados</span>
             <span className="text-right">CPL</span>
+            <span className="text-right">Conversas</span>
+            <span className="text-right">Custo por conversa</span>
             <span className="text-right">Faturamento</span>
           </div>
           <ul className="divide-y divide-border">
@@ -188,6 +191,12 @@ function LeadsSection({ rows }: { rows: LeadRow[] }) {
                     {row.cpl ? <Value r={row.cpl} v={row.cpl.value} /> : "—"}
                   </span>
                   <span className="flex items-center justify-end gap-2 text-sm font-semibold text-foreground">
+                    {row.conversations ? <><Value r={row.conversations} v={row.conversations.value} /><Delta r={row.conversations} /></> : "—"}
+                  </span>
+                  <span className="flex items-center justify-end gap-2 text-sm font-semibold text-foreground">
+                    {row.costPerConversation ? <Value r={row.costPerConversation} v={row.costPerConversation.value} /> : "—"}
+                  </span>
+                  <span className="flex items-center justify-end gap-2 text-sm font-semibold text-foreground">
                     <Value r={row.revenue} v={row.revenue.value} />
                     <Delta r={row.revenue} />
                   </span>
@@ -195,6 +204,7 @@ function LeadsSection({ rows }: { rows: LeadRow[] }) {
               </li>
             ))}
           </ul>
+          </div>
         </div>
       )}
     </section>
@@ -377,11 +387,11 @@ export default function ReporteiDashboardsPage() {
           <>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <TotalCard r={data.totals.leads} covered={data.totals.coverage.leads} total={data.totals.coverage.total} />
-              <TotalCard r={data.totals.conversations} covered={data.totals.coverage.conversations} total={data.totals.coverage.total} />
-              <TotalCard r={data.totals.roas} covered={data.totals.coverage.revenue} total={data.totals.coverage.total} />
               <TotalCard r={data.totals.cpl} covered={data.totals.coverage.leads} total={data.totals.coverage.total} />
+              <TotalCard r={data.totals.conversations} covered={data.totals.coverage.conversations} total={data.totals.coverage.total} />
+              <TotalCard r={data.totals.costPerConversation} covered={data.totals.coverage.conversationCost} total={data.totals.coverage.total} />
             </div>
-            <p className="text-xs text-muted-foreground">Leads e CPL usam a fonte de leads escolhida na ficha de cada cliente. Conversas são exibidas separadamente e não são somadas novamente aos leads.</p>
+            <p className="text-xs text-muted-foreground">Leads e conversas aparecem separados. Cada custo usa o investimento e a quantidade do respectivo resultado, sem somar leads e conversas.</p>
 
             <div className="space-y-5">
               <MonthChart title="Investimento" line={data.month.spend} month={data.month.month} before={data.month.before} format="money" />
