@@ -194,28 +194,33 @@ export interface LeadRow {
   name: string;
   logoUrl: string | null;
   leads: Reading;
+  conversations: Reading | null;
+  costPerConversation: Reading | null;
   /** Purchase value attributed by Meta; a null value = the account has no purchase event (leads do not depend on it). */
   revenue: Reading;
   cpl: Reading | null;
 }
 
-/** The lead-generation (and mixed) clients with their leads, most leads first. A client with leads but no revenue still shows. */
+/** Lead-generation clients with separate lead and conversation counts; either result keeps a row visible. */
 export function leadRows(clients: readonly ClientReadings[], limit = 20): LeadRow[] {
   const rows: LeadRow[] = [];
   for (const c of clients) {
     if (c.status !== "ok" || (c.segment !== "leads" && c.segment !== "mixed")) continue;
-    const leads = find(c, "leads");
-    if (!leads || leads.value === null) continue;
+    const leads = find(c, "direct_leads") ?? find(c, "leads");
+    const conversations = find(c, "conversations") ?? null;
+    if ((!leads || leads.value === null) && conversations?.value == null) continue;
     rows.push({
       clientId: c.clientId,
       name: c.name,
       logoUrl: c.logoUrl,
-      leads,
+      leads: leads ?? { key: "direct_leads", label: "Leads gerados", value: null, previous: null, format: "number", upIsGood: true, why: "not_collected" },
+      conversations,
+      costPerConversation: find(c, "cost_per_conversation") ?? null,
       revenue: find(c, "revenue") ?? { key: "revenue", label: "Faturamento", value: null, previous: null, format: "money", upIsGood: true, why: "no_events" },
-      cpl: find(c, "cpl") ?? null,
+      cpl: find(c, "direct_cpl") ?? find(c, "cpl") ?? null,
     });
   }
-  return rows.sort((a, b) => (b.leads.value ?? 0) - (a.leads.value ?? 0)).slice(0, limit);
+  return rows.sort((a, b) => Math.max(b.leads.value ?? 0, b.conversations?.value ?? 0) - Math.max(a.leads.value ?? 0, a.conversations?.value ?? 0)).slice(0, limit);
 }
 
 export interface Totals {
@@ -223,10 +228,11 @@ export interface Totals {
   revenue: Reading;
   leads: Reading;
   conversations: Reading;
+  costPerConversation: Reading;
   roas: Reading;
   cpl: Reading;
   /** How many clients each number covers, so a partial sum is never passed off as the whole. */
-  coverage: { spend: number; revenue: number; leads: number; conversations: number; total: number };
+  coverage: { spend: number; revenue: number; leads: number; conversations: number; conversationCost: number; total: number };
 }
 
 const unavailable = (key: string, label: string, format: ReadingFormat, upIsGood: boolean, why: Why, neutral = false): Reading => ({ key, label, value: null, previous: null, format, upIsGood, why, ...(neutral ? { neutral: true } : {}) });
@@ -272,13 +278,22 @@ export function totals(clients: readonly ClientReadings[]): Totals {
   }
 
   // Leads and CPL: lead-generation clients only, same population for both.
-  const leadRowsOk = ok.filter((c) => c.segment === "leads" || c.segment === "mixed").map((c) => ({ c, l: find(c, "leads"), sp: find(c, "spend") })).filter((x) => has(x.l) && has(x.sp));
+  const leadRowsOk = ok.filter((c) => c.segment === "leads" || c.segment === "mixed").map((c) => ({ c, l: find(c, "direct_leads") ?? find(c, "leads"), sp: find(c, "spend") })).filter((x) => has(x.l) && has(x.sp));
   const leadMixed = new Set(leadRowsOk.map((x) => x.c.currency ?? "?")).size > 1 || leadRowsOk.some((x) => x.c.currency === null);
   // Informational metric, separate from the configured lead result: never add the two.
   const conversationRows = ok.map((c) => find(c, "conversations")).filter(has);
   const conversations: Reading = conversationRows.length === 0
     ? unavailable("conversations", "Conversas por mensagem iniciadas", "number", true, "not_collected")
     : { key: "conversations", label: "Conversas por mensagem iniciadas", value: sumField(conversationRows, "value"), previous: conversationRows.some((r) => r.previous === null) ? null : sumField(conversationRows, "previous"), format: "number", upIsGood: true };
+  const conversationCostRows = ok.map((c) => ({ c, r: find(c, "conversations"), sp: find(c, "spend") })).filter((x) => has(x.r) && has(x.sp));
+  const conversationMixed = new Set(conversationCostRows.map((x) => x.c.currency ?? "?")).size > 1 || conversationCostRows.some((x) => x.c.currency === null);
+  let costPerConversation = unavailable("cost_per_conversation", "Custo por conversa", "money", false, conversationCostRows.length === 0 ? "not_collected" : "mixed_currency");
+  if (conversationCostRows.length > 0 && !conversationMixed) {
+    const value = ratio(sumField(conversationCostRows.map((x) => x.sp!), "value"), sumField(conversationCostRows.map((x) => x.r!), "value"));
+    const previous = conversationCostRows.some((x) => x.sp!.previous === null || x.r!.previous === null) ? null : ratio(sumField(conversationCostRows.map((x) => x.sp!), "previous"), sumField(conversationCostRows.map((x) => x.r!), "previous"));
+    costPerConversation = value === null ? unavailable("cost_per_conversation", "Custo por conversa", "money", false, "no_base") : { key: "cost_per_conversation", label: "Custo por conversa", value: r2(value), previous: previous === null ? null : r2(previous), format: "money", upIsGood: false };
+    costPerConversation.currency = conversationCostRows[0].c.currency;
+  }
   const leads: Reading =
     leadRowsOk.length === 0 ? unavailable("leads", "Leads gerados", "number", true, "not_configured") : { key: "leads", label: "Leads gerados", value: sumField(leadRowsOk.map((x) => x.l!), "value"), previous: sumField(leadRowsOk.map((x) => x.l!), "previous"), format: "number", upIsGood: true };
   let cpl = unavailable("cpl", "CPL médio", "money", false, leadRowsOk.length === 0 ? "not_configured" : "mixed_currency");
@@ -300,7 +315,7 @@ export function totals(clients: readonly ClientReadings[]): Totals {
     leads.previous = null;
     cpl.previous = null;
   }
-  return { spend, revenue, leads, conversations, roas, cpl, coverage: { spend: spendRows.length, revenue: revRows.length, leads: leadRowsOk.length, conversations: conversationRows.length, total } };
+  return { spend, revenue, leads, conversations, costPerConversation, roas, cpl, coverage: { spend: spendRows.length, revenue: revRows.length, leads: leadRowsOk.length, conversations: conversationRows.length, conversationCost: conversationCostRows.length, total } };
 }
 
 // ---- the daily series of the month -----------------------------------------------------

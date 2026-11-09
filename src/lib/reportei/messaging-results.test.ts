@@ -18,9 +18,9 @@ describe("messaging results", () => {
     expect(insights).toMatchObject({ leads: 20, conversations: 20, costPerLead: 5, leadEvent: CONVERSATION_ACTION });
     const readings = readingsOf([snap(insights)]);
     const summary = totals([{ clientId: "client", name: "Example", logoUrl: null, segment: "leads", ...readings }]);
-    expect(summary.leads.value).toBe(20); // Never 9 + 20, or 20 + 20.
+    expect(summary.leads.value).toBe(9); // Overview cards keep direct leads separate from conversations.
     expect(summary.conversations.value).toBe(20);
-    expect(summary.cpl.value).toBe(5);
+    expect(summary.cpl.value).toBe(11.11);
   });
   it("exposes real quantity, comparison and cost in the editable dashboard catalog", () => {
     expect(metaWidget("conversations", snap(), { id: "w", range })).toMatchObject({ title: "Conversas por mensagem iniciadas", value: 20, previous: 20, comparison: true });

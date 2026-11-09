@@ -310,6 +310,9 @@ export interface AccountInsights {
   cpm: number;
   /** Leads (action `lead`) and conversations started on messaging apps, from Meta's `actions`. */
   leads?: number;
+  /** Lead events separately from messaging, even when conversations are the configured result. */
+  directLeads?: number;
+  directLeadEvent?: string | null;
   conversations?: number;
   /** Spend per lead; 0 when there were no leads (kept for saved reports; new code uses cplOf, which is null then). */
   costPerLead?: number;
@@ -419,7 +422,7 @@ const OPTIONAL_NUMERIC = ["reach", "ctr", "cpc", "cpm"] as const;
 export function parseInsightsStrict(row: Record<string, unknown> | undefined, options: ReadOptions = {}): AccountInsights {
   const requested = options.attributionWindows && options.attributionWindows.length > 0 ? [...options.attributionWindows] : null;
   const attribution = (effective: string | null): AccountInsights["attribution"] => ({ requested, mode: requested ? "explicit" : "meta_default", effective });
-  if (!row) return { ...ZERO_INSIGHTS, delivered: false, leadEvent: null, purchaseEvent: null, purchases: null, purchaseValue: null, attribution: attribution(null) };
+  if (!row) return { ...ZERO_INSIGHTS, directLeads: 0, directLeadEvent: null, delivered: false, leadEvent: null, purchaseEvent: null, purchases: null, purchaseValue: null, attribution: attribution(null) };
 
   const numbers: Record<string, number> = {};
   for (const key of REQUIRED_NUMERIC) numbers[key] = metaNumber(row[key], key);
@@ -428,6 +431,7 @@ export function parseInsightsStrict(row: Record<string, unknown> | undefined, op
   const actions = readActions(row.actions, "actions");
   const values = readActions(row.action_values, "action_values");
   const leadEvent = chooseEvent(actions, options.events?.lead ? [options.events.lead] : LEAD_EVENTS);
+  const directLeadEvent = options.events?.lead === CONVERSATION_ACTION ? chooseEvent(actions, LEAD_EVENTS) : leadEvent;
   const purchaseEvent = chooseEvent(actions, options.events?.purchase ? [options.events.purchase] : PURCHASE_EVENTS);
   const leads = eventTotal(actions, leadEvent) ?? 0;
   const effective = typeof row.attribution_setting === "string" && row.attribution_setting.trim() ? row.attribution_setting.trim().slice(0, 100) : null;
@@ -440,6 +444,8 @@ export function parseInsightsStrict(row: Record<string, unknown> | undefined, op
     cpc: numbers.cpc,
     cpm: numbers.cpm,
     leads,
+    directLeads: eventTotal(actions, directLeadEvent) ?? 0,
+    directLeadEvent,
     conversations: actions === null ? undefined : eventTotal(actions, CONVERSATION_ACTION) ?? 0,
     costPerLead: leads > 0 ? Math.round((numbers.spend / leads) * 100) / 100 : 0,
     delivered: true,
