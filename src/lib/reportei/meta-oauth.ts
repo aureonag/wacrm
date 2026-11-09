@@ -15,7 +15,7 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 const RETURN_PREFIX = "/operational/reportei/";
 
 export function isMetaLoginConfigured(): boolean {
-  return Boolean(process.env.META_ADS_APP_ID && process.env.META_ADS_APP_SECRET);
+  return Boolean(process.env.META_ADS_APP_ID?.trim() && process.env.META_ADS_APP_SECRET?.trim());
 }
 
 /** Only same-site paths inside Reportei are valid return targets (blocks open redirects). */
@@ -39,8 +39,10 @@ export interface OAuthState {
   a: string;
   /** Where to send the person afterwards. */
   r: string;
-  /** Random per request. */
+  /** Random per request; also kept in a cookie of the browser that started the sign-in, so the state cannot be replayed from elsewhere. */
   n: string;
+  /** Set when reconnecting a known connection (meta_connections.id): the callback then insists on the same Meta identity. */
+  k?: string;
   /** Expiry, epoch ms. */
   e: number;
 }
@@ -51,9 +53,29 @@ function sign(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-export function signState(state: Omit<OAuthState, "n" | "e">, secret: string, now = Date.now()): string {
-  const payload = b64(JSON.stringify({ ...state, n: randomBytes(8).toString("hex"), e: now + STATE_TTL_MS } satisfies OAuthState));
+export function signState(state: Omit<OAuthState, "n" | "e"> & { n?: string }, secret: string, now = Date.now()): string {
+  const payload = b64(JSON.stringify({ ...state, n: state.n ?? randomBytes(8).toString("hex"), e: now + STATE_TTL_MS } satisfies OAuthState));
   return `${payload}.${sign(payload, secret)}`;
+}
+
+/** Name of the cookie that carries the state's nonce from "connect" to "callback". */
+export const OAUTH_NONCE_COOKIE = "meta_oauth_n";
+
+/** The value of one cookie in a Cookie header, or null. Pure. */
+export function readCookie(header: string | null | undefined, name: string): string | null {
+  for (const part of (header ?? "").split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
+  }
+  return null;
+}
+
+/** True when the browser's cookie carries the nonce the state was signed with (the sign-in was started in this browser). Pure. */
+export function nonceMatches(cookieValue: string | null, state: Pick<OAuthState, "n">): boolean {
+  if (!cookieValue) return false;
+  const a = Buffer.from(cookieValue);
+  const b = Buffer.from(state.n);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /** Returns the state when the signature is valid and it has not expired, else null. */
@@ -66,7 +88,8 @@ export function verifyState(token: string | null | undefined, secret: string, no
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   try {
     const s = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as OAuthState;
-    if (typeof s.u !== "string" || typeof s.a !== "string" || typeof s.r !== "string" || typeof s.e !== "number") return null;
+    if (typeof s.u !== "string" || typeof s.a !== "string" || typeof s.r !== "string" || typeof s.n !== "string" || typeof s.e !== "number") return null;
+    if (s.k !== undefined && typeof s.k !== "string") return null;
     return s.e >= now ? s : null;
   } catch {
     return null;

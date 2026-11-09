@@ -15,17 +15,22 @@ import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { diagnoseToken, listConnectionAdAccounts, MetaAdsError, mergeConnectionAccounts, type MetaAdAccount } from "@/lib/reportei/meta-ads";
 import { isMetaLoginConfigured } from "@/lib/reportei/meta-oauth";
-import { listCompanyConnections, markConnectionFailed, refreshConnectionIfDue } from "@/lib/reportei/meta-connection";
+import { listCompanyConnections, listCompanyConnectionSummaries, markConnectionFailed, refreshConnectionIfDue } from "@/lib/reportei/meta-connection";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
     const ctx = await requirePermission("operational", "tasks", "edit_boards");
-    if (!isMetaLoginConfigured()) return NextResponse.json({ configured: false });
-
-    const connections = await listCompanyConnections(ctx.accountId);
-    if (connections.length === 0) return NextResponse.json({ configured: true, connected: false });
+    const configured = isMetaLoginConfigured();
+    // Existing credentials can still read without the app's login configuration.
+    // Keep this separate from the ability to start or renew an authorization.
+    const [connections, summaries] = await Promise.all([
+      listCompanyConnections(ctx.accountId),
+      listCompanyConnectionSummaries(ctx.accountId),
+    ]);
+    const setup = { configured, oauthConfigured: configured, connections: summaries };
+    if (connections.length === 0) return NextResponse.json({ ...setup, connected: false });
 
     // ?diagnose=1: what each connection's token can see (scopes, granted assets, Meta's errors). Never the token.
     if (new URL(req.url).searchParams.get("diagnose") === "1") {
@@ -39,7 +44,7 @@ export async function GET(req: Request) {
     let lastError: MetaAdsError | null = null;
     for (const stored of connections) {
       // Renew a token that is close to its end while we have it in hand.
-      const c = await refreshConnectionIfDue(stored);
+      const c = configured ? await refreshConnectionIfDue(stored) : stored;
       try {
         lists.push({ connectionId: c.id, accounts: await listConnectionAdAccounts(c.token) });
         working.push({ name: c.fbUserName });
@@ -54,14 +59,13 @@ export async function GET(req: Request) {
 
     if (working.length === 0) {
       // Every connection was revoked: ask for a new sign-in. Any other failure is an error.
-      if (lastError?.code === "token_invalid") return NextResponse.json({ configured: true, connected: false });
-      return NextResponse.json({ error: lastError?.code ?? "request_failed", detail: lastError?.detail }, { status: 502 });
+      if (lastError?.code === "token_invalid") return NextResponse.json({ ...setup, connected: false });
+      return NextResponse.json({ ...setup, error: lastError?.code ?? "request_failed", detail: lastError?.detail }, { status: 502 });
     }
 
     return NextResponse.json({
-      configured: true,
+      ...setup,
       connected: true,
-      connections: working,
       accounts: mergeConnectionAccounts(lists),
     });
   } catch (err) {

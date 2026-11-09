@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAuthUrl, isRefreshDue, needsLongLivedExchange, safeReturnTo, signState, verifyState, withMetaResult } from "./meta-oauth";
+import { buildAuthUrl, isRefreshDue, nonceMatches, readCookie, needsLongLivedExchange, safeReturnTo, signState, verifyState, withMetaResult } from "./meta-oauth";
 
 describe("needsLongLivedExchange", () => {
   it("trades a short-lived user token, but keeps a permanent system-user token", () => {
@@ -90,5 +90,23 @@ describe("isRefreshDue", () => {
     expect(isRefreshDue(inDays(31), now)).toBe(false);
     expect(isRefreshDue(null, now)).toBe(false);
     expect(isRefreshDue("not a date", now)).toBe(false);
+  });
+});
+
+
+describe("OAuth nonce binds the callback to the initiating browser", () => {
+  it("rejects missing or different browser cookies even with a correctly signed state", () => {
+    const token = signState({u:"u",a:"a",r:"/operational/reportei/clientes",n:"browser-a"}, SECRET);
+    const state = verifyState(token, SECRET)!;
+    expect(nonceMatches(null,state)).toBe(false);
+    expect(nonceMatches("browser-b",state)).toBe(false);
+    expect(nonceMatches("browser-a",state)).toBe(true);
+  });
+  it("keeps the identity selected for reconnect and expires the authorization", () => {
+    const token=signState({u:"u",a:"a",r:"/operational/reportei/clientes",n:"nonce",k:"connection-a"},SECRET,1000);
+    expect(verifyState(token,SECRET,1001)?.k).toBe("connection-a");
+    expect(verifyState(token,SECRET,601001)).toBeNull();
+    expect(readCookie("another=x; meta_oauth_n=nonce", "meta_oauth_n")).toBe("nonce");
+    expect(readCookie(null,"meta_oauth_n")).toBeNull();
   });
 });

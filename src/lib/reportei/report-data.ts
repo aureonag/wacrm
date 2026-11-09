@@ -69,7 +69,7 @@ export async function collectAccountSnapshots(
       accounts.push(entry);
     } catch (err) {
       if (!(err instanceof MetaAdsError)) throw err;
-      accounts.push({ ...base, error: err.code === "not_configured" ? "request_failed" : err.code, detail: err.detail });
+      accounts.push({ ...base, error: err.code === "permission" || err.code === "token_invalid" ? err.code : "request_failed", detail: err.detail });
     }
   }
   return accounts;

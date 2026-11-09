@@ -33,6 +33,7 @@ export function IntegrationsPanel({
   integrations,
   onChanged,
   openPicker = false,
+  onPickerClosed,
 }: {
   clientId: string;
   clientName: string;
@@ -40,6 +41,7 @@ export function IntegrationsPanel({
   onChanged: () => void;
   /** Open the account picker on arrival (coming back from "Entrar com Facebook"). */
   openPicker?: boolean;
+  onPickerClosed?: () => void;
 }) {
   const t = useTranslations("Operational.reportei.integrations");
   const canEdit = useHasPermission("operational", "tasks", "edit_boards");
@@ -47,7 +49,7 @@ export function IntegrationsPanel({
   const [picking, setPicking] = useState(openPicker);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const linkedIds = useMemo(() => new Set(integrations.map((i) => i.external_account_id)), [integrations]);
+  const linkedIds = useMemo(() => new Set(integrations.filter((i) => i.status === "connected").map((i) => i.external_account_id)), [integrations]);
   const cards = useMemo(() => {
     const q = norm(query.trim());
     return q ? INTEGRATION_CATALOG.filter((c) => norm(c.name).includes(q)) : INTEGRATION_CATALOG;
@@ -120,22 +122,27 @@ export function IntegrationsPanel({
                   </div>
                 </div>
                 {c.available ? (
-                  <Button variant="outline" size="sm" disabled={!canEdit} onClick={() => setPicking(true)}>
+                  <Button variant="outline" size="sm" disabled={!canEdit} onClick={() => {
+                    const here = new URL(window.location.href);
+                    here.searchParams.delete("meta");
+                    window.location.assign(`/api/operational/reportei/meta/connect?${new URLSearchParams({ returnTo: here.pathname + here.search })}`);
+                  }}>
                     <Plug className="h-3.5 w-3.5" />
-                    {t("integrate")}
+                    {t("connectMeta")}
                   </Button>
                 ) : (
                   <Button variant="outline" size="sm" disabled>
                     {t("soon")}
                   </Button>
                 )}
+                {c.available && <button type="button" disabled={!canEdit} onClick={() => setPicking(true)} className="text-xs font-medium text-primary hover:underline disabled:opacity-50">{t("chooseAuthorized")}</button>}
               </div>
             );
           })}
         </div>
       </section>
 
-      <MetaAccountsDialog open={picking} onOpenChange={setPicking} clientId={clientId} clientName={clientName} linkedIds={linkedIds} onLinked={onChanged} />
+      <MetaAccountsDialog open={picking} onOpenChange={(open) => { setPicking(open); if (!open) onPickerClosed?.(); }} clientId={clientId} clientName={clientName} linkedIds={linkedIds} onLinked={onChanged} />
     </div>
   );
 }
