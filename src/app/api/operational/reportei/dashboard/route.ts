@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   try {
     const ctx = await requirePermission("operational", "tasks", "view_tasks");
     const url = new URL(req.url);
-    const wanted = url.searchParams.get("period") ?? "last_30d";
+    const wanted = url.searchParams.get("period") ?? "this_month";
     if (!isPeriod(wanted)) return NextResponse.json({ error: "Invalid period" }, { status: 400 });
     const offset = intParam(url.searchParams.get("offset"), 0, 0, 100_000);
     const limit = intParam(url.searchParams.get("limit"), PAGE_DEFAULT, 1, PAGE_MAX);

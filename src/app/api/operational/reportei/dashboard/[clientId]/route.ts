@@ -20,7 +20,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ clientId
     const ctx = await requirePermission("operational", "tasks", "view_tasks");
     const { clientId } = await params;
     if (!isUuid(clientId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    const wanted = new URL(req.url).searchParams.get("period") ?? "last_30d";
+    const wanted = new URL(req.url).searchParams.get("period") ?? "this_month";
     if (!isPeriod(wanted)) return NextResponse.json({ error: "Invalid period" }, { status: 400 });
 
     const client = await ctx.supabase.from("ops_clients").select("id, name, code").eq("id", clientId).eq("account_id", ctx.accountId).maybeSingle();

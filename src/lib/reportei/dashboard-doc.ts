@@ -8,6 +8,7 @@ import { demoSource } from "./doc-catalog";
 import { DASHBOARD_LAYOUT, buildDocFromTemplate } from "./doc-templates";
 import { refreshPreserving } from "./meta-doc";
 import { previousRange } from "./report";
+import { resolvePeriod } from "./periods";
 import { isWizardPeriod, resolveWizardPeriod, type DateRange, type WizardPeriod } from "./wizard";
 
 /** The periods of the selector, in Reportei's order. */
@@ -31,6 +32,11 @@ export interface DashboardPeriod {
   preset: DashboardPreset | "custom";
   since: string;
   until: string;
+}
+
+/** Every dashboard opens month-to-date, independently of an earlier manual selection. */
+export function dashboardOpeningPeriod(now = new Date()): DashboardPeriod {
+  return { preset: "this_month", ...resolvePeriod("this_month", now) };
 }
 
 const DAY = 24 * 60 * 60 * 1000;

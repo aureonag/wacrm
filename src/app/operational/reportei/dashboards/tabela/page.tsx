@@ -56,7 +56,7 @@ function Cell({ row, k }: { row: ClientSummary; k: Exclude<SortKey, "name"> }) {
 export default function ReporteiDashboardsPage() {
   const t = useTranslations("Operational.reportei.dashboardsPage");
   const tr = useTranslations("Operational.reportei.reports");
-  const [period, setPeriod] = useState<Period>("last_30d");
+  const [period, setPeriod] = useState<Period>("this_month");
   const [sort, setSort] = useState<SortKey>("spend");
   const [rows, setRows] = useState<ClientSummary[]>([]);
   const [total, setTotal] = useState(0);
