@@ -8,12 +8,13 @@ import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { parseDoc, type ReportDoc } from "@/lib/reportei/doc";
-import { comparisonOf, parsePeriod, refreshDashboardDoc } from "@/lib/reportei/dashboard-doc";
+import { comparisonOf, dashboardOpeningPeriod, parsePeriod, refreshDashboardDoc } from "@/lib/reportei/dashboard-doc";
 import { refreshRealDoc } from "@/lib/reportei/meta-doc";
 import { collectAccountSnapshots } from "@/lib/reportei/report-data";
 import { isUuid } from "@/lib/reportei/template-store";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -33,6 +34,22 @@ export async function GET(_req: Request, { params }: Ctx) {
       return NextResponse.json({ error: "Failed to load dashboard" }, { status: 500 });
     }
     if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Opening a dashboard is a fresh read, never a write to its saved configuration.
+    // Re-read the figures as well as the dates: relabeling the saved snapshot would be misleading.
+    const period = dashboardOpeningPeriod();
+    let doc = parseDoc(data.doc);
+    if (!doc) return NextResponse.json({ error: "Invalid dashboard" }, { status: 500 });
+    let unreadable: string[] = [];
+    if (doc.demo) {
+      doc = refreshDashboardDoc(doc, period, `${id}:${period.since}:${period.until}`);
+    } else {
+      const accounts = await collectAccountSnapshots(ctx, data.client_id as string, { ...period, compare: comparisonOf(period), daily: true });
+      if (accounts.length > 0 && accounts.every((a) => !a.insights)) return NextResponse.json({ error: "unreadable" }, { status: 502 });
+      const refreshed = refreshRealDoc(doc, accounts, period);
+      doc = refreshed.doc;
+      unreadable = refreshed.unreadable;
+    }
+    doc = { ...doc, blocks: doc.blocks.map((b) => ({ ...b, widgets: b.widgets.map((w) => w.kind === "metric" ? { ...w, comparison: w.previous !== null } : w) })) };
     const client = Array.isArray(data.ops_clients) ? data.ops_clients[0] : data.ops_clients;
     const logo = await ctx.supabase.from("reportei_client_logos").select("logo_url").eq("client_id", data.client_id).eq("account_id", ctx.accountId).maybeSingle();
     return NextResponse.json({
@@ -42,12 +59,13 @@ export async function GET(_req: Request, { params }: Ctx) {
         clientName: client?.name ?? "",
         logoUrl: (logo.data?.logo_url as string | undefined) ?? null,
         title: data.title,
-        doc: data.doc,
-        period: data.period,
-        compare: data.compare,
+        doc,
+        period,
+        compare: true,
         realtime: data.realtime,
         updatedAt: data.updated_at,
       },
+      unreadable,
     });
   } catch (err) {
     return toErrorResponse(err);

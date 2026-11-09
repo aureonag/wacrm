@@ -8,12 +8,11 @@ import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { CATALOG_NETWORKS } from "@/lib/reportei/doc-catalog";
-import { buildDashboardDoc, comparisonOf, resolveDashboardPreset, type DashboardAccount } from "@/lib/reportei/dashboard-doc";
+import { buildDashboardDoc, comparisonOf, dashboardOpeningPeriod, type DashboardAccount } from "@/lib/reportei/dashboard-doc";
 import { makeId } from "@/lib/reportei/doc";
 import { DASHBOARD_LAYOUT } from "@/lib/reportei/doc-templates";
 import { buildRealDoc } from "@/lib/reportei/meta-doc";
 import { collectAccountSnapshots } from "@/lib/reportei/report-data";
-import { resolvePeriod } from "@/lib/reportei/periods";
 import { isUuid } from "@/lib/reportei/template-store";
 
 export const dynamic = "force-dynamic";
@@ -56,8 +55,7 @@ export async function POST(req: Request) {
     if (client.error) return NextResponse.json({ error: "Failed to load client" }, { status: 500 });
     if (!client.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const today = resolvePeriod("last_7d").until;
-    const range = resolveDashboardPreset("last_30d", today);
+    const range = dashboardOpeningPeriod();
     let doc;
     if (demo) {
       // The marked preview: made-up numbers, flagged in the document.
@@ -80,7 +78,7 @@ export async function POST(req: Request) {
         client_id: clientId,
         title: `Dashboard de ${client.data.name}`.slice(0, 200),
         doc,
-        period: { preset: "last_30d", ...range },
+        period: range,
         networks: [...new Set(doc.blocks.map((b) => b.network).filter((n): n is string => !!n))],
         created_by: ctx.userId,
       })

@@ -35,7 +35,7 @@ export default function ReporteiDashboardClientPage({ params }: { params: Promis
   const t = useTranslations("Operational.reportei.dashboardsPage");
   const tr = useTranslations("Operational.reportei.reports");
   const canEdit = useHasPermission("operational", "tasks", "edit_boards");
-  const [period, setPeriod] = useState<Period>("last_30d");
+  const [period, setPeriod] = useState<Period>("this_month");
   const [state, setState] = useState<State>({ kind: "loading" });
   const [generating, setGenerating] = useState(false);
   const run = useRef(0);

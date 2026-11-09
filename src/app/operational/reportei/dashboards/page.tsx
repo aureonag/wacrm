@@ -13,7 +13,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import type { ClientCardData } from "@/lib/reportei/client-card";
-import { resolveDashboardPreset, type DashboardPeriod } from "@/lib/reportei/dashboard-doc";
+import { dashboardOpeningPeriod, type DashboardPeriod } from "@/lib/reportei/dashboard-doc";
 import { formatDec, formatInt, formatMoney, showDate } from "@/lib/reportei/format";
 import {
   RULES, WHY_TEXT, classify, dailySeries, deltaPct, demoOverview, goodness, isNewResult, leadRows, pendingOf, seriesTotal, totals,
@@ -279,7 +279,7 @@ function MonthChart({ title, line, month, before, format }: { title: string; lin
 type Loaded = { kind: "loading" } | { kind: "error"; key: string } | { kind: "ready"; key: string; clients: ClientCardData[]; payload: OverviewPayload };
 
 export default function ReporteiDashboardsPage() {
-  const [period, setPeriod] = useState<DashboardPeriod>(() => ({ preset: "last_30d", ...resolveDashboardPreset("last_30d", resolvePeriod("last_7d").until) }));
+  const [period, setPeriod] = useState<DashboardPeriod>(() => dashboardOpeningPeriod());
   const [compare, setCompare] = useState(true);
   const [preview, setPreview] = useState(false);
   const [state, setState] = useState<Loaded>({ kind: "loading" });
