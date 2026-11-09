@@ -7,12 +7,14 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Globe, Loader2, Megaphone, Plug, Search, Trash2 } from "lucide-react";
+import { Filter, Globe, Loader2, Megaphone, Plug, Search, Timer, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { INTEGRATION_CATALOG } from "@/lib/reportei/integrations-catalog";
 import { cn } from "@/lib/utils";
+import { AttributionDialog } from "./attribution-dialog";
+import { CampaignsDialog } from "./campaigns-dialog";
 import { MetaAccountsDialog } from "./meta-accounts-dialog";
 
 export interface Integration {
@@ -23,6 +25,8 @@ export interface Integration {
   status: "connected" | "error" | "revoked";
   last_error: string | null;
   created_at: string;
+  /** Campaigns the reports are limited to; null or absent = the whole account. */
+  campaign_ids?: string[] | null;
 }
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -48,6 +52,8 @@ export function IntegrationsPanel({
   const [query, setQuery] = useState("");
   const [picking, setPicking] = useState(openPicker);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState<Integration | null>(null);
+  const [attributing, setAttributing] = useState<Integration | null>(null);
 
   const linkedIds = useMemo(() => new Set(integrations.filter((i) => i.status === "connected").map((i) => i.external_account_id)), [integrations]);
   const cards = useMemo(() => {
@@ -78,7 +84,9 @@ export function IntegrationsPanel({
               <Megaphone className="h-4 w-4 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{i.external_account_name ?? i.external_account_id}</p>
-                <p className="truncate text-xs text-muted-foreground">{i.external_account_id}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {i.external_account_id} · {i.campaign_ids?.length ? t("campaignsCount", { count: i.campaign_ids.length }) : t("wholeAccount")}
+                </p>
               </div>
               <span
                 title={i.last_error ?? undefined}
@@ -90,6 +98,16 @@ export function IntegrationsPanel({
                 {t(`status_${i.status}`)}
               </span>
               <span className="hidden w-28 text-right text-xs text-muted-foreground sm:block">{fmt.format(new Date(i.created_at))}</span>
+              {canEdit && i.status === "connected" && (
+                <Button variant="ghost" size="icon" aria-label={t("campaignsButton")} title={t("campaignsButton")} onClick={() => setChoosing(i)}>
+                  <Filter className="h-4 w-4" />
+                </Button>
+              )}
+              {canEdit && i.status === "connected" && (
+                <Button variant="ghost" size="icon" aria-label="Atribuição" title="Janelas de atribuição" onClick={() => setAttributing(i)}>
+                  <Timer className="h-4 w-4" />
+                </Button>
+              )}
               {canEdit && (
                 <Button variant="ghost" size="icon" disabled={removingId === i.id} aria-label={t("remove")} title={t("remove")} onClick={() => remove(i)}>
                   {removingId === i.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -141,6 +159,21 @@ export function IntegrationsPanel({
           })}
         </div>
       </section>
+
+      {choosing && (
+        <CampaignsDialog
+          clientId={clientId}
+          integrationId={choosing.id}
+          accountName={choosing.external_account_name ?? choosing.external_account_id}
+          onClose={() => setChoosing(null)}
+          onSaved={() => {
+            setChoosing(null);
+            onChanged();
+          }}
+        />
+      )}
+
+      {attributing && <AttributionDialog clientId={clientId} integrationId={attributing.id} accountName={attributing.external_account_name ?? attributing.external_account_id} onClose={() => setAttributing(null)} />}
 
       <MetaAccountsDialog open={picking} onOpenChange={(open) => { setPicking(open); if (!open) onPickerClosed?.(); }} clientId={clientId} clientName={clientName} linkedIds={linkedIds} onLinked={onChanged} />
     </div>

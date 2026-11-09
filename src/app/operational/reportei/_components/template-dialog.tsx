@@ -22,22 +22,25 @@ function toggle<T>(list: readonly T[], item: T): T[] {
 
 export function TemplateDialog({
   template,
+  prefill,
   onClose,
   onSaved,
 }: {
   /** null: new template. */
   template: Template | null;
+  /** Starting values for a NEW template (e.g. from a report). Ignored when editing. */
+  prefill?: Partial<Omit<Template, "id">>;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const t = useTranslations("Operational.reportei.templatesPage");
   const tm = useTranslations("Operational.reportei.reports");
-  const [name, setName] = useState(template?.name ?? "");
-  const [metrics, setMetrics] = useState<MetricKey[]>(template?.metrics ?? [...DEFAULT_OPTIONS.metrics]);
-  const [chart, setChart] = useState(template?.chart ?? true);
-  const [chartMetrics, setChartMetrics] = useState<DailyMetric[]>(template?.chartMetrics.length ? template.chartMetrics : [...DEFAULT_OPTIONS.chartMetrics]);
-  const [compare, setCompare] = useState(template?.compare ?? true);
-  const [intro, setIntro] = useState(template?.intro ?? "");
+  const [name, setName] = useState(template?.name ?? prefill?.name ?? "");
+  const [metrics, setMetrics] = useState<MetricKey[]>(template?.metrics ?? prefill?.metrics ?? [...DEFAULT_OPTIONS.metrics]);
+  const [chart, setChart] = useState(template?.chart ?? prefill?.chart ?? true);
+  const [chartMetrics, setChartMetrics] = useState<DailyMetric[]>((template?.chartMetrics ?? prefill?.chartMetrics)?.length ? (template?.chartMetrics ?? prefill?.chartMetrics)! : [...DEFAULT_OPTIONS.chartMetrics]);
+  const [compare, setCompare] = useState(template?.compare ?? prefill?.compare ?? true);
+  const [intro, setIntro] = useState(template?.intro ?? prefill?.intro ?? "");
   const [saving, setSaving] = useState(false);
 
   const body = { name: name.trim(), metrics, chart, chartMetrics, compare, intro };

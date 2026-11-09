@@ -2,6 +2,7 @@
 // copied into the report's snapshot when it is generated, so a later edit of the
 // template never changes a report that already exists.
 
+import { parseLayout, type TemplateLayout } from "@/lib/reportei/doc-templates";
 import { DAILY_METRICS, METRICS, type DailyMetric, type MetricKey } from "@/lib/reportei/report";
 
 export interface ReportOptions {
@@ -28,6 +29,18 @@ export interface Template extends ReportOptions {
   id: string;
   name: string;
   compare: boolean;
+  description: string;
+  /** "mine": Meus templates; "expert": the template of a person of the team. */
+  kind: "mine" | "expert";
+  ownerProfileId: string | null;
+  /** Which networks and indicators a report made from it has; null for the older templates that only choose metrics. */
+  layout: TemplateLayout | null;
+}
+
+/** A template as the list shows it: the expert's name and photo come from their profile. */
+export interface TemplateListItem extends Template {
+  ownerName: string | null;
+  ownerAvatarUrl: string | null;
 }
 
 const keep = <T extends string>(all: readonly T[], value: unknown): T[] | null => {
@@ -79,11 +92,24 @@ interface TemplateRow {
   chart_metrics: string[];
   compare: boolean;
   intro: string | null;
+  description?: string | null;
+  kind?: string | null;
+  owner_profile_id?: string | null;
+  layout?: unknown;
 }
 
 export function templateFromRow(row: TemplateRow): Template {
   const options = effectiveOptions({ metrics: row.metrics as MetricKey[], chart: row.chart, chartMetrics: row.chart_metrics as DailyMetric[], intro: row.intro ?? "" });
-  return { id: row.id, name: row.name, compare: row.compare, ...options };
+  return {
+    id: row.id,
+    name: row.name,
+    compare: row.compare,
+    ...options,
+    description: row.description ?? "",
+    kind: row.kind === "expert" ? "expert" : "mine",
+    ownerProfileId: row.owner_profile_id ?? null,
+    layout: row.layout ? parseLayout(row.layout) : null,
+  };
 }
 
 export function optionsOf(t: ReportOptions): ReportOptions {

@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronRight, FileText, Megaphone, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { Skeleton } from "@/components/dashboard/skeleton";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { formatMetric, showDate, showDateTime } from "@/lib/reportei/format";
 import { PERIODS, type Period } from "@/lib/reportei/periods";
-import { METRICS, type AccountSnapshot } from "@/lib/reportei/report";
+import { METRICS, visibleMetrics, type AccountSnapshot } from "@/lib/reportei/report";
 import { cn } from "@/lib/utils";
 import { GenerateReportDialog } from "./generate-report-dialog";
 
@@ -42,6 +43,7 @@ export function ReportsPanel({ clientId, clientName, hasIntegrations }: { client
   const [state, setState] = useState<State>({ kind: "loading" });
   const [saved, setSaved] = useState<SavedReport[] | null>(null);
   const [generating, setGenerating] = useState(false);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/operational/reportei/clients/${clientId}/insights?period=${period}`);
@@ -97,10 +99,15 @@ export function ReportsPanel({ clientId, clientName, hasIntegrations }: { client
               <p className="text-xs text-muted-foreground">{t("range", { since: showDate(state.report.period.since), until: showDate(state.report.period.until) })}</p>
             )}
             {canEdit && (
-              <Button size="sm" onClick={() => setGenerating(true)}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                {t("generate")}
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={() => setGenerating(true)} title="Lê agora o Meta Ads e salva o relatório no formato simples">
+                  {t("generate")} (Meta Ads, dados reais)
+                </Button>
+                <Button size="sm" onClick={() => router.push(`/operational/reportei/clientes/${clientId}/relatorios/novo`)}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Novo relatório
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -120,12 +127,15 @@ export function ReportsPanel({ clientId, clientName, hasIntegrations }: { client
                   <Megaphone className="h-4 w-4 shrink-0 text-primary" />
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-semibold text-foreground">{a.name}</h3>
-                    <p className="truncate text-xs text-muted-foreground">Meta Ads · {a.id}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      Meta Ads · {a.id}
+                      {a.campaigns ? ` · ${t("campaignsCount", { count: a.campaigns })}` : ""}
+                    </p>
                   </div>
                 </header>
                 {a.insights ? (
                   <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {METRICS.map((key) => (
+                    {visibleMetrics(METRICS, a.insights).map((key) => (
                       <div key={key}>
                         <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{t(`metric_${key}`)}</dt>
                         <dd className="mt-0.5 text-base font-semibold text-foreground">{formatMetric(key, a.insights![key], a.currency)}</dd>

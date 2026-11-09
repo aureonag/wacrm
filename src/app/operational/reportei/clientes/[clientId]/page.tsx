@@ -14,9 +14,14 @@ import { Skeleton } from "@/components/dashboard/skeleton";
 import { ClientCode } from "@/components/operational/client-code";
 import { cn } from "@/lib/utils";
 import type { ClientStatus } from "@/lib/operational/clients-projects";
+import { ClientChecklist } from "../../_components/client-checklist";
+import { ClientHome } from "../../_components/client-home";
+import { ClientLogoEditor } from "../../_components/client-logo-editor";
 import { IntegrationsPanel, type Integration } from "../../_components/integrations-panel";
 import { AutomationPanel } from "../../_components/automation-panel";
+import { SegmentSelect } from "../../_components/segment-select";
 import { ReportsPanel } from "../../_components/reports-panel";
+import { TimelinePanel } from "../../_components/timeline-panel";
 import { WizardProgress } from "../../_components/wizard-progress";
 
 interface Client {
@@ -24,12 +29,21 @@ interface Client {
   name: string;
   code: string | null;
   status: ClientStatus;
+  logoUrl?: string | null;
 }
 
 type State = { kind: "loading" } | { kind: "error" } | { kind: "notFound" } | { kind: "ready"; client: Client; integrations: Integration[] };
-type Tab = "integrations" | "reports" | "automations";
+type Tab = "home" | "integrations" | "reports" | "automations" | "timeline";
 
-const TABS: Tab[] = ["integrations", "reports", "automations"];
+const TABS: Tab[] = ["home", "integrations", "reports", "automations", "timeline"];
+
+
+function clearMetaResult() {
+  const current = new URL(window.location.href);
+  if (!current.searchParams.has("meta")) return;
+  current.searchParams.delete("meta");
+  window.history.replaceState(window.history.state, "", current.pathname + current.search + current.hash);
+}
 
 export default function ReporteiClientPage({
   params,
@@ -48,7 +62,7 @@ export default function ReporteiClientPage({
   const tw = useTranslations("Operational.reportei.wizard");
   const ti = useTranslations("Operational.reportei.integrations");
   const [state, setState] = useState<State>({ kind: "loading" });
-  const [tab, setTab] = useState<Tab>("integrations");
+  const [tab, setTab] = useState<Tab>(() => meta ? "integrations" : "home");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/operational/reportei/clients/${clientId}`);
@@ -70,11 +84,7 @@ export default function ReporteiClientPage({
 
   const consumeMetaResult = useCallback(() => {
     setOpenPicker(false);
-    const current = new URL(window.location.href);
-    if (current.searchParams.has("meta")) {
-      current.searchParams.delete("meta");
-      window.history.replaceState(window.history.state, "", current.pathname + current.search + current.hash);
-    }
+    clearMetaResult();
   }, []);
 
   const back = (
@@ -131,6 +141,12 @@ export default function ReporteiClientPage({
   return (
     <>
       {back}
+      <ClientLogoEditor
+        clientId={client.id}
+        name={client.name}
+        logoUrl={client.logoUrl ?? null}
+        onChanged={(logoUrl) => setState((s) => (s.kind === "ready" ? { ...s, client: { ...s.client, logoUrl } } : s))}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <ClientCode code={client.code} />
         <h1 className="text-2xl font-bold text-foreground">{client.name}</h1>
@@ -138,6 +154,10 @@ export default function ReporteiClientPage({
           <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{tc("inactive")}</span>
         )}
       </div>
+
+      <SegmentSelect clientId={client.id} />
+
+      <ClientChecklist clientId={client.id} integrations={integrations.length} onGo={setTab} />
 
       <nav className="flex gap-1 border-b border-border" aria-label={client.name}>
         {TABS.map((key) => (
@@ -156,12 +176,16 @@ export default function ReporteiClientPage({
         ))}
       </nav>
 
-      {tab === "integrations" ? (
+      {tab === "home" ? (
+        <ClientHome clientId={client.id} clientName={client.name} providers={integrations.map((i) => i.provider)} onGo={setTab} />
+      ) : tab === "integrations" ? (
         panel
       ) : tab === "reports" ? (
         <ReportsPanel clientId={client.id} clientName={client.name} hasIntegrations={integrations.length > 0} />
+      ) : tab === "automations" ? (
+        <AutomationPanel clientId={client.id} clientName={client.name} hasIntegrations={integrations.length > 0} />
       ) : (
-        <AutomationPanel clientId={client.id} hasIntegrations={integrations.length > 0} />
+        <TimelinePanel clientId={client.id} />
       )}
     </>
   );

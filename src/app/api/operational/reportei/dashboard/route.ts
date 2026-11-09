@@ -4,11 +4,12 @@
 // page at a time, because each one costs a few reads on Meta. Each summary is
 // kept for 10 minutes in memory; `refresh=1` reads again. view_tasks.
 //
-// 200 { period, compare, total, offset, clients: ClientSummary[] }
+// 200 { period, compare, total, offset, clients: ClientSummary[], goals: { [clientId]: { monthlyBudget, maxCpc } } }
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
+import { goalsFromRow } from "@/lib/reportei/goals";
 import { TtlCache, mapLimit, summarizeClient, type ClientSummary } from "@/lib/reportei/dashboard";
 import { isPeriod, resolvePeriod } from "@/lib/reportei/periods";
 import { previousRange } from "@/lib/reportei/report";
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Failed to load integrations" }, { status: 500 });
     }
     const ids = [...new Set((linked.data ?? []).map((r) => r.client_id as string))];
-    if (ids.length === 0) return NextResponse.json({ period: { key: wanted, ...period }, compare, total: 0, offset, clients: [] });
+    if (ids.length === 0) return NextResponse.json({ period: { key: wanted, ...period }, compare, total: 0, offset, clients: [], goals: {} });
 
     const clients = await ctx.supabase.from("ops_clients").select("id, name, code").eq("account_id", ctx.accountId).in("id", ids).order("name", { ascending: true });
     if (clients.error) {
@@ -75,7 +76,16 @@ export async function GET(req: Request) {
       }
     });
 
-    return NextResponse.json({ period: { key: wanted, ...period }, compare, total: all.length, offset, clients: summaries });
+    // Goals are read fresh (not cached) so an edit shows on the next load.
+    const goalRows = await ctx.supabase
+      .from("reportei_client_goals")
+      .select("client_id, monthly_budget, max_cpc")
+      .eq("account_id", ctx.accountId)
+      .in("client_id", page.map((c) => c.id as string));
+    if (goalRows.error) console.error("[GET reportei/dashboard] goals", goalRows.error.message);
+    const goals = Object.fromEntries((goalRows.data ?? []).map((g) => [g.client_id as string, goalsFromRow(g)]));
+
+    return NextResponse.json({ period: { key: wanted, ...period }, compare, total: all.length, offset, clients: summaries, goals });
   } catch (err) {
     return toErrorResponse(err);
   }

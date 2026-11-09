@@ -14,13 +14,17 @@ import { Skeleton } from "@/components/dashboard/skeleton";
 import { ReportView } from "@/components/reportei/report-view";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { PERIODS, type Period } from "@/lib/reportei/periods";
+import type { Goals } from "@/lib/reportei/goals";
 import type { ReportSnapshot } from "@/lib/reportei/report";
 import { cn } from "@/lib/utils";
 import { GenerateReportDialog } from "../../_components/generate-report-dialog";
+import { GoalsCard } from "../../_components/goals-card";
 
 interface Panel {
   client: { id: string; name: string; code: string | null };
   snapshot: ReportSnapshot;
+  goals: Goals;
+  period: { key: string };
   generatedAt: string;
 }
 
@@ -120,6 +124,17 @@ export default function ReporteiDashboardClientPage({ params }: { params: Promis
       {state.kind === "error" && <EmptyState title={t("panelError")} className="min-h-40" />}
       {state.kind === "ready" && (
         <>
+          {state.panel.snapshot.accounts.length > 0 && (
+            <GoalsCard
+              // A new load (another period) re-reads the figures; the key resets the form to the saved goals.
+              key={`${state.panel.period.key}:${state.panel.generatedAt}`}
+              clientId={clientId}
+              initial={state.panel.goals}
+              accounts={state.panel.snapshot.accounts}
+              periodKey={state.panel.period.key}
+              today={state.panel.snapshot.period.until}
+            />
+          )}
           {state.panel.snapshot.accounts.length === 0 ? (
             <EmptyState title={t("noAccounts")} className="min-h-40" />
           ) : (

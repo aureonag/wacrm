@@ -246,3 +246,13 @@ html[data-theme="rose"] {
     @apply font-sans;
   }
 }
+/* Reportei: a card that was just dropped settles into its place, and one that is lifted tilts. */
+@keyframes reportei-settle {
+  0% { transform: scale(0.86) rotate(-3deg); opacity: 0.55; }
+  55% { transform: scale(1.05) rotate(1deg); opacity: 1; }
+  100% { transform: none; }
+}
+@keyframes reportei-lift {
+  0% { transform: none; }
+  100% { transform: scale(1.03) rotate(2.5deg); }
+}

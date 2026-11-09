@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { templateFromRow, type Template } from "@/lib/reportei/template";
 
-export const TEMPLATE_COLUMNS = "id, name, metrics, chart, chart_metrics, compare, intro";
+export const TEMPLATE_COLUMNS = "id, name, metrics, chart, chart_metrics, compare, intro, description, kind, owner_profile_id, layout";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 export const isUuid = (v: unknown): v is string => typeof v === "string" && UUID.test(v);

@@ -1,15 +1,18 @@
 "use client";
 
-// Operacional → Reportei → Clientes: the same clients as Operacional → Clientes
-// (ops_clients), seen from the reporting side. Click a client to open its
-// Reportei page (integrations, reports, automations). "Novo cliente" opens the
-// two-step wizard (preferences, then integrations); it creates the same
-// ops_clients row as Operacional → Clientes, under the same permission.
+// Operacional → Reportei → Clientes: the clients of the operation (ops_clients) as
+// cards, like Reportei's: photo with a connection-health badge, name, the networks
+// linked, how many reports and when the last one was made. Click a card to open
+// the client's Reportei page. "Novo cliente" opens the two-step wizard (preferences,
+// then integrations); it creates the same ops_clients row as Operacional → Clientes,
+// under the same permission.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { Building2, ChevronRight, Plus, Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { formatDistance } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,20 +20,81 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import { ClientCode } from "@/components/operational/client-code";
 import { useHasPermission } from "@/hooks/use-permissions";
+import { demoNetworks, type ClientCardData } from "@/lib/reportei/client-card";
+import { INTEGRATION_CATALOG } from "@/lib/reportei/integrations-catalog";
 import { cn } from "@/lib/utils";
-import type { ClientStatus } from "@/lib/operational/clients-projects";
+import { ClientAvatar } from "../_components/client-avatar";
+import { NetworkIcon } from "../_components/network-icon";
 
-interface Row {
-  id: string;
-  name: string;
-  code: string | null;
-  status: ClientStatus;
-}
-
-type State = { kind: "loading" } | { kind: "error" } | { kind: "ready"; rows: Row[] };
+type State = { kind: "loading" } | { kind: "error" } | { kind: "ready"; rows: ClientCardData[] };
 type Filter = "active" | "inactive" | "all";
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+// Local-only preview: with this variable on (.env.local), every card shows a mix of
+// networks as if they were linked, so the grid can be judged before more connectors
+// exist. Production never sets it, so it never shows made-up data there.
+const DEMO_ICONS = process.env.NEXT_PUBLIC_REPORTEI_DEMO_ICONS === "1";
+const CATALOG_KEYS = INTEGRATION_CATALOG.map((c) => c.key);
+const NETWORK_NAME = new Map(INTEGRATION_CATALOG.map((c) => [c.key, c.name]));
+
+function Card({ client, onOpen }: { client: ClientCardData; onOpen: () => void }) {
+  const t = useTranslations("Operational.reportei.clientsPage");
+  const locale = useLocale();
+  const networks = DEMO_ICONS ? demoNetworks(client.name, CATALOG_KEYS) : client.networks;
+  const health = DEMO_ICONS ? "ok" : client.health;
+  const when = client.lastReportAt
+    ? formatDistance(new Date(client.lastReportAt), new Date(), { addSuffix: true, locale: locale.startsWith("pt") ? ptBR : undefined })
+    : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        "flex w-full items-start gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        client.status === "inactive" && "opacity-60",
+      )}
+    >
+      <ClientAvatar name={client.name} logoUrl={client.logoUrl} size={64} health={health} healthTitle={t(`cardHealth_${health}`)} />
+      <span className="min-w-0 flex-1 space-y-1.5">
+        <span className="flex items-center gap-1.5">
+          <ClientCode code={client.code} />
+          <span className="truncate text-base font-semibold text-foreground">{client.name}</span>
+        </span>
+
+        <span className="flex min-h-5 flex-wrap items-center gap-1.5">
+          {networks.length > 0 ? (
+            networks.map((n) => (
+              <span key={n} title={NETWORK_NAME.get(n) ?? n} className="inline-flex">
+                <NetworkIcon network={n} size={18} />
+              </span>
+            ))
+          ) : (
+            <span className="text-xs text-muted-foreground">{t("cardNoIntegrations")}</span>
+          )}
+          <span
+            className={cn(
+              "ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium",
+              client.status === "active" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground",
+            )}
+          >
+            {client.status === "active" ? t("statusActive") : t("statusInactive")}
+          </span>
+        </span>
+
+        <span className="block text-xs text-muted-foreground">
+          {client.reportCount > 0 ? t("cardReports", { count: client.reportCount }) : t("cardNoReports")}
+        </span>
+        {when && (
+          <span className="block text-xs text-muted-foreground">
+            <span className="font-semibold text-primary">{t("cardLastReport")}</span> {t("cardGenerated", { when })}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
 
 export default function ReporteiClientsPage() {
   const t = useTranslations("Operational.reportei.clientsPage");
@@ -41,9 +105,9 @@ export default function ReporteiClientsPage() {
   const [state, setState] = useState<State>({ kind: "loading" });
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/operational/ops-clients?status=${filter}`);
+    const res = await fetch(`/api/operational/reportei/clients?status=${filter}`);
     if (!res.ok) return setState({ kind: "error" });
-    setState({ kind: "ready", rows: ((await res.json()) as { clients: Row[] }).clients });
+    setState({ kind: "ready", rows: ((await res.json()) as { clients: ClientCardData[] }).clients });
   }, [filter]);
 
   useEffect(() => {
@@ -102,10 +166,12 @@ export default function ReporteiClientsPage() {
         )}
       </div>
 
+      {DEMO_ICONS && <p className="rounded-lg border border-dashed border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">{t("demoNote")}</p>}
+
       {state.kind === "loading" && (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
           ))}
         </div>
       )}
@@ -114,50 +180,14 @@ export default function ReporteiClientsPage() {
         (rows.length === 0 ? (
           <EmptyState title={query.trim() ? t("noResults") : t("empty")} hint={query.trim() ? undefined : t("emptyHint")} className="min-h-40" />
         ) : (
-          <section className="overflow-hidden rounded-xl border border-border bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-2.5 font-medium">{t("colClient")}</th>
-                    <th className="px-3 py-2.5 font-medium">{t("colStatus")}</th>
-                    <th className="px-4 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      onClick={() => router.push(`/operational/reportei/clientes/${r.id}`)}
-                      className={cn("cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-muted/40", r.status === "inactive" && "opacity-60")}
-                    >
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-2 font-medium text-foreground">
-                          <Building2 className="h-4 w-4 shrink-0 text-primary" />
-                          <ClientCode code={r.code} />
-                          {r.name}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                            r.status === "active" ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {r.status === "active" ? t("statusActive") : t("statusInactive")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">
-                        <ChevronRight className="ml-auto h-4 w-4" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {rows.map((r) => (
+                <Card key={r.id} client={r} onOpen={() => router.push(`/operational/reportei/clientes/${r.id}`)} />
+              ))}
             </div>
-            <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">{t("count", { count: rows.length })}</p>
-          </section>
+            <p className="text-xs text-muted-foreground">{t("count", { count: rows.length })}</p>
+          </>
         ))}
     </>
   );

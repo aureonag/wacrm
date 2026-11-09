@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
+import { goalsFromRow } from "@/lib/reportei/goals";
 import { isPeriod, resolvePeriod } from "@/lib/reportei/periods";
 import { previousRange } from "@/lib/reportei/report";
 import { collectAccountSnapshots } from "@/lib/reportei/report-data";
@@ -37,7 +38,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ clientId
     });
     if (!accounts) return NextResponse.json({ error: "Failed to load integrations" }, { status: 500 });
 
+    const goalRow = await ctx.supabase.from("reportei_client_goals").select("monthly_budget, max_cpc").eq("client_id", clientId).eq("account_id", ctx.accountId).maybeSingle();
+
     return NextResponse.json({
+      goals: goalsFromRow(goalRow.data),
       client: { id: client.data.id, name: client.data.name, code: client.data.code ?? null },
       period: { key: wanted, ...period },
       snapshot: { period, compare, accounts },
