@@ -1,99 +1,111 @@
 "use client";
 
-// "Tipo do cliente": what the client sells (geração de leads, e-commerce or both). The
-// general dashboard judges each client by the results of its type, so it is set by a
-// person; "Não configurado" keeps the client out of highlights and attention.
-
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { LEAD_EVENT_OPTIONS, PURCHASE_EVENT_OPTIONS } from "@/lib/reportei/event-config";
 import { SEGMENT_LABEL, type Segment } from "@/lib/reportei/overview";
 
-const OPTIONS: { value: Segment | ""; label: string }[] = [{ value: "", label: "Não configurado" }, ...(Object.keys(SEGMENT_LABEL) as Segment[]).map((s) => ({ value: s, label: SEGMENT_LABEL[s] }))];
+const CHANGED = "reportei:client-type-changed";
+const OPTIONS: Segment[] = ["leads", "ecommerce", "mixed"];
+const HINTS: Record<Segment, string> = { leads: "Leads e custo por lead", ecommerce: "Compras, receita e ROAS", mixed: "Leads e vendas no mesmo cliente" };
 
-export function SegmentSelect({ clientId }: { clientId: string }) {
+/** One saved client classification, reused in the permanent card and Meta picker. */
+export function SegmentSelect({ clientId, compact = false, onBusyChange }: { clientId: string; compact?: boolean; onBusyChange?: (busy: boolean) => void }) {
   const canEdit = useHasPermission("operational", "tasks", "edit_boards");
+  const id = useId();
   const [segment, setSegment] = useState<Segment | "">("");
   const [leadEvent, setLeadEvent] = useState("");
   const [purchaseEvent, setPurchaseEvent] = useState("");
   const [available, setAvailable] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [saving, setSaving] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    fetch(`/api/operational/reportei/clients/${clientId}/segment`)
-      .then(async (res) => {
-        if (!alive || !res.ok) return;
-        const body = (await res.json()) as { segment: Segment | null; leadEvent?: string | null; purchaseEvent?: string | null; available: boolean };
+    void (async () => {
+      try {
+        const res = await fetch(`/api/operational/reportei/clients/${clientId}/segment`);
+        if (!res.ok) throw new Error("load");
+        const body = await res.json();
+        if (!alive) return;
         setSegment(body.segment ?? "");
         setLeadEvent(body.leadEvent ?? "");
         setPurchaseEvent(body.purchaseEvent ?? "");
-        setAvailable(body.available);
-        setLoaded(true);
-      })
-      .catch(() => null);
-    return () => {
-      alive = false;
+        setAvailable(body.available === true);
+        setStatus("ready");
+      } catch {
+        if (alive) setStatus("error");
+      }
+    })();
+    const sync = (event: Event) => {
+      const changed = (event as CustomEvent<{ clientId: string; segment: Segment }>).detail;
+      if (changed?.clientId === clientId) setSegment(changed.segment);
     };
-  }, [clientId]);
+    window.addEventListener(CHANGED, sync);
+    return () => { alive = false; window.removeEventListener(CHANGED, sync); };
+  }, [clientId, retry]);
 
-  async function save(patch: { segment?: Segment | null; leadEvent?: string | null; purchaseEvent?: string | null }, done: () => void, what: string) {
+  async function save(patch: { segment?: Segment; leadEvent?: string | null; purchaseEvent?: string | null }, done: () => void, label: string) {
+    if (saving) return;
     setSaving(true);
+    onBusyChange?.(true);
     try {
       const res = await fetch(`/api/operational/reportei/clients/${clientId}/segment`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
-      if (res.status === 503) return toast.error("Ainda não dá para salvar: falta aplicar uma atualização no banco.");
-      if (!res.ok) return toast.error(`Não foi possível salvar ${what}.`);
+      if (!res.ok) return toast.error(`Não foi possível salvar ${label}. Tente novamente.`);
       done();
-      toast.success(`${what[0].toUpperCase()}${what.slice(1)} salvo.`);
+      if (patch.segment) window.dispatchEvent(new CustomEvent(CHANGED, { detail: { clientId, segment: patch.segment } }));
+      toast.success(`${label === "o tipo do cliente" ? "Tipo do cliente" : "Evento"} salvo.`);
     } catch {
-      toast.error(`Não foi possível salvar ${what}.`);
+      toast.error(`Não foi possível salvar ${label}. Tente novamente.`);
     } finally {
       setSaving(false);
+      onBusyChange?.(false);
     }
   }
-  const change = (next: Segment | "") => save({ segment: next || null }, () => setSegment(next), "o tipo do cliente");
 
-  if (!loaded) return null;
-  const eventSelect = (label: string, value: string, options: readonly string[], onPick: (v: string) => void, title: string) => (
-    <label className="flex items-center gap-2 text-xs text-muted-foreground" title={title}>
+  const eventSelect = (label: string, value: string, options: readonly string[], onPick: (v: string) => void) => (
+    <label className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
       {label}
-      <select
-        value={value}
-        disabled={!canEdit || saving || !available}
-        onChange={(e) => onPick(e.target.value)}
-        className="h-8 max-w-[16rem] rounded-lg border border-input bg-transparent px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 dark:bg-input/30"
-      >
+      <select value={value} disabled={!canEdit || saving || !available} onChange={(e) => onPick(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground disabled:opacity-60">
         <option value="">Padrão ({options[0]})</option>
-        {(value && !options.includes(value) ? [...options, value] : options).map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
+        {(value && !options.includes(value) ? [...options, value] : options).map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
     </label>
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-    <label className="flex items-center gap-2 text-xs text-muted-foreground" title={available ? "Define quais resultados avaliam este cliente no dashboard geral." : "Disponível depois de aplicar a atualização do banco."}>
-      Tipo do cliente
-      <select
-        value={segment}
-        disabled={!canEdit || saving || !available}
-        onChange={(e) => void change(e.target.value as Segment | "")}
-        className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 dark:bg-input/30"
-      >
-        {OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
-    {eventSelect("Evento de lead", leadEvent, LEAD_EVENT_OPTIONS, (v) => void save({ leadEvent: v || null }, () => setLeadEvent(v), "o evento de lead"), "O evento da Meta que conta os leads deste cliente. Só ele é usado, sem somar outros.")}
-    {eventSelect("Evento de compra", purchaseEvent, PURCHASE_EVENT_OPTIONS, (v) => void save({ purchaseEvent: v || null }, () => setPurchaseEvent(v), "o evento de compra"), "O evento da Meta que conta as compras e o valor deste cliente. A quantidade e o valor vêm sempre do mesmo evento.")}
-    </div>
+    <Card size={compact ? "sm" : "default"} aria-label="Tipo de resultado do cliente">
+      <CardHeader>
+        <CardTitle>Tipo de resultado do cliente</CardTitle>
+        <CardDescription>{compact ? "Escolha o foco deste cliente. A escolha fica salva mesmo depois de conectar." : "Defina o foco dos resultados. Você pode mudar quando quiser, sem reconectar as contas."}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {status === "loading" && <p role="status" className="text-sm text-muted-foreground">Carregando tipo do cliente…</p>}
+        {status === "error" && <div role="alert" className="flex flex-wrap items-center gap-2 text-sm"><span>Não foi possível carregar o tipo do cliente.</span><Button variant="outline" size="sm" onClick={() => { setStatus("loading"); setRetry((n) => n + 1); }}>Tentar novamente</Button></div>}
+        {status === "ready" && <>
+          <RadioGroup aria-label="Tipo do cliente" value={segment} disabled={!canEdit || saving || !available} onValueChange={(value) => {
+            if (OPTIONS.includes(value as Segment) && value !== segment) void save({ segment: value as Segment }, () => setSegment(value as Segment), "o tipo do cliente");
+          }} className="grid gap-2 sm:grid-cols-3">
+            {OPTIONS.map((value) => <label key={value} htmlFor={`${id}-${value}`} className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 has-[[data-checked]]:border-primary has-[[data-checked]]:bg-muted has-[:disabled]:cursor-not-allowed">
+              <RadioGroupItem id={`${id}-${value}`} value={value} />
+              <span className="flex min-w-0 flex-col gap-1"><span className="text-sm font-medium">{SEGMENT_LABEL[value]}</span>{!compact && <span className="text-xs text-muted-foreground">{HINTS[value]}</span>}</span>
+            </label>)}
+          </RadioGroup>
+          {!available && <p role="alert" className="text-xs text-muted-foreground">A configuração está temporariamente indisponível.</p>}
+          {available && !segment && <p className="text-xs text-muted-foreground">Ainda não definido. Se atuar com captação e vendas, selecione Misto.</p>}
+          {!canEdit && <p className="text-xs text-muted-foreground">Seu acesso permite consultar. Peça a um responsável para alterar.</p>}
+          {saving && <p role="status" className="text-xs text-muted-foreground">Salvando…</p>}
+          {!compact && <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">Configurações avançadas dos eventos da Meta</summary><div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {eventSelect("Evento de lead", leadEvent, LEAD_EVENT_OPTIONS, (v) => void save({ leadEvent: v || null }, () => setLeadEvent(v), "o evento de lead"))}
+            {eventSelect("Evento de compra", purchaseEvent, PURCHASE_EVENT_OPTIONS, (v) => void save({ purchaseEvent: v || null }, () => setPurchaseEvent(v), "o evento de compra"))}
+          </div></details>}
+        </>}
+      </CardContent>
+    </Card>
   );
 }

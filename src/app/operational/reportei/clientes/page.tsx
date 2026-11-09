@@ -25,6 +25,8 @@ import { INTEGRATION_CATALOG } from "@/lib/reportei/integrations-catalog";
 import { cn } from "@/lib/utils";
 import { ClientAvatar } from "../_components/client-avatar";
 import { NetworkIcon } from "../_components/network-icon";
+import { Badge } from "@/components/ui/badge";
+import { SEGMENT_LABEL } from "@/lib/reportei/overview";
 
 type State = { kind: "loading" } | { kind: "error" } | { kind: "ready"; rows: ClientCardData[] };
 type Filter = "active" | "inactive" | "all";
@@ -63,6 +65,7 @@ function Card({ client, onOpen }: { client: ClientCardData; onOpen: () => void }
           <span className="truncate text-base font-semibold text-foreground">{client.name}</span>
         </span>
 
+        <Badge variant="outline">{client.segment ? SEGMENT_LABEL[client.segment] : "Tipo não definido"}</Badge>
         <span className="flex min-h-5 flex-wrap items-center gap-1.5">
           {networks.length > 0 ? (
             networks.map((n) => (

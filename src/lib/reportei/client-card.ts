@@ -8,6 +8,7 @@ export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 export type Health = "ok" | "attention" | "none";
 
 export interface ClientCardData {
+  segment?: "leads" | "ecommerce" | "mixed" | null;
   id: string;
   name: string;
   code: string | null;
