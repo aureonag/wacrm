@@ -9,7 +9,8 @@ import { ArrowDownRight, ArrowUpRight, CalendarDays, CircleHelp } from "lucide-r
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { NetworkIcon } from "@/app/operational/reportei/_components/network-icon";
 import { changeOf, formatValue, sortRows, type GroupedBarWidget, type MetricWidget, type PieWidget, type PostsWidget, type SeriesWidget, type StoriesWidget, type TableWidget, type Widget } from "@/lib/reportei/doc";
-import { formatInt, showDate } from "@/lib/reportei/format";
+import { formatDec, formatInt, formatMoney, showDate, showDateTime } from "@/lib/reportei/format";
+import { filterCampaignRows, type CampaignFilter } from "@/lib/reportei/campaign-table";
 import { cn } from "@/lib/utils";
 
 const TONE = { good: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", bad: "bg-red-500/15 text-red-600 dark:text-red-400", neutral: "bg-muted text-muted-foreground" } as const;
@@ -167,12 +168,25 @@ function SortHeader({ label, align, active, onClick }: { label: string; align: "
 
 function TableView({ w }: { w: TableWidget }) {
   const [sortKey, setSortKey] = useState(w.sortKey);
-  const rows = sortRows(w.rows, sortKey);
+  const [campaignFilter, setCampaignFilter] = useState<CampaignFilter>("all");
+  const campaigns = w.key === "campaigns" && !!w.campaignReadAt;
+  const rows = sortRows(campaigns ? filterCampaignRows(w.rows, campaignFilter) : w.rows, sortKey);
   return (
     <div>
       <WidgetTitle title={w.title} description={w.description} />
-      <div className="mt-3 overflow-hidden rounded-xl border border-border">
-        <table className="w-full text-sm">
+      {campaigns && (
+        <div className="mt-3 space-y-2">
+          <div className="no-print flex flex-wrap justify-center gap-1.5" role="group" aria-label="Filtro de campanhas" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            {([ ["all", "Todas"], ["active", "Ativas agora"], ["delivered", "Com veiculação no período"] ] as const).map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={campaignFilter === value} onClick={() => setCampaignFilter(value)} className={cn("rounded-md border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-primary", campaignFilter === value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>{label}</button>
+            ))}
+          </div>
+          <p className="text-center text-[11px] text-muted-foreground" aria-live="polite">{rows.length} de {w.rows.length} campanhas · {campaignFilter === "active" ? "Status ACTIVE na coleta, independentemente da veiculação no período." : campaignFilter === "delivered" ? "Pelo menos uma impressão no período, mesmo se pausada hoje." : "Status atual e resultados do período selecionado."}</p>
+          <p className="text-center text-[11px] text-muted-foreground">Status consultado em {showDateTime(w.campaignReadAt!)}. Leads seguem a fonte configurada no cliente.</p>
+        </div>
+      )}
+      <div className="mt-3 overflow-x-auto rounded-xl border border-border">
+        <table className={cn("w-full text-sm", campaigns && "min-w-[60rem]")}>
           <thead className="bg-muted/40">
             <tr>
               {w.columns.map((c) => (
@@ -185,11 +199,12 @@ function TableView({ w }: { w: TableWidget }) {
               <tr key={i}>
                 {w.columns.map((c) => (
                   <td key={c.key} className={cn("px-3 py-3 text-foreground", c.align === "right" && "text-right tabular-nums")}>
-                    {typeof r[c.key] === "number" ? formatInt(r[c.key] as number) : r[c.key]}
+                    {typeof r[c.key] === "number" ? campaigns && c.key === "spend" ? w.currency ? formatMoney(r[c.key] as number, w.currency) : formatDec(r[c.key] as number) : formatInt(r[c.key] as number) : r[c.key]}
                   </td>
                 ))}
               </tr>
             ))}
+            {campaigns && rows.length === 0 && <tr><td colSpan={w.columns.length} className="px-3 py-6 text-center text-sm text-muted-foreground">{campaignFilter === "active" ? "Nenhuma campanha ativa na coleta." : campaignFilter === "delivered" ? "Nenhuma campanha teve impressões no período." : "Nenhuma campanha encontrada para esta conta ou seleção."}</td></tr>}
           </tbody>
         </table>
       </div>

@@ -51,6 +51,7 @@ describe("collectAccountSnapshots", () => {
     const [a] = await collectAccountSnapshots({ supabase: db, accountId: "acc" }, "client", { since: "2026-10-01", until: "2026-10-31", now: new Date("2026-11-05T12:00:00Z") });
     expect(a).toMatchObject({ id: "act_1", timezone: "America/Sao_Paulo", range: { since: "2026-10-01", until: "2026-10-31" } });
     expect(JSON.parse(urls(f)[0].searchParams.get("time_range")!)).toEqual({ since: "2026-10-01", until: "2026-10-31" });
+    expect(f).toHaveBeenCalledTimes(1); // Ordinary totals do not request the campaign table.
   });
 
   it("never asks for days that have not started in the account's zone, and compares like with like", async () => {
@@ -117,5 +118,33 @@ describe("collectAccountSnapshots", () => {
     const { db } = fakeDb({ links: [link({ campaign_ids: ["111"] })] });
     await collectAccountSnapshots({ supabase: db, accountId: "acc" }, "client", { since: "2026-10-01", until: "2026-10-31", campaigns: { act_1: ["222"] } });
     expect(JSON.parse(urls(f)[0].searchParams.get("filtering")!)[0].value).toEqual(["222"]);
+  });
+
+  it("collects a requested campaign table through the linked account with the clamped period and saved filter", async () => {
+    const f = vi.fn(async (raw: string | URL) => {
+      const url = new URL(raw);
+      const body = url.pathname.endsWith("/campaigns") ? { data: [{ id: "111", name: "C", effective_status: "PAUSED" }] }
+        : url.searchParams.get("level") === "campaign" ? { data: [{ campaign_id: "111", campaign_name: "C", spend: "10", impressions: "100", clicks: "5" }] } : insightsBody();
+      return { ok: true, status: 200, json: async () => body };
+    });
+    vi.stubGlobal("fetch", f);
+    const { db } = fakeDb({ links: [link({ campaign_ids: ["111"] })] });
+    const [a] = await collectAccountSnapshots({ supabase: db, accountId: "acc" }, "client", { since: "2026-11-01", until: "2026-11-30", campaignTable: true, now: new Date("2026-11-10T12:00:00Z") });
+    expect(a.campaignTable).toMatchObject({ readAt: "2026-11-10T12:00:00.000Z", rows: [{ id: "111", status: "PAUSED", spend: 10 }] });
+    const periodCall = urls(f).find((u) => u.searchParams.get("level") === "campaign")!;
+    expect(JSON.parse(periodCall.searchParams.get("time_range")!)).toEqual({ since: "2026-11-01", until: "2026-11-10" });
+    expect(JSON.parse(periodCall.searchParams.get("filtering")!)[0].value).toEqual(["111"]);
+  });
+
+  it("keeps valid totals if campaign metadata fails, without inventing an empty campaign result", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (raw: string | URL) => new URL(raw).pathname.endsWith("/campaigns")
+      ? { ok: false, status: 403, json: async () => ({ error: { code: 200 } }) }
+      : { ok: true, status: 200, json: async () => new URL(raw).searchParams.get("level") === "campaign" ? { data: [] } : insightsBody() }));
+    const { db } = fakeDb({ links: [link()] });
+    const [a] = await collectAccountSnapshots({ supabase: db, accountId: "acc" }, "client", { since: "2026-10-01", until: "2026-10-31", campaignTable: true });
+    expect(a.insights?.spend).toBe(10);
+    expect(a.error).toBeUndefined();
+    expect(a.campaignTable).toBeUndefined();
+    expect(a.campaignTableError).toContain("Não foi possível");
   });
 });

@@ -14,6 +14,7 @@ import { DASHBOARD_LAYOUT } from "@/lib/reportei/doc-templates";
 import { buildRealDoc } from "@/lib/reportei/meta-doc";
 import { collectAccountSnapshots } from "@/lib/reportei/report-data";
 import { isUuid } from "@/lib/reportei/template-store";
+import { needsCampaignTable } from "@/lib/reportei/campaign-table";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
       doc.demo = true;
     } else {
       // Real: every Meta Ads account linked to the client, read now. Nothing is made up.
-      const snapshots = await collectAccountSnapshots(ctx, clientId, { since: range.since, until: range.until, compare: comparisonOf(range), daily: true });
+      const snapshots = await collectAccountSnapshots(ctx, clientId, { since: range.since, until: range.until, compare: comparisonOf(range), daily: true, ...(needsCampaignTable(DASHBOARD_LAYOUT) ? { campaignTable: true } : {}) });
       if (snapshots.length === 0) return NextResponse.json({ error: "no_integration" }, { status: 422 });
       const built = buildRealDoc({ layout: DASHBOARD_LAYOUT, accounts: snapshots, range, newId: makeId, hideCover: true });
       if (built.doc.blocks.length === 0) return NextResponse.json({ error: snapshots.every((a) => !a.insights) ? "unreadable" : "nothing_to_show" }, { status: snapshots.every((a) => !a.insights) ? 502 : 422 });

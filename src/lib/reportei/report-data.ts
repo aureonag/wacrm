@@ -12,6 +12,7 @@ import { rangeForAccount, accountToday } from "@/lib/reportei/account-time";
 import { fetchAccountInsights, fetchDailyInsights, MetaAdsError, type EventConfig } from "@/lib/reportei/meta-ads";
 import { getCompanyConnection } from "@/lib/reportei/meta-connection";
 import { fillDays, previousRange, type AccountSnapshot } from "@/lib/reportei/report";
+import { fetchCampaignTable } from "@/lib/reportei/campaign-data";
 
 type Connection = Awaited<ReturnType<typeof getCompanyConnection>>;
 type Ctx = Pick<AccountContext, "supabase" | "accountId">;
@@ -51,6 +52,7 @@ export async function collectAccountSnapshots(
     until: string;
     compare?: { since: string; until: string } | null;
     daily?: boolean;
+    campaignTable?: boolean;
     /** Campaigns chosen for this read only, by ad account id (null = the whole account); overrides what is saved on the link. */
     campaigns?: Record<string, string[] | null>;
     /** For tests: the moment "now" is taken at. */
@@ -99,6 +101,16 @@ export async function collectAccountSnapshots(
     try {
       const insights = await fetchAccountInsights(connection.token, base.id, range.since, range.until, campaignIds, options);
       const entry: AccountSnapshot = { ...base, ...(campaignIds ? { campaigns: campaignIds.length } : {}), range, ...(compare ? { compareRange: compare } : {}), insights };
+      if (ranges.campaignTable) {
+        try {
+          entry.campaignTable = { rows: await fetchCampaignTable(connection.token, base.id, range.since, range.until, campaignIds, options), readAt: (ranges.now ?? new Date()).toISOString() };
+        } catch (error) {
+          // A failed breakdown never removes valid account totals, and never becomes an empty table.
+          entry.campaignTableError = error instanceof MetaAdsError && error.detail === "campaign_table_limit"
+            ? "A seleção ultrapassa 500 campanhas. Selecione menos campanhas na integração para exibir a tabela completa."
+            : "Não foi possível ler as campanhas e seus resultados na Meta. Atualize para tentar novamente.";
+        }
+      }
       if (compare) {
         try {
           entry.previous = await fetchAccountInsights(connection.token, base.id, compare.since, compare.until, campaignIds, options);

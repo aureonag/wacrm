@@ -77,4 +77,16 @@ describe("dashboard opening", () => {
     expect(body.doc.blocks[0].widgets.find((w: { id: string }) => w.id === "new").unavailable).toBeUndefined();
     expect(m.update).toHaveBeenCalledWith(expect.objectContaining({ doc: body.doc, period }));
   });
+  it("opening an existing campaign table opts into the real breakdown without changing saved configuration", async () => {
+    const period = dashboardOpeningPeriod();
+    const account = { id: "act_1", name: "Example", currency: "BRL", insights: { spend: 100, impressions: 1000, clicks: 50, reach: 800, ctr: 5, cpc: 2, cpm: 100 } };
+    const original = buildRealDoc({ layout: { custom: [], blocks: [{ network: "meta_ads", keys: ["campaigns"] }] }, accounts: [account], range: period, newId: makeId }).doc;
+    m.row.doc = original;
+    m.collect.mockResolvedValue([{ ...account, campaignTable: { readAt: "2026-11-09T15:00:00.000Z", rows: [{ id: "1", name: "Campaign", status: "ACTIVE", spend: 100, impressions: 1000, clicks: 50, leads: 0, conversations: 2, purchases: null }] } }]);
+    const { dashboard } = await (await request()).json();
+    expect(m.collect).toHaveBeenCalledWith(expect.anything(), "client", expect.objectContaining({ campaignTable: true, ...period }));
+    expect(dashboard.doc.blocks[0].widgets[0]).toMatchObject({ rows: [expect.objectContaining({ campaign: "Campaign", spend: 100, status: "Ativa" })] });
+    expect(dashboard.doc.blocks[0].widgets[0].unavailable).toBeUndefined();
+    expect(m.update).not.toHaveBeenCalled();
+  });
 });

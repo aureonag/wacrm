@@ -13,6 +13,7 @@ import type { TemplateLayout } from "./doc-templates";
 import { attributionLabel } from "./event-config";
 import { CONVERSATION_ACTION, cplOf } from "./meta-ads";
 import type { AccountSnapshot, DailyPoint } from "./report";
+import { campaignStatusLabel } from "./campaign-table";
 
 const dmy = (ymd: string) => `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}/${ymd.slice(0, 4)}`;
 
@@ -116,6 +117,28 @@ function withEvent(w: Widget, key: string, i: Insights): Widget {
 export function metaWidget(key: string, snap: AccountSnapshot, ctx: { id: string; range: Range }): Widget | null {
   const base = catalogEntry("meta_ads", key)?.make({ id: ctx.id, range: ctx.range, seed: "real" });
   if (!base || !snap.insights) return null;
+  if (key === "campaigns" && base.kind === "table") {
+    if (!snap.campaignTable) return withoutData(base, snap.campaignTableError ?? "Atualize este documento para coletar as campanhas da Meta.");
+    return {
+      ...base, currency: snap.currency ?? undefined, campaignReadAt: snap.campaignTable.readAt,
+      columns: [
+        { key: "campaign", label: "Campanha", align: "left" },
+        { key: "status", label: "Status atual", align: "left" },
+        { key: "spend", label: snap.currency ? `Gasto (${snap.currency})` : "Gasto (moeda não informada)", align: "right" },
+        { key: "impressions", label: "Impressões", align: "right" },
+        { key: "clicks", label: "Cliques (todos)", align: "right" },
+        { key: "leads", label: "Leads (cliente)", align: "right" },
+        { key: "conversations", label: "Conversas iniciadas", align: "right" },
+        { key: "purchases", label: "Compras", align: "right" },
+      ],
+      rows: snap.campaignTable.rows.map((r) => ({
+        campaign: r.name, status: campaignStatusLabel(r.status), _status: r.status, _delivered: r.impressions > 0 ? 1 : 0,
+        spend: r.spend, impressions: r.impressions, clicks: r.clicks,
+        leads: r.leads ?? "—", conversations: r.conversations ?? "—", purchases: r.purchases ?? "—",
+      })),
+      sortKey: "spend",
+    };
+  }
   if (base.kind === "metric") {
     const p = pickMetric(key, snap.insights, snap.previous);
     if (!p) return withoutData(base, NOT_COLLECTED);
@@ -230,6 +253,7 @@ export function applyFresh(old: Widget, fresh: Fresh): Widget {
   const description = `${old.description.replace(EVENT_NOTE, "")}${note}`;
   if (clean.kind === "metric" && f.kind === "metric") return { ...clean, description, currency: f.currency, value: f.value, previous: f.previous, comparison: clean.comparison && f.previous !== null };
   if ((clean.kind === "line" || clean.kind === "bar") && (f.kind === "line" || f.kind === "bar")) return { ...clean, description, points: f.points };
+  if (clean.kind === "table" && f.kind === "table" && clean.key === "campaigns") return { ...clean, currency: f.currency, campaignReadAt: f.campaignReadAt, columns: f.columns, rows: f.rows };
   return withoutData(clean as Widget, NOT_COLLECTED);
 }
 

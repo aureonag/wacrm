@@ -631,22 +631,26 @@ export function parseCampaigns(rows: Record<string, unknown>[] | undefined): Met
 }
 
 /** Campaigns of an ad account (up to 1000), read with ads_read. */
-export async function listCampaigns(token: string, accountId: string): Promise<MetaCampaign[]> {
+export async function listCampaigns(token: string, accountId: string, strict = false): Promise<MetaCampaign[]> {
   if (!/^act_\d+$/.test(accountId)) throw new MetaAdsError("Invalid ad account id", "request_failed");
   const first = new URL(`${META_API_BASE}/${accountId}/campaigns`);
   first.searchParams.set("fields", "id,name,effective_status");
   first.searchParams.set("limit", "200");
   const rows: Record<string, unknown>[] = [];
   let next: string | undefined = first.toString();
-  while (next && rows.length < 1000) {
+  let pages = 0;
+  while (next) {
+    if (++pages > 20) throw new MetaAdsError("Too many campaign pages", "invalid_payload");
     const res: Response = await fetch(next, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
     const body = (await res.json().catch(() => ({}))) as { data?: Record<string, unknown>[]; paging?: { next?: string }; error?: { code?: number; message?: string } };
     if (!res.ok || body.error) {
       throw new MetaAdsError(`Meta campaigns failed (${res.status}${body.error?.code ? `/${body.error.code}` : ""})`, metaErrorKind(body.error?.code), describeMetaError(body.error));
     }
     rows.push(...dataRows(body));
+    if (rows.length > 1000) throw new MetaAdsError("Too many campaigns", "invalid_payload");
     next = body.paging?.next;
     if (next && !isGraphNextUrl(next)) throw new MetaAdsError("Meta returned an unexpected next page", "invalid_payload");
   }
+  if (strict && rows.some((r) => typeof r.id !== "string" || !/^\d{1,30}$/.test(r.id))) throw new MetaAdsError("Invalid campaign metadata", "invalid_payload");
   return parseCampaigns(rows);
 }
