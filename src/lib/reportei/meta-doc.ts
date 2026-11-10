@@ -40,7 +40,7 @@ function withoutData(base: Widget, why: string): Widget {
     case "pie":
       return { ...marked, slices: [] };
     case "table":
-      return { ...marked, rows: [], adThumbnails: undefined, adPreviews: undefined, adReadAt: undefined, adMetadataUnavailable: undefined };
+      return { ...marked, rows: [], adThumbnails: undefined, adPreviews: undefined, adVideoContext: undefined, adReadAt: undefined, adMetadataUnavailable: undefined };
     case "posts":
       return { ...marked, rows: [] };
     case "stories":
@@ -145,6 +145,7 @@ export function metaWidget(key: string, snap: AccountSnapshot, ctx: { id: string
     return {
       ...base, currency: snap.currency ?? undefined, adReadAt: snap.adTable.readAt,
       adMetadataUnavailable: snap.adTable.metadataUnavailable,
+      adVideoContext: snap.clientId ? { clientId: snap.clientId, accountId: snap.id } : undefined,
       adPreviews: Object.fromEntries(snap.adTable.rows.filter((r) => r.previewUrl).map((r) => [r.id, r.previewUrl!])),
       adThumbnails: Object.fromEntries(snap.adTable.rows.filter((r) => r.thumbnailUrl).map((r) => [r.id, r.thumbnailUrl!])),
       columns: [
@@ -163,7 +164,7 @@ export function metaWidget(key: string, snap: AccountSnapshot, ctx: { id: string
         { key: "clicks", label: "Cliques (todos)", align: "right" },
       ],
       rows: snap.adTable.rows.map((r) => ({
-        ad: r.name, _adId: r.id, status: r.status ? campaignStatusLabel(r.status) : "Indisponível",
+        ad: r.name, _adId: r.id, _video: r.hasVideo ? 1 : 0, status: r.status ? campaignStatusLabel(r.status) : "Indisponível",
         leads: r.leads ?? "—", cost_per_lead: cplOf(r.spend, r.leads ?? undefined) ?? "—",
         conversations: r.conversations ?? "—", purchases: r.purchases ?? "—", spend: r.spend,
         link_ctr: r.linkClicks === null ? "—" : divide(r.linkClicks, r.impressions, 100),
@@ -287,7 +288,7 @@ export function applyFresh(old: Widget, fresh: Fresh): Widget {
   if (clean.kind === "metric" && f.kind === "metric") return { ...clean, description, currency: f.currency, value: f.value, previous: f.previous, comparison: clean.comparison && f.previous !== null };
   if ((clean.kind === "line" || clean.kind === "bar") && (f.kind === "line" || f.kind === "bar")) return { ...clean, description, points: f.points };
   if (clean.kind === "table" && f.kind === "table" && clean.key === "campaigns") return { ...clean, currency: f.currency, campaignReadAt: f.campaignReadAt, columns: f.columns, rows: f.rows };
-  if (clean.kind === "table" && f.kind === "table" && clean.key === "ads") return { ...clean, currency: f.currency, adReadAt: f.adReadAt, adMetadataUnavailable: f.adMetadataUnavailable, adThumbnails: f.adThumbnails, adPreviews: f.adPreviews, columns: f.columns, rows: f.rows };
+  if (clean.kind === "table" && f.kind === "table" && clean.key === "ads") return { ...clean, currency: f.currency, adReadAt: f.adReadAt, adMetadataUnavailable: f.adMetadataUnavailable, adThumbnails: f.adThumbnails, adPreviews: f.adPreviews, adVideoContext: f.adVideoContext, columns: f.columns, rows: f.rows };
   return withoutData(clean as Widget, NOT_COLLECTED);
 }
 

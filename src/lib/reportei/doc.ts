@@ -83,6 +83,7 @@ export interface TableWidget extends WidgetBase {
   adMetadataUnavailable?: boolean;
   adThumbnails?: Record<string, string>;
   adPreviews?: Record<string, string>;
+  adVideoContext?: { clientId: string; accountId: string };
   columns: Column[];
   rows: Record<string, string | number>[];
   sortKey: string | null;
@@ -368,7 +369,7 @@ export function isWidget(v: unknown): v is Widget {
     case "pie":
       return Array.isArray(v.slices) && v.slices.length <= 30 && v.slices.every((s) => isObj(s) && isStr(s.label, 60) && isNum(s.value) && isStr(s.color, 20));
     case "table":
-      return (v.adPreviews === undefined || (isObj(v.adPreviews) && Object.keys(v.adPreviews).length <= LIMITS.rows && Object.entries(v.adPreviews).every(([id, url]) => /^\d{1,30}$/.test(id) && safeAdThumbnail(url) !== null))) && (v.adReadAt === undefined || (isStr(v.adReadAt, 40) && Number.isFinite(Date.parse(v.adReadAt as string)))) && (v.adMetadataUnavailable === undefined || typeof v.adMetadataUnavailable === "boolean") && (v.adThumbnails === undefined || (isObj(v.adThumbnails) && Object.keys(v.adThumbnails).length <= LIMITS.rows && Object.entries(v.adThumbnails).every(([id, url]) => /^\d{1,30}$/.test(id) && safeAdThumbnail(url) !== null))) && (v.currency === undefined || (typeof v.currency === "string" && /^[A-Z]{3}$/.test(v.currency))) && (v.campaignReadAt === undefined || (isStr(v.campaignReadAt, 40) && Number.isFinite(Date.parse(v.campaignReadAt as string)))) && validColumns(v.columns) && Array.isArray(v.rows) && v.rows.length <= LIMITS.rows && v.rows.every(validCells) && (v.sortKey === null || isStr(v.sortKey, 60));
+      return (v.adVideoContext === undefined || (isObj(v.adVideoContext) && typeof v.adVideoContext.clientId === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(v.adVideoContext.clientId) && typeof v.adVideoContext.accountId === "string" && /^act_\d+$/.test(v.adVideoContext.accountId))) && (v.adPreviews === undefined || (isObj(v.adPreviews) && Object.keys(v.adPreviews).length <= LIMITS.rows && Object.entries(v.adPreviews).every(([id, url]) => /^\d{1,30}$/.test(id) && safeAdThumbnail(url) !== null))) && (v.adReadAt === undefined || (isStr(v.adReadAt, 40) && Number.isFinite(Date.parse(v.adReadAt as string)))) && (v.adMetadataUnavailable === undefined || typeof v.adMetadataUnavailable === "boolean") && (v.adThumbnails === undefined || (isObj(v.adThumbnails) && Object.keys(v.adThumbnails).length <= LIMITS.rows && Object.entries(v.adThumbnails).every(([id, url]) => /^\d{1,30}$/.test(id) && safeAdThumbnail(url) !== null))) && (v.currency === undefined || (typeof v.currency === "string" && /^[A-Z]{3}$/.test(v.currency))) && (v.campaignReadAt === undefined || (isStr(v.campaignReadAt, 40) && Number.isFinite(Date.parse(v.campaignReadAt as string)))) && validColumns(v.columns) && Array.isArray(v.rows) && v.rows.length <= LIMITS.rows && v.rows.every(validCells) && (v.sortKey === null || isStr(v.sortKey, 60));
     case "posts":
       return validColumns(v.columns) && Array.isArray(v.rows) && v.rows.length <= LIMITS.rows && (v.sortKey === null || isStr(v.sortKey, 60)) &&
         v.rows.every((r) => isObj(r) && isNum(r.hue) && isStr(r.text, 400) && validCells(r.values));
