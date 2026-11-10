@@ -6,6 +6,7 @@ import type { AccountInsights } from "@/lib/reportei/meta-ads";
 import type { ReportOptions } from "@/lib/reportei/template";
 import type { ReportDoc } from "@/lib/reportei/doc";
 import type { TimelineEvent } from "@/lib/reportei/timeline";
+import type { CampaignPeriodRow } from "@/lib/reportei/campaign-table";
 
 export const METRICS = ["spend", "impressions", "reach", "clicks", "ctr", "cpc", "cpm", "leads", "conversations", "costPerLead"] as const;
 export type MetricKey = (typeof METRICS)[number];
@@ -39,6 +40,8 @@ export interface AccountSnapshot {
   compareRange?: { since: string; until: string };
   /** How many campaigns the numbers are limited to; absent means the whole account. */
   campaigns?: number;
+  campaignTable?: { rows: CampaignPeriodRow[]; readAt: string };
+  campaignTableError?: string;
   insights?: AccountInsights;
   /** The comparison period for the same account; absent when comparison is off or it failed. */
   previous?: AccountInsights;

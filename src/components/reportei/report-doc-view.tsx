@@ -119,7 +119,7 @@ function WidgetShell({
             <ToolButton label="Editar" onClick={() => onEditWidget?.(w.id)}>
               <Settings className="h-3.5 w-3.5" />
             </ToolButton>
-            <ToolButton label="Exportar" onClick={() => download(`${slug(w.title)}.csv`, widgetToCsv(w))}>
+            <ToolButton label={w.key === "campaigns" ? "Exportar todas as campanhas" : "Exportar"} onClick={() => download(`${slug(w.title)}.csv`, widgetToCsv(w))}>
               <Download className="h-3.5 w-3.5" />
             </ToolButton>
             <ToolButton label="Excluir" danger onClick={() => change(deleteWidget(doc, w.id))}>
