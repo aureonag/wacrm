@@ -69,6 +69,7 @@ export async function collectAccountSnapshots(
   for (const r of rows) {
     const timezone = (r.timezone as string | null) ?? null;
     const base = {
+      clientId,
       id: r.external_account_id as string,
       name: (r.external_account_name as string | null) ?? (r.external_account_id as string),
       currency: (r.currency as string | null) ?? null,

@@ -14,6 +14,7 @@ import { filterCampaignRows, type CampaignFilter } from "@/lib/reportei/campaign
 import { safeAdThumbnail } from "@/lib/reportei/ad-table";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { AdVideoPreview } from "./ad-video-preview";
 import { cn } from "@/lib/utils";
 
 const TONE = { good: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", bad: "bg-red-500/15 text-red-600 dark:text-red-400", neutral: "bg-muted text-muted-foreground" } as const;
@@ -169,13 +170,14 @@ function SortHeader({ label, align, active, onClick }: { label: string; align: "
   );
 }
 
-function AdThumbnail({ url, previewUrl, name }: { url: string | null; previewUrl: string | null; name: string }) {
+function AdThumbnail({ url, previewUrl, name, videoEndpoint }: { url: string | null; previewUrl: string | null; name: string; videoEndpoint: string | null }) {
   const [failed, setFailed] = useState(false);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [open, setOpen] = useState(false);
   if (!url || failed) return <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-md bg-muted px-1 text-center text-[10px] text-muted-foreground">Sem prévia</span>;
   return (
     <span className="shrink-0" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key !== "Escape") e.stopPropagation(); }}>
-      <Dialog onOpenChange={() => setPreviewFailed(false)}>
+      <Dialog open={open} onOpenChange={(value) => { setOpen(value); setPreviewFailed(false); }}>
         <DialogTrigger render={<button type="button" aria-label={`Ampliar criativo: ${name}`} title="Ampliar criativo" className="block size-[72px] cursor-zoom-in overflow-hidden rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" />}>
           {/* Meta CDN URLs expire; no Graph token is exposed to the browser. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -184,10 +186,10 @@ function AdThumbnail({ url, previewUrl, name }: { url: string | null; previewUrl
         <DialogContent showCloseButton={false} className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="pr-12 break-words leading-normal">{name}</DialogTitle>
-            <DialogDescription>{previewUrl ? "Prévia estática do criativo fornecida pela Meta." : "Miniatura ampliada. A Meta não disponibilizou uma imagem maior para este anúncio."}</DialogDescription>
+            <DialogDescription>{videoEndpoint ? "Assista à prévia oficial da Meta sem sair do dashboard. O player é encerrado ao fechar esta janela." : previewUrl ? "Prévia estática do criativo fornecida pela Meta." : "Miniatura ampliada. A Meta não disponibilizou uma imagem maior para este anúncio."}</DialogDescription>
           </DialogHeader>
           <DialogClose render={<Button variant="ghost" size="sm" className="absolute right-2 top-2" aria-label="Fechar prévia" />}>Fechar</DialogClose>
-          {previewFailed ? <p role="status" className="py-12 text-center text-muted-foreground">Não foi possível carregar esta prévia. Feche e tente novamente ou atualize os dados do dashboard.</p> : (
+          {videoEndpoint ? open && <AdVideoPreview endpoint={videoEndpoint} name={name} poster={previewUrl ?? url} /> : previewFailed ? <p role="status" className="py-12 text-center text-muted-foreground">Não foi possível carregar esta prévia. Feche e tente novamente ou atualize os dados do dashboard.</p> : (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewUrl ?? url} alt={`Criativo do anúncio ${name}`} referrerPolicy="no-referrer" onError={() => setPreviewFailed(true)} className="max-h-[65dvh] w-full rounded-md object-contain" />
           )}
@@ -237,7 +239,7 @@ function TableView({ w }: { w: TableWidget }) {
                 {w.columns.map((c) => (
                   <td key={c.key} className={cn("px-3 py-3 text-foreground", c.align === "right" && "text-right tabular-nums")}>
                     {ads && c.key === "ad" ? <span className="flex min-w-[18rem] items-center gap-3">
-                      <AdThumbnail key={String(w.adThumbnails?.[String(r._adId)] ?? r._adId)} url={safeAdThumbnail(w.adThumbnails?.[String(r._adId)])} previewUrl={safeAdThumbnail(w.adPreviews?.[String(r._adId)])} name={String(r.ad ?? "Anúncio")} />
+                      <AdThumbnail key={String(w.adThumbnails?.[String(r._adId)] ?? r._adId)} url={safeAdThumbnail(w.adThumbnails?.[String(r._adId)])} previewUrl={safeAdThumbnail(w.adPreviews?.[String(r._adId)])} name={String(r.ad ?? "Anúncio")} videoEndpoint={r._video === 1 && w.adVideoContext ? `/api/operational/reportei/clients/${encodeURIComponent(w.adVideoContext.clientId)}/ad-video?${new URLSearchParams({ account: w.adVideoContext.accountId, ad: String(r._adId) })}` : null} />
                       <span className="text-[13px] font-medium">{r.ad}</span>
                     </span> : typeof r[c.key] === "number" ? (campaigns && c.key === "spend") || (ads && ["spend", "cost_per_lead", "link_cpc", "cpm"].includes(c.key)) ? w.currency ? formatMoney(r[c.key] as number, w.currency) : formatDec(r[c.key] as number) : ads && c.key === "link_ctr" ? `${formatDec(r[c.key] as number)}%` : formatInt(r[c.key] as number) : r[c.key]}
                   </td>

@@ -4,6 +4,7 @@ export interface AdPeriodRow extends CampaignPeriodRow {
   campaignId: string;
   thumbnailUrl: string | null;
   previewUrl?: string | null;
+  hasVideo?: boolean;
   reach: number | null;
   linkClicks: number | null;
 }
@@ -22,4 +23,14 @@ export function safeAdThumbnail(value: unknown): string | null {
 
 export function needsAdTable(source: { blocks: readonly { network?: string; keys?: readonly string[]; widgets?: readonly { key?: string }[] }[] }): boolean {
   return source.blocks.some((b) => b.network === "meta_ads" && (b.keys?.includes("ads") || b.widgets?.some((w) => w.key === "ads")));
+}
+
+/** Only the official signed ad-preview frame. No arbitrary iframe HTML or OAuth URLs. */
+export function safeAdVideoPreview(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 20000) return null;
+  try {
+    const u = new URL(value);
+    if (u.protocol !== "https:" || u.username || u.password || (u.port && u.port !== "443") || !["www.facebook.com", "business.facebook.com"].includes(u.hostname) || u.pathname !== "/ads/api/preview_iframe.php" || !u.searchParams.get("d") || [...u.searchParams.keys()].some(k => !["d", "t"].includes(k))) return null;
+    return u.href;
+  } catch { return null; }
 }

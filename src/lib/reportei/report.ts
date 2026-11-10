@@ -30,6 +30,7 @@ export type DailyMetric = (typeof DAILY_METRICS)[number];
 export type AccountError = "connection_unavailable" | "token_invalid" | "permission" | "request_failed";
 
 export interface AccountSnapshot {
+  clientId?: string;
   id: string;
   name: string;
   currency: string | null;
