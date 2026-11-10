@@ -1,0 +1,24 @@
+import {afterEach,describe,expect,it,vi} from "vitest";
+import {fetchAdTable} from "./ad-data";
+import {safeAdThumbnail,needsAdTable} from "./ad-table";
+import {CONVERSATION_ACTION} from "./meta-ads";
+const image="https://scontent.example.fbcdn.net/image.jpg?signature="+"a".repeat(700);
+const insight=(id="2",extra={})=>({ad_id:id,campaign_id:"9",ad_name:"Histórico",spend:"32.50",impressions:"100",clicks:"8",reach:"75",inline_link_clicks:"5",actions:[{action_type:"lead",value:"2"},{action_type:CONVERSATION_ACTION,value:"3"}],...extra});
+const meta=(id="2",extra={})=>({id,name:"Criativo real",account_id:"1",campaign_id:"9",effective_status:"PAUSED",creative:{thumbnail_url:image},...extra});
+const reply=(data:unknown,next?:string)=>({ok:true,json:async()=>({data,...(next?{paging:{next}}:{})})});
+const read=(ids?:string[],options={})=>fetchAdTable("secret","act_1","2026-11-01","2026-11-10",ids,options);
+const stub=(i:unknown=[insight()],m:unknown=[meta()])=>{const f=vi.fn(async(raw:string|URL)=>reply(new URL(raw).pathname.endsWith("/ads")?m:i));vi.stubGlobal("fetch",f);return f;};
+afterEach(()=>vi.unstubAllGlobals());
+describe("real ad collection",()=>{
+ it("matches each thumbnail by account, campaign and ad ID, with no token in URLs",async()=>{const f=stub();expect(await read()).toMatchObject({metadataUnavailable:false,rows:[{id:"2",name:"Criativo real",status:"PAUSED",thumbnailUrl:image,spend:32.5,leads:2,conversations:3,reach:75,linkClicks:5}]});expect(f).toHaveBeenCalledTimes(2);expect(f.mock.calls.every(([u])=>!String(u).includes("secret"))).toBe(true);});
+ it("uses period, campaign and configured lead/attribution choices",async()=>{const f=stub();expect((await read(["9"],{events:{lead:CONVERSATION_ACTION},attributionWindows:["7d_click"]})).rows[0].leads).toBe(3);const u=new URL(f.mock.calls[0][0]);expect(u.searchParams.get("level")).toBe("ad");expect(JSON.parse(u.searchParams.get("filtering")!)[0].value).toEqual(["9"]);expect(JSON.parse(u.searchParams.get("time_range")!)).toEqual({since:"2026-11-01",until:"2026-11-10"});expect(u.searchParams.get("action_attribution_windows")).toBe('["7d_click"]');});
+ it("retains real metrics when metadata is unavailable or belongs to another account",async()=>{stub(undefined,[meta("2",{account_id:"999"})]);expect(await read()).toMatchObject({metadataUnavailable:true,rows:[{name:"Histórico",status:"",thumbnailUrl:null,spend:32.5}]});});
+ it("does not invent thumbnails or zeros for missing optional metrics",async()=>{stub([insight("2",{reach:undefined,inline_link_clicks:undefined})],[meta("2",{creative:{thumbnail_url:"https://evil.example/a"}})]);expect((await read()).rows[0]).toMatchObject({thumbnailUrl:null,reach:null,linkClicks:null});});
+ it("skips sparse historical identities but rejects missing impressions with spend",async()=>{stub([{ad_id:"1",campaign_id:"9",spend:"0"},insight()]);expect((await read()).rows).toHaveLength(1);stub([insight("2",{impressions:undefined})]);await expect(read()).rejects.toMatchObject({code:"invalid_payload"});});
+ it("empty delivery makes no metadata requests",async()=>{const f=stub([]);expect(await read()).toEqual({rows:[],metadataUnavailable:false});expect(f).toHaveBeenCalledTimes(1);});
+ it.each([[insight(),insight()],[insight("2",{spend:"bad"})],[insight("2",{campaign_id:"8"})]].map(i=>[i] as const))("rejects malformed and out-of-filter results",async(i)=>{stub(i);await expect(read(["9"])).rejects.toMatchObject({code:"invalid_payload"});});
+ it("bounds document size and refuses invalid filters before requests",async()=>{const f=stub();await expect(read([])).rejects.toMatchObject({code:"invalid_filter"});expect(f).not.toHaveBeenCalled();stub(Array.from({length:501},(_,i)=>insight(String(i+1))));await expect(read()).rejects.toMatchObject({detail:"ad_table_limit"});});
+ it("never forwards credentials to pagination outside Graph",async()=>{const f=vi.fn(async()=>reply([insight()],"https://evil.example/token"));vi.stubGlobal("fetch",f);await expect(read()).rejects.toMatchObject({code:"invalid_payload"});expect(f).toHaveBeenCalledTimes(1);});
+ it("allows only credential-free Meta CDN thumbnails",()=>{expect(safeAdThumbnail(image)).toBe(image);for(const v of ["http://fbcdn.net/a","https://fbcdn.net.evil.org/a","https://x.fbcdn.net/a?access_token=abc","https://user:pass@fbcdn.net/a"])expect(safeAdThumbnail(v)).toBeNull();});
+ it("only opts in documents with an ads widget",()=>{expect(needsAdTable({blocks:[{network:"meta_ads",keys:["campaigns"]}]})).toBe(false);expect(needsAdTable({blocks:[{network:"meta_ads",widgets:[{key:"ads"}]}]})).toBe(true);});
+});

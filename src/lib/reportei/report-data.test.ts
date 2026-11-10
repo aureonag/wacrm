@@ -147,4 +147,19 @@ describe("collectAccountSnapshots", () => {
     expect(a.campaignTable).toBeUndefined();
     expect(a.campaignTableError).toContain("Não foi possível");
   });
+  it("a failed ad breakdown preserves campaign results and valid account totals", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (raw: string | URL) => {
+      const u = new URL(raw);
+      const body = u.pathname.endsWith("/campaigns") ? {data: []} : u.searchParams.get("level") === "campaign" ? {data: []} : u.searchParams.get("level") === "ad" ? {error: {code: 200}} : insightsBody();
+      return {ok: !('error' in body), status: 'error' in body ? 403 : 200, json: async () => body};
+    }));
+    const {db} = fakeDb({links: [link()]});
+    const [a] = await collectAccountSnapshots({supabase: db, accountId: "acc"}, "client", {since: "2026-10-01", until: "2026-10-31", campaignTable: true, adTable: true});
+    expect(a.insights?.spend).toBe(10);
+    expect(a.campaignTable?.rows).toEqual([]);
+    expect(a.adTable).toBeUndefined();
+    expect(a.adTableError).toContain("Não foi possível");
+    expect(a.error).toBeUndefined();
+  });
+
 });

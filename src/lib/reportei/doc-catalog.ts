@@ -385,6 +385,8 @@ const META_ADS: CatalogEntry[] = [
   daily(AD("spend_daily", "Gasto diário", "Quanto foi gasto em cada dia."), "line", "Gasto", { base: 120, wave: 60 }),
   daily(AD("clicks_daily", "Cliques por dia", "Cliques em cada dia."), "bar", "Cliques", { base: 90, wave: 40 }),
   daily(AD("leads_daily", "Leads por dia", "Leads gerados em cada dia."), "bar", "Leads", { base: 5, wave: 4 }),
+  tableOf(AD("ads", "Anúncios em Destaque", "Criativos e resultados dos anúncios com veiculação no período. Leads seguem o evento configurado no cliente."), [left("ad", "Anúncio"), right("spend", "Valor investido"), right("leads", "Leads (cliente)")],
+    (r, i) => ({ ad: "Anúncio de demonstração " + (i + 1), spend: Math.round(between(r, 150, 1800)), leads: Math.round(between(r, 3, 60)) }), 3, "spend"),
   tableOf(AD("campaigns", "Campanhas", "Desempenho de cada campanha no período."), [left("campaign", "Campanha"), right("spend", "Gasto (R$)"), right("impressions", "Impressões"), right("clicks", "Cliques"), right("results", "Resultados")],
     (r, i) => ({ campaign: CAMPAIGNS[i], spend: Math.round(between(r, 150, 1800)), impressions: Math.round(between(r, 6000, 60000)), clicks: Math.round(between(r, 80, 900)), results: Math.round(between(r, 3, 60)) }), 5, "spend"),
 ];

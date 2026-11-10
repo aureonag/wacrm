@@ -11,6 +11,7 @@ import { NetworkIcon } from "@/app/operational/reportei/_components/network-icon
 import { changeOf, formatValue, sortRows, type GroupedBarWidget, type MetricWidget, type PieWidget, type PostsWidget, type SeriesWidget, type StoriesWidget, type TableWidget, type Widget } from "@/lib/reportei/doc";
 import { formatDec, formatInt, formatMoney, showDate, showDateTime } from "@/lib/reportei/format";
 import { filterCampaignRows, type CampaignFilter } from "@/lib/reportei/campaign-table";
+import { safeAdThumbnail } from "@/lib/reportei/ad-table";
 import { cn } from "@/lib/utils";
 
 const TONE = { good: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", bad: "bg-red-500/15 text-red-600 dark:text-red-400", neutral: "bg-muted text-muted-foreground" } as const;
@@ -166,14 +167,28 @@ function SortHeader({ label, align, active, onClick }: { label: string; align: "
   );
 }
 
+function AdThumbnail({ url }: { url: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) return <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-md bg-muted px-1 text-center text-[10px] text-muted-foreground">Sem prévia</span>;
+  // Meta supplies expiring CDN URLs; load directly, without sending a Graph token.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" width={72} height={72} onError={() => setFailed(true)} className="h-[72px] w-[72px] shrink-0 rounded-md object-cover" />;
+}
+
 function TableView({ w }: { w: TableWidget }) {
   const [sortKey, setSortKey] = useState(w.sortKey);
   const [campaignFilter, setCampaignFilter] = useState<CampaignFilter>("all");
   const campaigns = w.key === "campaigns" && !!w.campaignReadAt;
+  const ads = w.key === "ads";
   const rows = sortRows(campaigns ? filterCampaignRows(w.rows, campaignFilter) : w.rows, sortKey);
   return (
     <div>
       <WidgetTitle title={w.title} description={w.description} />
+      {ads && <div className="mt-3 space-y-1 text-center text-[11px] text-muted-foreground">
+        <p>{rows.length} anúncios com veiculação no período. Leads seguem a fonte configurada no cliente.</p>
+        {w.adReadAt && <p>Status consultado em {showDateTime(w.adReadAt)}.</p>}
+        {w.adMetadataUnavailable && <p role="status">Alguns status ou criativos não puderam ser consultados. Os resultados do período foram preservados.</p>}
+      </div>}
       {campaigns && (
         <div className="mt-3 space-y-2">
           <div className="no-print flex flex-wrap justify-center gap-1.5" role="group" aria-label="Filtro de campanhas" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
@@ -186,7 +201,7 @@ function TableView({ w }: { w: TableWidget }) {
         </div>
       )}
       <div className="mt-3 overflow-x-auto rounded-xl border border-border">
-        <table className={cn("w-full text-sm", campaigns && "min-w-[60rem]")}>
+        <table className={cn("w-full text-sm", campaigns && "min-w-[60rem]", ads && "min-w-[90rem]")}>
           <thead className="bg-muted/40">
             <tr>
               {w.columns.map((c) => (
@@ -199,12 +214,16 @@ function TableView({ w }: { w: TableWidget }) {
               <tr key={i}>
                 {w.columns.map((c) => (
                   <td key={c.key} className={cn("px-3 py-3 text-foreground", c.align === "right" && "text-right tabular-nums")}>
-                    {typeof r[c.key] === "number" ? campaigns && c.key === "spend" ? w.currency ? formatMoney(r[c.key] as number, w.currency) : formatDec(r[c.key] as number) : formatInt(r[c.key] as number) : r[c.key]}
+                    {ads && c.key === "ad" ? <span className="flex min-w-[18rem] items-center gap-3">
+                      <AdThumbnail key={String(w.adThumbnails?.[String(r._adId)] ?? r._adId)} url={safeAdThumbnail(w.adThumbnails?.[String(r._adId)])} />
+                      <span className="text-[13px] font-medium">{r.ad}</span>
+                    </span> : typeof r[c.key] === "number" ? (campaigns && c.key === "spend") || (ads && ["spend", "cost_per_lead", "link_cpc", "cpm"].includes(c.key)) ? w.currency ? formatMoney(r[c.key] as number, w.currency) : formatDec(r[c.key] as number) : ads && c.key === "link_ctr" ? `${formatDec(r[c.key] as number)}%` : formatInt(r[c.key] as number) : r[c.key]}
                   </td>
                 ))}
               </tr>
             ))}
             {campaigns && rows.length === 0 && <tr><td colSpan={w.columns.length} className="px-3 py-6 text-center text-sm text-muted-foreground">{campaignFilter === "active" ? "Nenhuma campanha ativa na coleta." : campaignFilter === "delivered" ? "Nenhuma campanha teve impressões no período." : "Nenhuma campanha encontrada para esta conta ou seleção."}</td></tr>}
+            {ads && rows.length === 0 && <tr><td colSpan={w.columns.length} className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum anúncio teve veiculação neste período para esta conta ou seleção.</td></tr>}
           </tbody>
         </table>
       </div>
