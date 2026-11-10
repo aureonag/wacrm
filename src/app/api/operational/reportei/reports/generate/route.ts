@@ -29,6 +29,7 @@ import { collectAccountSnapshots } from "@/lib/reportei/report-data";
 import { resolvePeriod } from "@/lib/reportei/periods";
 import { loadTemplate, isUuid } from "@/lib/reportei/template-store";
 import { resolveAnalysis, resolveCompare } from "@/lib/reportei/wizard";
+import { needsAdTable } from "@/lib/reportei/ad-table";
 import { needsCampaignTable } from "@/lib/reportei/campaign-table";
 
 export const dynamic = "force-dynamic";
@@ -97,7 +98,7 @@ export async function POST(req: Request) {
         }
       }
 
-      const all = await collectAccountSnapshots(ctx, clientId, { since: range.since, until: range.until, compare, daily: true, campaigns, ...(needsCampaignTable(layout) ? { campaignTable: true } : {}) });
+      const all = await collectAccountSnapshots(ctx, clientId, { since: range.since, until: range.until, compare, daily: true, campaigns, ...(needsCampaignTable(layout) ? { campaignTable: true } : {}), ...(needsAdTable(layout) ? { adTable: true } : {}) });
       const idSet = new Set(ids);
       accountsSnapshot = all.filter((a) => idSet.has(a.id));
       const built = buildRealDoc({ layout, accounts: accountsSnapshot, range, newId: makeId });

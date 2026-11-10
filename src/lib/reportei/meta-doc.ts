@@ -40,7 +40,7 @@ function withoutData(base: Widget, why: string): Widget {
     case "pie":
       return { ...marked, slices: [] };
     case "table":
-      return { ...marked, rows: [] };
+      return { ...marked, rows: [], adThumbnails: undefined, adReadAt: undefined, adMetadataUnavailable: undefined };
     case "posts":
       return { ...marked, rows: [] };
     case "stories":
@@ -137,6 +137,38 @@ export function metaWidget(key: string, snap: AccountSnapshot, ctx: { id: string
         leads: r.leads ?? "—", conversations: r.conversations ?? "—", purchases: r.purchases ?? "—",
       })),
       sortKey: "spend",
+    };
+  }
+  if (key === "ads" && base.kind === "table") {
+    if (!snap.adTable) return withoutData(base, snap.adTableError ?? "Atualize este documento para coletar os anúncios da Meta.");
+    const divide = (a: number, b: number | null, scale = 1) => b !== null && b > 0 ? a / b * scale : "—";
+    return {
+      ...base, currency: snap.currency ?? undefined, adReadAt: snap.adTable.readAt,
+      adMetadataUnavailable: snap.adTable.metadataUnavailable,
+      adThumbnails: Object.fromEntries(snap.adTable.rows.filter((r) => r.thumbnailUrl).map((r) => [r.id, r.thumbnailUrl!])),
+      columns: [
+        { key: "ad", label: "Anúncio", align: "left" },
+        { key: "status", label: "Status atual", align: "left" },
+        { key: "leads", label: "Leads (cliente)", align: "right" },
+        { key: "cost_per_lead", label: "Custo por lead", align: "right" },
+        { key: "conversations", label: "Conversas iniciadas", align: "right" },
+        { key: "purchases", label: "Compras", align: "right" },
+        { key: "spend", label: snap.currency ? `Valor investido (${snap.currency})` : "Investimento (moeda não informada)", align: "right" },
+        { key: "link_ctr", label: "CTR (link)", align: "right" },
+        { key: "link_cpc", label: "CPC (link)", align: "right" },
+        { key: "cpm", label: "CPM", align: "right" },
+        { key: "reach", label: "Alcance", align: "right" },
+        { key: "impressions", label: "Impressões", align: "right" },
+        { key: "clicks", label: "Cliques (todos)", align: "right" },
+      ],
+      rows: snap.adTable.rows.map((r) => ({
+        ad: r.name, _adId: r.id, status: r.status ? campaignStatusLabel(r.status) : "Indisponível",
+        leads: r.leads ?? "—", cost_per_lead: cplOf(r.spend, r.leads ?? undefined) ?? "—",
+        conversations: r.conversations ?? "—", purchases: r.purchases ?? "—", spend: r.spend,
+        link_ctr: r.linkClicks === null ? "—" : divide(r.linkClicks, r.impressions, 100),
+        link_cpc: divide(r.spend, r.linkClicks), cpm: divide(r.spend, r.impressions, 1000),
+        reach: r.reach ?? "—", impressions: r.impressions, clicks: r.clicks,
+      })), sortKey: "spend",
     };
   }
   if (base.kind === "metric") {
@@ -254,6 +286,7 @@ export function applyFresh(old: Widget, fresh: Fresh): Widget {
   if (clean.kind === "metric" && f.kind === "metric") return { ...clean, description, currency: f.currency, value: f.value, previous: f.previous, comparison: clean.comparison && f.previous !== null };
   if ((clean.kind === "line" || clean.kind === "bar") && (f.kind === "line" || f.kind === "bar")) return { ...clean, description, points: f.points };
   if (clean.kind === "table" && f.kind === "table" && clean.key === "campaigns") return { ...clean, currency: f.currency, campaignReadAt: f.campaignReadAt, columns: f.columns, rows: f.rows };
+  if (clean.kind === "table" && f.kind === "table" && clean.key === "ads") return { ...clean, currency: f.currency, adReadAt: f.adReadAt, adMetadataUnavailable: f.adMetadataUnavailable, adThumbnails: f.adThumbnails, columns: f.columns, rows: f.rows };
   return withoutData(clean as Widget, NOT_COLLECTED);
 }
 

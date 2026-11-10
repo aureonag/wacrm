@@ -13,6 +13,7 @@ import { fetchAccountInsights, fetchDailyInsights, MetaAdsError, type EventConfi
 import { getCompanyConnection } from "@/lib/reportei/meta-connection";
 import { fillDays, previousRange, type AccountSnapshot } from "@/lib/reportei/report";
 import { fetchCampaignTable } from "@/lib/reportei/campaign-data";
+import { fetchAdTable } from "./ad-data";
 
 type Connection = Awaited<ReturnType<typeof getCompanyConnection>>;
 type Ctx = Pick<AccountContext, "supabase" | "accountId">;
@@ -53,6 +54,7 @@ export async function collectAccountSnapshots(
     compare?: { since: string; until: string } | null;
     daily?: boolean;
     campaignTable?: boolean;
+    adTable?: boolean;
     /** Campaigns chosen for this read only, by ad account id (null = the whole account); overrides what is saved on the link. */
     campaigns?: Record<string, string[] | null>;
     /** For tests: the moment "now" is taken at. */
@@ -109,6 +111,15 @@ export async function collectAccountSnapshots(
           entry.campaignTableError = error instanceof MetaAdsError && error.detail === "campaign_table_limit"
             ? "A seleção ultrapassa 500 campanhas. Selecione menos campanhas na integração para exibir a tabela completa."
             : "Não foi possível ler as campanhas e seus resultados na Meta. Atualize para tentar novamente.";
+        }
+      }
+      if (ranges.adTable) {
+        try {
+          entry.adTable = { ...await fetchAdTable(connection.token, base.id, range.since, range.until, campaignIds, options), readAt: (ranges.now ?? new Date()).toISOString() };
+        } catch (error) {
+          entry.adTableError = error instanceof MetaAdsError && error.detail === "ad_table_limit"
+            ? "A seleção ultrapassa 500 anúncios. Selecione menos campanhas na integração para exibir a tabela completa."
+            : "Não foi possível ler os anúncios e seus resultados na Meta. Atualize para tentar novamente.";
         }
       }
       if (compare) {

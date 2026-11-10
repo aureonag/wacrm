@@ -12,6 +12,7 @@ import { comparisonOf, dashboardOpeningPeriod, parsePeriod, refreshDashboardDoc 
 import { refreshRealDoc } from "@/lib/reportei/meta-doc";
 import { collectAccountSnapshots } from "@/lib/reportei/report-data";
 import { isUuid } from "@/lib/reportei/template-store";
+import { needsAdTable } from "@/lib/reportei/ad-table";
 import { needsCampaignTable } from "@/lib/reportei/campaign-table";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     if (doc.demo) {
       doc = refreshDashboardDoc(doc, period, `${id}:${period.since}:${period.until}`);
     } else {
-      const accounts = await collectAccountSnapshots(ctx, data.client_id as string, { ...period, compare: comparisonOf(period), daily: true, ...(needsCampaignTable(doc) ? { campaignTable: true } : {}) });
+      const accounts = await collectAccountSnapshots(ctx, data.client_id as string, { ...period, compare: comparisonOf(period), daily: true, ...(needsCampaignTable(doc) ? { campaignTable: true } : {}), ...(needsAdTable(doc) ? { adTable: true } : {}) });
       if (accounts.length > 0 && accounts.every((a) => !a.insights)) return NextResponse.json({ error: "unreadable" }, { status: 502 });
       const refreshed = refreshRealDoc(doc, accounts, period);
       doc = refreshed.doc;
@@ -113,7 +114,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
         // inside the indicators change (order, titles, analyses and edits stay). If nothing can be read
         // the document is left as it was.
         const compared = typeof patch.compare === "boolean" ? patch.compare : current.data.compare !== false;
-        const accounts = await collectAccountSnapshots(ctx, current.data.client_id as string, { since: period.since, until: period.until, compare: compared ? comparisonOf(period) : null, daily: true, ...(needsCampaignTable(doc) ? { campaignTable: true } : {}) });
+        const accounts = await collectAccountSnapshots(ctx, current.data.client_id as string, { since: period.since, until: period.until, compare: compared ? comparisonOf(period) : null, daily: true, ...(needsCampaignTable(doc) ? { campaignTable: true } : {}), ...(needsAdTable(doc) ? { adTable: true } : {}) });
         if (accounts.length > 0 && accounts.every((a) => !a.insights)) return NextResponse.json({ error: "unreadable" }, { status: 502 });
         const refreshed = refreshRealDoc(doc, accounts, period);
         doc = refreshed.doc;
