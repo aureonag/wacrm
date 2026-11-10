@@ -3,6 +3,7 @@ import type { CampaignPeriodRow } from "./campaign-table";
 export interface AdPeriodRow extends CampaignPeriodRow {
   campaignId: string;
   thumbnailUrl: string | null;
+  previewUrl?: string | null;
   reach: number | null;
   linkClicks: number | null;
 }

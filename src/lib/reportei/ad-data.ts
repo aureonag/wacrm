@@ -53,7 +53,7 @@ export async function fetchAdTable(token: string, accountId: string, since: stri
   for (let offset = 0; offset < ids.length; offset += 100) {
     const requested = new Set(ids.slice(offset, offset + 100));
     const meta = new URL(`${META_API_BASE}/${accountId}/ads`);
-    meta.searchParams.set("fields", "id,name,account_id,effective_status,campaign_id,creative{id,thumbnail_url}");
+    meta.searchParams.set("fields", "id,name,account_id,effective_status,campaign_id,creative{id,thumbnail_url,image_url}");
     meta.searchParams.set("filtering", JSON.stringify([{ field: "id", operator: "IN", value: [...requested] }]));
     meta.searchParams.set("limit", "200");
     let metaNext: string | undefined = meta.href;
@@ -74,6 +74,7 @@ export async function fetchAdTable(token: string, accountId: string, since: stri
           row.status = typeof raw.effective_status === "string" ? raw.effective_status.slice(0, 60) : "";
           const creative = raw.creative as Record<string, unknown> | undefined;
           row.thumbnailUrl = safeAdThumbnail(creative?.thumbnail_url);
+          row.previewUrl = safeAdThumbnail(creative?.image_url);
         }
         metaNext = body?.paging?.next;
         if (metaNext && !isGraphNextUrl(metaNext)) throw new Error("Unexpected metadata next page");
@@ -82,7 +83,7 @@ export async function fetchAdTable(token: string, accountId: string, since: stri
     } catch {
       metadataUnavailable = true;
       // Refuse partial/unverified identities for this group; keep independently read metrics.
-      for (const id of requested) { const row = rows.get(id)!; row.name = originalNames.get(id)!; row.status = ""; row.thumbnailUrl = null; }
+      for (const id of requested) { const row = rows.get(id)!; row.name = originalNames.get(id)!; row.status = ""; row.thumbnailUrl = null; row.previewUrl = null; }
     }
   }
   return { rows: [...rows.values()], metadataUnavailable };
