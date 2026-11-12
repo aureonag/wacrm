@@ -1913,7 +1913,9 @@
       "urgent": "Urgente",
       "taskOpen": "Aberta",
       "taskDone": "Concluída",
-      "taskOverdue": "Atrasada"
+      "taskOverdue": "Atrasada",
+      "taskDeliveredLate": "Entregue com atraso",
+      "taskDeliveredLateHint": "Concluída depois do prazo de entrega"
     },
     "cardActions": {
       "menuLabel": "Ações da tarefa",

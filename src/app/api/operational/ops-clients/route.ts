@@ -9,6 +9,7 @@ import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { supabaseAdmin } from "@/lib/contracts/admin-client";
 import { syncSignedContractClients } from "@/lib/operational/sync-contract-clients";
+import { loadDoneStageIds } from "@/lib/operational/done-stages";
 import {
   countTasks,
   EMPTY_COUNTS,
@@ -37,14 +38,15 @@ export async function GET(req: Request) {
       .order("name", { ascending: true });
     if (status === "active" || status === "inactive") q = q.eq("status", status);
 
-    const [clients, projects, tasks] = await Promise.all([
+    const [clients, projects, tasks, doneStageIds] = await Promise.all([
       q,
       ctx.supabase.from("ops_projects").select("id, client_id, status").eq("account_id", ctx.accountId),
       ctx.supabase
         .from("tasks")
-        .select("project_id, status, due_date")
+        .select("project_id, status, due_date, stage_id")
         .eq("account_id", ctx.accountId)
         .not("project_id", "is", null),
+      loadDoneStageIds(ctx.supabase),
     ]);
     for (const r of [clients, projects, tasks]) {
       if (r.error) {
@@ -57,7 +59,12 @@ export async function GET(req: Request) {
     const byClient = countTasks(
       (tasks.data ?? [])
         .filter((t) => clientOf.has(t.project_id as string))
-        .map((t) => ({ key: clientOf.get(t.project_id as string)!, status: t.status as string, due_date: t.due_date as string | null })),
+        .map((t) => ({
+          key: clientOf.get(t.project_id as string)!,
+          status: t.status as string,
+          due_date: t.due_date as string | null,
+          stage_done: doneStageIds.has(t.stage_id as string),
+        })),
       todayInSaoPaulo(),
     );
     const projectCount = new Map<string, number>();

@@ -5,7 +5,16 @@
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
-import { countTasks, EMPTY_COUNTS, parseProjectInput, todayInSaoPaulo, ValidationError } from "@/lib/operational/clients-projects";
+import {
+  countTasks,
+  deliveredLate,
+  EMPTY_COUNTS,
+  isTaskCompleted,
+  parseProjectInput,
+  todayInSaoPaulo,
+  ValidationError,
+} from "@/lib/operational/clients-projects";
+import { loadDoneStageIds, loadStageCompletionDays } from "@/lib/operational/done-stages";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -29,7 +38,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const tasks = await ctx.supabase
       .from("tasks")
-      .select("id, task_number, title, status, priority, is_urgent, due_date, start_date, board_id, stage_id, assignee_id")
+      .select("id, task_number, title, status, priority, is_urgent, due_date, start_date, board_id, stage_id, assignee_id, completed_at")
       .eq("project_id", id)
       .is("parent_task_id", null)
       .order("created_at", { ascending: false });
@@ -55,7 +64,25 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const personName = nameOf(people.data as never);
 
     const today = todayInSaoPaulo();
-    const counts = countTasks(rows.map((t) => ({ key: id, status: t.status as string, due_date: t.due_date as string | null })), today).get(id) ?? EMPTY_COUNTS;
+    // A card in a finished stage ("Concluído") is completed even though its own `status`
+    // stays "open": it must not be counted — or shown — as overdue. When it was finished
+    // after its due date we keep that as "entregue com atraso" instead.
+    const doneStageIds = await loadDoneStageIds(ctx.supabase);
+    const inDoneStage = (t: { stage_id: unknown }) => doneStageIds.has(t.stage_id as string);
+    const stageDays = await loadStageCompletionDays(
+      ctx.supabase,
+      rows.filter(inDoneStage).map((t) => t.id as string),
+      doneStageIds,
+    );
+    const completedOn = (t: (typeof rows)[number]): string | null =>
+      t.status === "done" && t.completed_at
+        ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(t.completed_at as string))
+        : (stageDays.get(t.id as string) ?? null);
+    const counts =
+      countTasks(
+        rows.map((t) => ({ key: id, status: t.status as string, due_date: t.due_date as string | null, stage_done: inDoneStage(t) })),
+        today,
+      ).get(id) ?? EMPTY_COUNTS;
 
     const client = project.data.ops_clients as unknown as { id: string; name: string; code: string | null; status: string } | null;
     return NextResponse.json({
@@ -69,20 +96,28 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       },
       client,
       counts,
-      tasks: rows.map((t) => ({
-        id: t.id,
-        number: t.task_number,
-        title: t.title,
-        status: t.status,
-        priority: t.priority,
-        is_urgent: t.is_urgent,
-        due_date: t.due_date,
-        board_id: t.board_id,
-        board: boardName.get(t.board_id as string) ?? "",
-        stage: stageName.get(t.stage_id as string) ?? "",
-        assignee: t.assignee_id ? (personName.get(t.assignee_id as string) ?? "") : "",
-        overdue: t.status !== "done" && Boolean(t.due_date) && (t.due_date as string) < today,
-      })),
+      tasks: rows.map((t) => {
+        const done = isTaskCompleted(t.status as string, inDoneStage(t));
+        return {
+          id: t.id,
+          number: t.task_number,
+          title: t.title,
+          status: t.status,
+          priority: t.priority,
+          is_urgent: t.is_urgent,
+          due_date: t.due_date,
+          board_id: t.board_id,
+          board: boardName.get(t.board_id as string) ?? "",
+          stage: stageName.get(t.stage_id as string) ?? "",
+          assignee: t.assignee_id ? (personName.get(t.assignee_id as string) ?? "") : "",
+          /** Completed: marked done, or sitting in a finished stage. */
+          done,
+          /** Still open and past its due date — never true for a completed task. */
+          overdue: !done && Boolean(t.due_date) && (t.due_date as string) < today,
+          /** Completed, but after its due date: kept visible so the team can ask why. */
+          delivered_late: done && deliveredLate(completedOn(t), t.due_date as string | null),
+        };
+      }),
     });
   } catch (err) {
     return toErrorResponse(err);

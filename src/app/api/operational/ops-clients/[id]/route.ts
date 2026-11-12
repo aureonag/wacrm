@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/auth/account";
 import { requirePermission } from "@/lib/auth/require-permission";
+import { loadDoneStageIds } from "@/lib/operational/done-stages";
 import {
   countTasks,
   EMPTY_COUNTS,
@@ -43,12 +44,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const ids = (projects.data ?? []).map((p) => p.id as string);
     const tasks = ids.length
-      ? await ctx.supabase.from("tasks").select("project_id, status, due_date").in("project_id", ids)
+      ? await ctx.supabase.from("tasks").select("project_id, status, due_date, stage_id").in("project_id", ids)
       : { data: [], error: null };
     if (tasks.error) return NextResponse.json({ error: "Failed to load tasks" }, { status: 500 });
+    const doneStageIds = await loadDoneStageIds(ctx.supabase);
 
     const counts = countTasks(
-      (tasks.data ?? []).map((t) => ({ key: t.project_id as string, status: t.status as string, due_date: t.due_date as string | null })),
+      (tasks.data ?? []).map((t) => ({
+        key: t.project_id as string,
+        status: t.status as string,
+        due_date: t.due_date as string | null,
+        stage_done: doneStageIds.has(t.stage_id as string),
+      })),
       todayInSaoPaulo(),
     );
     return NextResponse.json({

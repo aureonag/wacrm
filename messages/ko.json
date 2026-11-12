@@ -1913,7 +1913,9 @@
       "urgent": "Urgent",
       "taskOpen": "Open",
       "taskDone": "Done",
-      "taskOverdue": "Overdue"
+      "taskOverdue": "Overdue",
+      "taskDeliveredLate": "Delivered late",
+      "taskDeliveredLateHint": "Completed after its due date"
     },
     "cardActions": {
       "menuLabel": "Task actions",

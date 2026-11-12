@@ -30,7 +30,12 @@ interface TaskRow {
   board: string;
   stage: string;
   assignee: string;
+  /** Completed: marked done, or sitting in a finished stage ("Concluído"). */
+  done: boolean;
+  /** Still open and past its due date. Never true for a completed task. */
   overdue: boolean;
+  /** Completed after its due date — kept visible to understand the delay. */
+  delivered_late: boolean;
 }
 interface Data {
   project: { id: string; name: string; description: string | null; status: ProjectStatus; start_date: string | null; due_date: string | null };
@@ -72,8 +77,8 @@ export default function OperationalProjectPage() {
     if (state.kind !== "ready") return [];
     const q = norm(query.trim());
     return state.data.tasks.filter((x) => {
-      if (view === "open" && x.status !== "open") return false;
-      if (view === "done" && x.status !== "done") return false;
+      if (view === "open" && x.done) return false;
+      if (view === "done" && !x.done) return false;
       if (view === "overdue" && !x.overdue) return false;
       return !q || norm(`${x.title} ${x.assignee} ${x.stage}`).includes(q);
     });
@@ -244,14 +249,21 @@ export default function OperationalProjectPage() {
                     <td className="px-3 py-3 text-foreground">{x.assignee || "—"}</td>
                     <td className={cn("whitespace-nowrap px-3 py-3", x.overdue ? "font-medium text-red-500" : "text-foreground")}>{brDate(x.due_date)}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                          x.status === "done" ? "bg-emerald-500/15 text-emerald-500" : x.overdue ? "bg-red-500/15 text-red-500" : "bg-muted text-muted-foreground",
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            x.done ? "bg-emerald-500/15 text-emerald-500" : x.overdue ? "bg-red-500/15 text-red-500" : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {x.done ? t("taskDone") : x.overdue ? t("taskOverdue") : t("taskOpen")}
+                        </span>
+                        {x.delivered_late && (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-500" title={t("taskDeliveredLateHint")}>
+                            {t("taskDeliveredLate")}
+                          </span>
                         )}
-                      >
-                        {x.status === "done" ? t("taskDone") : x.overdue ? t("taskOverdue") : t("taskOpen")}
-                      </span>
+                      </div>
                     </td>
                   </tr>
                 ))}

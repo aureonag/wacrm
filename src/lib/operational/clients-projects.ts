@@ -109,16 +109,48 @@ export function parseProjectInput(body: unknown, partial = false): Partial<Proje
   return out;
 }
 
-/** Folds task rows into per-key counts. A task is overdue when open and past its due date. */
+/**
+ * Whether a board stage is a "finished" column ("Concluído", "Concluída",
+ * "Finalizado"…). Moving a card into it does not flip the task's own `status`
+ * (that stays "open" until someone marks it), so the overview has to look at
+ * the stage too, or a delivered task keeps showing as open / overdue.
+ */
+export function isDoneStageName(name: string | null | undefined): boolean {
+  const n = (name ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .toLowerCase();
+  return /^(concluid|finalizad)[oa]s?$/.test(n);
+}
+
+/** A task counts as completed when it is marked done OR sits in a finished stage. */
+export const isTaskCompleted = (status: string, stageDone: boolean | undefined) => status === "done" || stageDone === true;
+
+/**
+ * Delivered late: finished after its due date. Both are YYYY-MM-DD (the
+ * completion date already in São Paulo time). Unknown completion date → not
+ * flagged, rather than guessing.
+ */
+export function deliveredLate(completedOn: string | null | undefined, dueDate: string | null | undefined): boolean {
+  return Boolean(completedOn && dueDate && completedOn > dueDate);
+}
+
+/**
+ * Folds task rows into per-key counts. A completed task (done, or in a finished
+ * stage — see `stage_done`) is never overdue, even when it was delivered after
+ * its due date: that is shown separately as "entregue com atraso". Only an
+ * open task past its due date is overdue.
+ */
 export function countTasks(
-  rows: { key: string; status: string; due_date: string | null }[],
+  rows: { key: string; status: string; due_date: string | null; stage_done?: boolean }[],
   today: string,
 ): Map<string, TaskCounts> {
   const map = new Map<string, TaskCounts>();
   for (const r of rows) {
     const c = map.get(r.key) ?? { ...EMPTY_COUNTS };
     c.total += 1;
-    if (r.status === "done") c.done += 1;
+    if (isTaskCompleted(r.status, r.stage_done)) c.done += 1;
     else {
       c.open += 1;
       if (r.due_date && r.due_date < today) c.overdue += 1;
